@@ -1,0 +1,265 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{0ac45599-f5cb-41b6-a41c-9b2d86f76433}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>D:\Projects\BaseLib\BaseLib;D:\Projects\BaseLib\BaseLibTest;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>D:\Projects\BaseLib\BaseLibTest;D:\Projects\BaseLib\BaseLib;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="simple_test_tick_clock.h" />
+    <ClInclude Include="test\bind_test_util.h" />
+    <ClInclude Include="test\copy_only_int.h" />
+    <ClInclude Include="test\gtest_util.h" />
+    <ClInclude Include="test\gtest_xml_unittest_result_printer.h" />
+    <ClInclude Include="test\gtest_xml_util.h" />
+    <ClInclude Include="test\launcher\test_launcher.h" />
+    <ClInclude Include="test\launcher\test_launcher_tracer.h" />
+    <ClInclude Include="test\launcher\test_result.h" />
+    <ClInclude Include="test\launcher\test_results_tracker.h" />
+    <ClInclude Include="test\metrics\histogram_enum_reader.h" />
+    <ClInclude Include="test\metrics\histogram_tester.h" />
+    <ClInclude Include="test\metrics\user_action_tester.h" />
+    <ClInclude Include="test\move_only_int.h" />
+    <ClInclude Include="test\multiprocess_test.h" />
+    <ClInclude Include="test\scoped_environment_variable_override.h" />
+    <ClInclude Include="test\scoped_feature_list.h" />
+    <ClInclude Include="test\scoped_locale.h" />
+    <ClInclude Include="test\scoped_task_environment.h" />
+    <ClInclude Include="test\test_file_util.h" />
+    <ClInclude Include="test\test_mock_time_task_runner.h" />
+    <ClInclude Include="test\test_pending_task.h" />
+    <ClInclude Include="test\test_shortcut_win.h" />
+    <ClInclude Include="test\test_simple_task_runner.h" />
+    <ClInclude Include="test\test_switches.h" />
+    <ClInclude Include="test\test_timeouts.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="at_exit_unittest.cpp" />
+    <ClCompile Include="base64url_unittest.cpp" />
+    <ClCompile Include="base64_unittest.cpp" />
+    <ClCompile Include="big_endian_unittest.cpp" />
+    <ClCompile Include="bits_unittest.cpp" />
+    <ClCompile Include="bit_cast_unittest.cpp" />
+    <ClCompile Include="command_line_unittest.cpp" />
+    <ClCompile Include="containers\adapters_unittest.cpp" />
+    <ClCompile Include="containers\any_internal_unittest.cpp" />
+    <ClCompile Include="containers\buffer_iterator_unittest.cpp" />
+    <ClCompile Include="containers\circular_deque_unittest.cpp" />
+    <ClCompile Include="containers\id_map_unittest.cpp" />
+    <ClCompile Include="containers\linked_list_unittest.cpp" />
+    <ClCompile Include="containers\mru_cache_unittest.cpp" />
+    <ClCompile Include="containers\small_map_unittest.cpp" />
+    <ClCompile Include="containers\stack_container_unittest.cpp" />
+    <ClCompile Include="containers\unique_any_unittest.cpp" />
+    <ClCompile Include="containers\unique_ptr_adapters_unittest.cpp" />
+    <ClCompile Include="containers\vector_buffer_unittest.cpp" />
+    <ClCompile Include="environment_unittest.cpp" />
+    <ClCompile Include="files\file_path_unittest.cpp" />
+    <ClCompile Include="files\file_unittest.cpp" />
+    <ClCompile Include="files\file_util_unittest.cpp" />
+    <ClCompile Include="files\important_file_writer_unittest.cpp" />
+    <ClCompile Include="files\memory_mapped_file_unittest.cpp" />
+    <ClCompile Include="files\scoped_temp_dir_unittest.cpp" />
+    <ClCompile Include="hash\hash_unittest.cpp" />
+    <ClCompile Include="hash\md5_unittest.cpp" />
+    <ClCompile Include="hash\sha1_unittest.cpp" />
+    <ClCompile Include="json\json_parser_unittest.cpp" />
+    <ClCompile Include="json\json_reader_unittest.cpp" />
+    <ClCompile Include="json\json_value_converter_unittest.cpp" />
+    <ClCompile Include="json\json_value_serializer_unittest.cpp" />
+    <ClCompile Include="json\json_writer_unittest.cpp" />
+    <ClCompile Include="json\string_escape_unittest.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="simple_test_tick_clock.cpp" />
+    <ClCompile Include="strings\stringprintf_unittest.cpp" />
+    <ClCompile Include="strings\string_number_conversions_unittest.cpp" />
+    <ClCompile Include="strings\string_tokenizer_unittest.cpp" />
+    <ClCompile Include="strings\string_util_unittest.cpp" />
+    <ClCompile Include="strings\sys_string_conversions_unittest.cpp" />
+    <ClCompile Include="strings\utf_string_conversions_unittest.cpp" />
+    <ClCompile Include="test\bind_test_util.cpp" />
+    <ClCompile Include="test\copy_only_int.cpp" />
+    <ClCompile Include="test\gtest_util.cpp" />
+    <ClCompile Include="test\gtest_xml_unittest_result_printer.cpp" />
+    <ClCompile Include="test\gtest_xml_util.cpp" />
+    <ClCompile Include="test\launcher\test_launcher.cpp" />
+    <ClCompile Include="test\launcher\test_launcher_tracer.cpp" />
+    <ClCompile Include="test\launcher\test_result.cpp" />
+    <ClCompile Include="test\launcher\test_results_tracker.cpp" />
+    <ClCompile Include="test\metrics\histogram_enum_reader.cpp" />
+    <ClCompile Include="test\metrics\histogram_enum_reader_unittest.cpp" />
+    <ClCompile Include="test\metrics\histogram_tester.cpp" />
+    <ClCompile Include="test\metrics\user_action_tester.cpp" />
+    <ClCompile Include="test\metrics\user_action_tester_unittest.cpp" />
+    <ClCompile Include="test\multiprocess_test.cpp" />
+    <ClCompile Include="test\scoped_environment_variable_override.cpp" />
+    <ClCompile Include="test\scoped_feature_list.cpp" />
+    <ClCompile Include="test\scoped_feature_list_unittest.cpp" />
+    <ClCompile Include="test\scoped_locale.cpp" />
+    <ClCompile Include="test\scoped_task_environment.cpp" />
+    <ClCompile Include="test\test_file_util.cpp" />
+    <ClCompile Include="test\test_file_util_win.cpp" />
+    <ClCompile Include="test\test_mock_time_task_runner.cpp" />
+    <ClCompile Include="test\test_pending_task.cpp" />
+    <ClCompile Include="test\test_shortcut_win.cpp" />
+    <ClCompile Include="test\test_simple_task_runner.cpp" />
+    <ClCompile Include="test\test_switches.cpp" />
+    <ClCompile Include="test\test_timeouts.cpp" />
+    <ClCompile Include="values_unittest.cpp" />
+    <ClCompile Include="value_iterators_unittest.cpp" />
+    <ClCompile Include="version_unittest.cpp" />
+    <ClCompile Include="vlog_unittest.cpp" />
+    <ClCompile Include="win\async_operation_unittest.cpp" />
+    <ClCompile Include="win\com_init_check_hook_unittest.cpp" />
+    <ClCompile Include="win\com_init_util_unittest.cpp" />
+    <ClCompile Include="win\core_winrt_util_unittest.cpp" />
+    <ClCompile Include="win\enum_variant_unittest.cpp" />
+    <ClCompile Include="win\event_trace_consumer_unittest.cpp" />
+    <ClCompile Include="win\event_trace_controller_unittest.cpp" />
+    <ClCompile Include="win\event_trace_provider_unittest.cpp" />
+    <ClCompile Include="win\hstring_reference_unittest.cpp" />
+    <ClCompile Include="win\i18n_unittest.cpp" />
+    <ClCompile Include="win\iunknown_impl_unittest.cpp" />
+    <ClCompile Include="win\object_watcher_unittest.cpp" />
+    <ClCompile Include="win\pe_image_unittest.cpp" />
+    <ClCompile Include="win\reference_unittest.cpp" />
+    <ClCompile Include="win\registry_unittest.cpp" />
+    <ClCompile Include="win\scoped_bstr_unittest.cpp" />
+    <ClCompile Include="win\scoped_handle_unittest.cpp" />
+    <ClCompile Include="win\scoped_hstring_unittest.cpp" />
+    <ClCompile Include="win\scoped_process_information_unittest.cpp" />
+    <ClCompile Include="win\scoped_safearray_unittest.cpp" />
+    <ClCompile Include="win\scoped_variant_unittest.cpp" />
+    <ClCompile Include="win\scoped_winrt_initializer_unittest.cpp" />
+    <ClCompile Include="win\shortcut_unittest.cpp" />
+    <ClCompile Include="win\startup_information_unittest.cpp" />
+    <ClCompile Include="win\typed_event_handler_unittest.cpp" />
+    <ClCompile Include="win\windows_version_unittest.cpp" />
+    <ClCompile Include="win\winrt_storage_util_unittest.cpp" />
+    <ClCompile Include="win\win_includes_unittest.cpp" />
+    <ClCompile Include="win\win_util_unittest.cpp" />
+    <ClCompile Include="win\wmi_unittest.cpp" />
+    <ClCompile Include="win\wrapped_window_proc_unittest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BaseLib\BaseLib.vcxproj">
+      <Project>{e91b0dc7-6643-4ab3-a638-8cccf59622fd}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemDefinitionGroup />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn.1.8.1\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn.targets" Condition="Exists('..\packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn.1.8.1\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn.targets')" />
+  </ImportGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>X64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>X64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+  </ItemDefinitionGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>这台计算机上缺少此项目引用的 NuGet 程序包。使用“NuGet 程序包还原”可下载这些程序包。有关更多信息，请参见 http://go.microsoft.com/fwlink/?LinkID=322105。缺少的文件是 {0}。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn.1.8.1\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn.1.8.1\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-dyn.targets'))" />
+  </Target>
+</Project>

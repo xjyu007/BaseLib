@@ -1,0 +1,36 @@
+// Copyright 2017 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <memory>
+#include <string>
+
+namespace base {
+
+	class Environment;
+
+	namespace test {
+
+		// Helper class to override |variable_name| environment variable to |value| for
+		// the lifetime of this class. Upon destruction, the previous value is restored.
+		class ScopedEnvironmentVariableOverride final {
+		public:
+			ScopedEnvironmentVariableOverride(const std::string& variable_name, const std::string& value);
+			~ScopedEnvironmentVariableOverride();
+
+			base::Environment* GetEnv() { return environment_.get(); }
+			bool IsOverridden() { return overridden_; }
+			bool WasSet() { return was_set_; }
+
+		private:
+			std::unique_ptr<Environment> environment_;
+			std::string variable_name_;
+			bool overridden_;
+			bool was_set_;
+			std::string old_value_;
+		};
+
+	}  // namespace test
+}  // namespace base

@@ -1,0 +1,406 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="big_endian_unittest.cpp" />
+    <ClCompile Include="command_line_unittest.cpp" />
+    <ClCompile Include="environment_unittest.cpp" />
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="strings\string_number_conversions_unittest.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="strings\string_tokenizer_unittest.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="strings\string_util_unittest.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="strings\stringprintf_unittest.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="strings\sys_string_conversions_unittest.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="strings\utf_string_conversions_unittest.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="test\scoped_locale.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="win\win_util_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="at_exit_unittest.cpp" />
+    <ClCompile Include="value_iterators_unittest.cpp" />
+    <ClCompile Include="values_unittest.cpp" />
+    <ClCompile Include="version_unittest.cpp" />
+    <ClCompile Include="vlog_unittest.cpp" />
+    <ClCompile Include="base64_unittest.cpp" />
+    <ClCompile Include="base64url_unittest.cpp" />
+    <ClCompile Include="bit_cast_unittest.cpp" />
+    <ClCompile Include="bits_unittest.cpp" />
+    <ClCompile Include="test\bind_test_util.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\gtest_util.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\adapters_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\any_internal_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\buffer_iterator_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\circular_deque_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\id_map_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\linked_list_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\mru_cache_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\small_map_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\stack_container_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\unique_any_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\unique_ptr_adapters_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\vector_buffer_unittest.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="test\copy_only_int.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="win\async_operation_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\com_init_check_hook_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\com_init_util_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\core_winrt_util_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\enum_variant_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\event_trace_consumer_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\event_trace_controller_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\event_trace_provider_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\hstring_reference_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\i18n_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\iunknown_impl_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\object_watcher_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\pe_image_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\reference_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\registry_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\scoped_bstr_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\scoped_handle_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\scoped_hstring_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\scoped_process_information_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\scoped_safearray_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\scoped_variant_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\scoped_winrt_initializer_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\shortcut_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\startup_information_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\typed_event_handler_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\win_includes_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\windows_version_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\winrt_storage_util_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\wmi_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\wrapped_window_proc_unittest.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_timeouts.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_switches.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\scoped_feature_list.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\scoped_feature_list_unittest.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\multiprocess_test.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="files\file_path_unittest.cpp">
+      <Filter>files</Filter>
+    </ClCompile>
+    <ClCompile Include="files\file_unittest.cpp">
+      <Filter>files</Filter>
+    </ClCompile>
+    <ClCompile Include="files\file_util_unittest.cpp">
+      <Filter>files</Filter>
+    </ClCompile>
+    <ClCompile Include="files\important_file_writer_unittest.cpp">
+      <Filter>files</Filter>
+    </ClCompile>
+    <ClCompile Include="files\memory_mapped_file_unittest.cpp">
+      <Filter>files</Filter>
+    </ClCompile>
+    <ClCompile Include="files\scoped_temp_dir_unittest.cpp">
+      <Filter>files</Filter>
+    </ClCompile>
+    <ClCompile Include="test\scoped_environment_variable_override.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_file_util.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_file_util_win.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_shortcut_win.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\metrics\histogram_enum_reader.cpp">
+      <Filter>test\metrics</Filter>
+    </ClCompile>
+    <ClCompile Include="test\metrics\histogram_enum_reader_unittest.cpp">
+      <Filter>test\metrics</Filter>
+    </ClCompile>
+    <ClCompile Include="test\metrics\histogram_tester.cpp">
+      <Filter>test\metrics</Filter>
+    </ClCompile>
+    <ClCompile Include="test\metrics\user_action_tester.cpp">
+      <Filter>test\metrics</Filter>
+    </ClCompile>
+    <ClCompile Include="test\metrics\user_action_tester_unittest.cpp">
+      <Filter>test\metrics</Filter>
+    </ClCompile>
+    <ClCompile Include="simple_test_tick_clock.cpp" />
+    <ClCompile Include="test\test_mock_time_task_runner.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\gtest_xml_unittest_result_printer.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\gtest_xml_util.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\launcher\test_launcher.cpp">
+      <Filter>test\launcher</Filter>
+    </ClCompile>
+    <ClCompile Include="test\launcher\test_result.cpp">
+      <Filter>test\launcher</Filter>
+    </ClCompile>
+    <ClCompile Include="test\launcher\test_results_tracker.cpp">
+      <Filter>test\launcher</Filter>
+    </ClCompile>
+    <ClCompile Include="test\launcher\test_launcher_tracer.cpp">
+      <Filter>test\launcher</Filter>
+    </ClCompile>
+    <ClCompile Include="test\scoped_task_environment.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="hash\hash_unittest.cpp">
+      <Filter>hash</Filter>
+    </ClCompile>
+    <ClCompile Include="hash\md5_unittest.cpp">
+      <Filter>hash</Filter>
+    </ClCompile>
+    <ClCompile Include="hash\sha1_unittest.cpp">
+      <Filter>hash</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_pending_task.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_simple_task_runner.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="json\json_parser_unittest.cpp">
+      <Filter>json</Filter>
+    </ClCompile>
+    <ClCompile Include="json\json_reader_unittest.cpp">
+      <Filter>json</Filter>
+    </ClCompile>
+    <ClCompile Include="json\json_value_converter_unittest.cpp">
+      <Filter>json</Filter>
+    </ClCompile>
+    <ClCompile Include="json\json_value_serializer_unittest.cpp">
+      <Filter>json</Filter>
+    </ClCompile>
+    <ClCompile Include="json\json_writer_unittest.cpp">
+      <Filter>json</Filter>
+    </ClCompile>
+    <ClCompile Include="json\string_escape_unittest.cpp">
+      <Filter>json</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="test\scoped_locale.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\bind_test_util.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\gtest_util.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\copy_only_int.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\move_only_int.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\test_timeouts.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\test_switches.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\scoped_feature_list.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\multiprocess_test.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\scoped_environment_variable_override.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\test_file_util.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\test_shortcut_win.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\metrics\histogram_enum_reader.h">
+      <Filter>test\metrics</Filter>
+    </ClInclude>
+    <ClInclude Include="test\metrics\histogram_tester.h">
+      <Filter>test\metrics</Filter>
+    </ClInclude>
+    <ClInclude Include="test\metrics\user_action_tester.h">
+      <Filter>test\metrics</Filter>
+    </ClInclude>
+    <ClInclude Include="simple_test_tick_clock.h" />
+    <ClInclude Include="test\test_mock_time_task_runner.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\gtest_xml_unittest_result_printer.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\gtest_xml_util.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\launcher\test_launcher.h">
+      <Filter>test\launcher</Filter>
+    </ClInclude>
+    <ClInclude Include="test\launcher\test_result.h">
+      <Filter>test\launcher</Filter>
+    </ClInclude>
+    <ClInclude Include="test\launcher\test_results_tracker.h">
+      <Filter>test\launcher</Filter>
+    </ClInclude>
+    <ClInclude Include="test\launcher\test_launcher_tracer.h">
+      <Filter>test\launcher</Filter>
+    </ClInclude>
+    <ClInclude Include="test\scoped_task_environment.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\test_pending_task.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\test_simple_task_runner.h">
+      <Filter>test</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="strings">
+      <UniqueIdentifier>{bd5a3d5c-f352-40fa-a959-96e150b76ea7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="test">
+      <UniqueIdentifier>{0e8808c0-aaff-40c5-9f75-31b6a99e58c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="win">
+      <UniqueIdentifier>{730dd200-e722-4d33-8e6b-348ae8f55b8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="containers">
+      <UniqueIdentifier>{9807d3fa-69aa-4edd-a302-7c967055160a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="files">
+      <UniqueIdentifier>{fac52e3f-3753-44e8-b1ed-f57d55e11e50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="test\metrics">
+      <UniqueIdentifier>{66023b92-a69d-49df-89c5-c5184255be2f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="test\launcher">
+      <UniqueIdentifier>{4baa3e07-253d-4875-b7b2-fd40f0fd5b64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="hash">
+      <UniqueIdentifier>{d9ca9591-7530-48e6-9bab-595078af0aa5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="json">
+      <UniqueIdentifier>{a28d3ef2-c30e-4067-bb44-163952536017}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

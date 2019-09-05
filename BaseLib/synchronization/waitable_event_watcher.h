@@ -7,25 +7,9 @@
 #include "base_export.h"
 #include "macros.h"
 #include "sequenced_task_runner.h"
-#include "build_config.h"
 
-#if defined(OS_WIN)
 #include "win/object_watcher.h"
 #include "win/scoped_handle.h"
-#elif defined(OS_MACOSX)
-#include <dispatch/dispatch.h>
-
-#include "mac/scoped_dispatch_object.h"
-#include "memory/weak_ptr.h"
-#include "synchronization/waitable_event.h"
-#else
-#include "sequence_checker.h"
-#include "synchronization/waitable_event.h"
-#endif
-
-#if !defined(OS_WIN)
-#include "callback.h"
-#endif
 
 namespace base {
 
@@ -70,20 +54,14 @@ namespace base {
 	// right after, the callback may be called with deleted WaitableEvent pointer.
 
 	class BASE_EXPORT WaitableEventWatcher
-#if defined(OS_WIN)
 		: public win::ObjectWatcher::Delegate
-#endif
 	{
 	public:
 		using EventCallback = OnceCallback<void(WaitableEvent*)>;
 
 		WaitableEventWatcher();
 
-#if defined(OS_WIN)
 		~WaitableEventWatcher() override;
-#else
-		~WaitableEventWatcher();
-#endif
 
 		// When |event| is signaled, |callback| is called on the sequence that called
 		// StartWatching().
@@ -102,7 +80,6 @@ namespace base {
 		void StopWatching();
 
 	private:
-#if defined(OS_WIN)
 		void OnObjectSignaled(HANDLE h) override;
 
 		// Duplicated handle of the event passed to StartWatching().
@@ -114,43 +91,7 @@ namespace base {
 
 		EventCallback callback_;
 		WaitableEvent* event_ = nullptr;
-#elif defined(OS_MACOSX)
-		// Invokes the callback and resets the source. Must be called on the task
-		// runner on which StartWatching() was called.
-		void InvokeCallback();
-
-		// Closure bound to the event being watched. This will be is_null() if
-		// nothing is being watched.
-		OnceClosure callback_;
-
-		// A reference to the receive right that is kept alive while a watcher
-		// is waiting. Null if no event is being watched.
-		scoped_refptr<WaitableEvent::ReceiveRight> receive_right_;
-
-		// A TYPE_MACH_RECV dispatch source on |receive_right_|. When a receive event
-		// is delivered, the message queue will be peeked and the bound |callback_|
-		// may be run. This will be null if nothing is currently being watched.
-		ScopedDispatchObject<dispatch_source_t> source_;
-
-		// Used to vend a weak pointer for calling InvokeCallback() from the
-		// |source_| event handler.
-		WeakPtrFactory<WaitableEventWatcher> weak_ptr_factory_;
-#else
-		// Instantiated in StartWatching(). Set before the callback runs. Reset in
-		// StopWatching() or StartWatching().
-		scoped_refptr<Flag> cancel_flag_;
-
-		// Enqueued in the wait list of the watched WaitableEvent.
-		AsyncWaiter* waiter_ = nullptr;
-
-		// Kernel of the watched WaitableEvent.
-		scoped_refptr<WaitableEvent::WaitableEventKernel> kernel_;
-
-		// Ensures that StartWatching() and StopWatching() are called on the same
-		// sequence.
-		SequenceChecker sequence_checker_;
-#endif
-
+		
 		DISALLOW_COPY_AND_ASSIGN(WaitableEventWatcher);
 	};
 

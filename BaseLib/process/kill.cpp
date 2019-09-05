@@ -31,7 +31,6 @@ namespace base {
 		return result;
 	}
 
-#if defined(OS_WIN) || defined(OS_FUCHSIA)
 	// Common implementation for platforms under which |process| is a handle to
 	// the process, rather than an identifier that must be "reaped".
 	void EnsureProcessTerminated(Process process) {
@@ -48,15 +47,10 @@ namespace base {
 			[](Process process) {
 				if (process.WaitForExitWithTimeout(TimeDelta(), nullptr))
 					return;
-#if defined(OS_WIN)
 				process.Terminate(win::kProcessKilledExitCode, false);
-#else
-            	process.Terminate(-1, false);
-#endif
 			},
           	std::move(process)),
 		TimeDelta::FromSeconds(2));
 	}
-#endif  // defined(OS_WIN) || defined(OS_FUCHSIA)
 
 }  // namespace base

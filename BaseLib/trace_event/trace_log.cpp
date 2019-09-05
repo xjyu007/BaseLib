@@ -17,7 +17,6 @@
 #include "message_loop/message_loop_current.h"
 #include "no_destructor.h"
 #include "process/process.h"
-#include "process/process_metrics.h"
 #include "stl_util.h"
 #include "strings/string_split.h"
 #include "strings/stringprintf.h"
@@ -40,17 +39,7 @@
 #include "build_config.h"
 #include "trace_event_memory_overhead.h"
 
-#if defined(OS_WIN)
 //#include "trace_event/trace_event_etw_export_win.h"
-#endif
-
-#if defined(OS_ANDROID)
-#include "base/debug/elf_reader.h"
-
-// The linker assigns the virtual address of the start of current library to
-// this symbol.
-extern char __executable_start;
-#endif
 
 namespace base::trace_event {
 
@@ -381,20 +370,11 @@ namespace base::trace_event {
 		filter_factory_for_testing_(nullptr) {
 		CategoryRegistry::Initialize();
 
-#if defined(OS_NACL)  // NaCl shouldn't expose the process id.
-		SetProcessID(0);
-#else
 		SetProcessID(static_cast<int>(GetCurrentProcId()));
-#endif
 
 		// Linux renderer processes and Android O processes are not allowed to read
 		// "proc/stat" file, crbug.com/788870.
-#if defined(OS_WIN) || (defined(OS_MACOSX) && !defined(OS_IOS))
 		process_creation_time_ = Process::Current().CreationTime();
-#else
-  // Use approximate time when creation time is not available.
-		process_creation_time_ = TRACE_TIME_NOW();
-#endif
 
 		logged_events_.reset(CreateTraceBuffer());
 
@@ -493,12 +473,10 @@ namespace base::trace_event {
 			state_flags |= TraceCategory::ENABLED_FOR_RECORDING;
 		}
 
-#if defined(OS_WIN)
 		/*if (base::trace_event::TraceEventETWExport::IsCategoryGroupEnabled(
 			category->name())) {
 			state_flags |= TraceCategory::ENABLED_FOR_ETW_EXPORT;
 		}*/
-#endif
 
 		uint32_t enabled_filters_bitmap = 0;
 		int index = 0;
@@ -1225,13 +1203,11 @@ namespace base::trace_event {
 			}
 		}
 
-#if defined(OS_WIN)
 		// This is done sooner rather than later, to avoid creating the event and
 		// acquiring the lock, which is not needed for ETW as it's already threadsafe.
 		/*if (*category_group_enabled & TraceCategory::ENABLED_FOR_ETW_EXPORT)
 			TraceEventETWExport::AddEvent(phase, category_group_enabled, name, id,
 				args);*/
-#endif  // OS_WIN
 
 		if (*category_group_enabled & RECORDING_MODE) {
 			const auto trace_event_override =
@@ -1291,9 +1267,6 @@ namespace base::trace_event {
 						args, flags);
 				}
 
-#if defined(OS_ANDROID)
-				trace_event->SendToATrace();
-#endif
 			}
 
 			if (trace_options() & kInternalEchoToConsole) {
@@ -1422,11 +1395,9 @@ namespace base::trace_event {
 			return;
 		AutoThreadLocalBoolean thread_is_in_trace_event(&thread_is_in_trace_event_);
 
-#if defined(OS_WIN)
 		// Generate an ETW event that marks the end of a complete event.
 		/*if (category_group_enabled_local & TraceCategory::ENABLED_FOR_ETW_EXPORT)
 			TraceEventETWExport::AddCompleteEndEvent(name);*/
-#endif  // OS_WIN
 
 		if (category_group_enabled_local & TraceCategory::ENABLED_FOR_RECORDING) {
 			const auto update_duration_override =
@@ -1446,9 +1417,6 @@ namespace base::trace_event {
 				DCHECK(trace_event->phase() == TRACE_EVENT_PHASE_COMPLETE);
 
 				trace_event->UpdateDuration(now, thread_now, thread_instruction_now);
-#if defined(OS_ANDROID)
-				trace_event->SendToATrace();
-#endif
 			}
 
 			if (trace_options() & kInternalEchoToConsole) {
@@ -1509,10 +1477,8 @@ namespace base::trace_event {
 			}
 		}
 
-#if !defined(OS_NACL)  // NaCl shouldn't expose the process id.
 		AddMetadataEventWhileLocked(0, "num_cpus", "number", 
 									base::SysInfo::NumberOfProcessors());
-#endif
 
 		const auto current_thread_id = static_cast<int>(base::PlatformThread::CurrentId());
 		if (process_sort_index_ != 0) {
@@ -1528,19 +1494,6 @@ namespace base::trace_event {
 		const auto process_uptime = TRACE_TIME_NOW() - process_creation_time_;
 		AddMetadataEventWhileLocked(current_thread_id, "process_uptime_seconds",
 			"uptime", process_uptime.InSeconds());
-
-#if defined(OS_ANDROID)
-		AddMetadataEventWhileLocked(current_thread_id, "chrome_library_address",
-			"start_address",
-			base::StringPrintf("%p", &__executable_start));
-		base::debug::ElfBuildIdBuffer build_id;
-		size_t build_id_length =
-			base::debug::ReadElfBuildId(&__executable_start, true, build_id);
-		if (build_id_length > 0) {
-			AddMetadataEventWhileLocked(current_thread_id, "chrome_library_module",
-				"id", std::string(build_id));
-		}
-#endif
 
 		if (!process_labels_.empty()) {
 			std::vector<std::string_view> labels;
@@ -1684,7 +1637,6 @@ namespace base::trace_event {
 			: kTraceEventVectorBufferChunks);
 	}
 
-#if defined(OS_WIN)
 	/*void TraceLog::UpdateETWCategoryGroupEnabledFlags() {
 		// Go through each category and set/clear the ETW bit depending on whether the
 		// category is enabled.
@@ -1697,7 +1649,6 @@ namespace base::trace_event {
 			}
 		}
 	}*/
-#endif  // defined(OS_WIN)
 
 	void TraceLog::SetTraceBufferForTesting(
 			std::unique_ptr<TraceBuffer> trace_buffer) {

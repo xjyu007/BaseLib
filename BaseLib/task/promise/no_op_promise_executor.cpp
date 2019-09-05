@@ -17,23 +17,18 @@ namespace base::internal {
 
 	NoOpPromiseExecutor::~NoOpPromiseExecutor() = default;
 
-	PromiseExecutor::PrerequisitePolicy NoOpPromiseExecutor::GetPrerequisitePolicy()
-		const {
-		return PromiseExecutor::PrerequisitePolicy::kNever;
-	}
-
-	bool NoOpPromiseExecutor::IsCancelled() {
+	bool NoOpPromiseExecutor::IsCancelled() const {
 		return false;
 	}
 
 #if DCHECK_IS_ON()
 	PromiseExecutor::ArgumentPassingType
-		NoOpPromiseExecutor::ResolveArgumentPassingType() {
+		NoOpPromiseExecutor::ResolveArgumentPassingType() const {
 		return PromiseExecutor::ArgumentPassingType::kNoCallback;
 	}
 
 	PromiseExecutor::ArgumentPassingType
-		NoOpPromiseExecutor::RejectArgumentPassingType(){
+		NoOpPromiseExecutor::RejectArgumentPassingType() const {
 		return PromiseExecutor::ArgumentPassingType::kNoCallback;
 	}
 
@@ -50,7 +45,7 @@ namespace base::internal {
 
 	// static
 	scoped_refptr<internal::AbstractPromise> NoOpPromiseExecutor::Create(
-		const Location& from_here,
+    	Location from_here,
 		bool can_resolve,
 		bool can_reject,
 		RejectPolicy reject_policy) {

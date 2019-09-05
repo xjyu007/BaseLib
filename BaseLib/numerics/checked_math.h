@@ -1,10 +1,8 @@
-#pragma once
-
 // Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
+#pragma once
 
 #include <limits>
 #include <type_traits>
@@ -50,7 +48,7 @@ namespace base {
 			// A range checked destination type can be supplied using the Dst template
 			// parameter.
 			template <typename Dst = T>
-			constexpr bool IsValid() const {
+			[[nodiscard]] constexpr bool IsValid() const {
 				return state_.is_valid() && IsValueInRangeForNumericType<Dst>(state_.value());
 			}
 
@@ -76,7 +74,7 @@ namespace base {
 			// template parameter, for test code, etc. However, the handler cannot access
 			// the underlying value, and it is not available through other means.
 			template <typename Dst = T, class CheckHandler = CheckOnFailure>
-			constexpr StrictNumeric<Dst> ValueOrDie() const {
+			[[nodiscard]] constexpr StrictNumeric<Dst> ValueOrDie() const {
 				return BASE_NUMERICS_LIKELY(IsValid<Dst>()) ? static_cast<Dst>(state_.value())
 					: CheckHandler::template HandleFailure<Dst>();
 			}
@@ -105,8 +103,8 @@ namespace base {
 			// This friend method is available solely for providing more detailed logging
 			// in the the tests. Do not implement it in production code, because the
 			// underlying values may change at any time.
-			template <typename U>
-			friend U GetNumericValueForTest(const CheckedNumeric<U>& src);
+			//template <typename U>
+			//friend U GetNumericValueForTest(const CheckedNumeric<U>& src);
 
 			// Prototypes for the supported arithmetic operator overloads.
 			template <typename Src>
@@ -150,7 +148,7 @@ namespace base {
 					InvertWrapper(state_.value()), IsValid());
 			}
 
-			constexpr CheckedNumeric Abs() const {
+			[[nodiscard]] constexpr CheckedNumeric Abs() const {
 				return !IsValueNegative(state_.value()) ? *this : -*this;
 			}
 
@@ -183,7 +181,7 @@ namespace base {
 			// This function is available only for integral types. It returns an unsigned
 			// integer of the same width as the source type, containing the absolute value
 			// of the source, and properly handling signed min.
-			constexpr CheckedNumeric<typename UnsignedOrFloatForSize<T>::type> UnsignedAbs() const {
+			[[nodiscard]] constexpr CheckedNumeric<typename UnsignedOrFloatForSize<T>::type> UnsignedAbs() const {
 				return CheckedNumeric<typename UnsignedOrFloatForSize<T>::type>(
 					SafeUnsignedAbs(state_.value()), state_.is_valid());
 			}
@@ -235,9 +233,9 @@ namespace base {
 		private:
 			CheckedNumericState<T> state_;
 
-			CheckedNumeric FastRuntimeNegate() const {
+			[[nodiscard]] CheckedNumeric FastRuntimeNegate() const {
 				T result;
-				bool success = CheckedSubOp<T, T>::Do(T(0), state_.value(), &result);
+				const bool success = CheckedSubOp<T, T>::Do(T(0), state_.value(), &result);
 				return CheckedNumeric<T>(result, IsValid() && success);
 			}
 
@@ -329,13 +327,13 @@ namespace base {
 			// bad, we trigger the CHECK condition here.
 		template <typename L, typename R>
 		L* operator+(L* lhs, const StrictNumeric<R> rhs) {
-			uintptr_t result = CheckAdd(reinterpret_cast<uintptr_t>(lhs), CheckMul(sizeof(L), static_cast<R>(rhs))).template ValueOrDie<uintptr_t>();
+			uintptr_t result = CheckAdd(reinterpret_cast<uintptr_t>(lhs), CheckMul(sizeof(L), static_cast<R>(rhs))).ValueOrDie<uintptr_t>();
 			return reinterpret_cast<L*>(result);
 		}
 
 		template <typename L, typename R>
 		L* operator-(L* lhs, const StrictNumeric<R> rhs) {
-			uintptr_t result = CheckSub(reinterpret_cast<uintptr_t>(lhs), CheckMul(sizeof(L), static_cast<R>(rhs))).template ValueOrDie<uintptr_t>();
+			uintptr_t result = CheckSub(reinterpret_cast<uintptr_t>(lhs), CheckMul(sizeof(L), static_cast<R>(rhs))).ValueOrDie<uintptr_t>();
 			return reinterpret_cast<L*>(result);
 		}
 

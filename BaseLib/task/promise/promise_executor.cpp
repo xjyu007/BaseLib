@@ -12,23 +12,14 @@ namespace base::internal {
 		data_.vtable_ = nullptr;
 	}
 
-	PromiseExecutor::PrerequisitePolicy PromiseExecutor::GetPrerequisitePolicy()
-		const {
-		return data_.vtable_->get_prerequisite_policy(data_.storage_.array);
-	}
-
-	bool PromiseExecutor::IsCancelled() const {
-		return data_.vtable_->is_cancelled(data_.storage_.array);
-	}
-
 #if DCHECK_IS_ON()
 	PromiseExecutor::ArgumentPassingType
-		PromiseExecutor::ResolveArgumentPassingType() const {
+	PromiseExecutor::ResolveArgumentPassingType() const {
 		return data_.vtable_->resolve_argument_passing_type(data_.storage_.array);
 	}
 
 	PromiseExecutor::ArgumentPassingType
-		PromiseExecutor::RejectArgumentPassingType() const {
+	PromiseExecutor::RejectArgumentPassingType() const {
 		return data_.vtable_->reject_argument_passing_type(data_.storage_.array);
 	}
 
@@ -41,7 +32,4 @@ namespace base::internal {
 	}
 #endif
 
-	void PromiseExecutor::Execute(AbstractPromise* promise) {
-		return data_.vtable_->execute(data_.storage_.array, promise);
-	}
 } // namespace base

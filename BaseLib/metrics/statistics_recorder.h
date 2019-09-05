@@ -28,8 +28,7 @@
 #include "metrics/record_histogram_checker.h"
 #include "synchronization/lock.h"
 
-namespace base
-{
+namespace base {
 
 	class BucketRanges;
 	class HistogramSnapshotManager;
@@ -45,13 +44,11 @@ namespace base
 	// CreateTemporaryForTesting(). This temporary recorder becomes the global one
 	// until deleted. When this temporary recorder is deleted, it restores the
 	// previous global one.
-	class BASE_EXPORT StatisticsRecorder
-	{
+	class BASE_EXPORT StatisticsRecorder {
 	public:
 		// An interface class that allows the StatisticsRecorder to forcibly merge
 		// histograms from providers when necessary.
-		class HistogramProvider
-		{
+		class HistogramProvider {
 		public:
 			// Merges all histogram information into the global versions.
 			virtual void MergeHistogramDeltas() = 0;
@@ -145,7 +142,7 @@ namespace base
 			HistogramBase::Flags required_flags,
 			HistogramSnapshotManager* snapshot_manager);
 
-		typedef base::Callback<void(HistogramBase::Sample)> OnSampleCallback;
+		using OnSampleCallback = base::RepeatingCallback<void(HistogramBase::Sample)>;
 
 		// Sets the callback to notify when a new sample is recorded on the histogram
 		// referred to by |histogram_name|. Can be called before or after the
@@ -153,7 +150,7 @@ namespace base
 		//
 		// This method is thread safe.
 		static bool SetCallback(const std::string& histogram_name,
-			const OnSampleCallback& callback);
+			OnSampleCallback callback);
 
 		// Clears any callback set on the histogram referred to by |histogram_name|.
 		//
@@ -225,19 +222,18 @@ namespace base
 	private:
 		typedef std::vector<WeakPtr<HistogramProvider>> HistogramProviders;
 
-		typedef std::unordered_map<std::string_view, HistogramBase*, StringPieceHash> HistogramMap;
+		typedef std::unordered_map<std::string_view, HistogramBase*, StringPieceHash>
+			HistogramMap;
 
 		// We keep a map of callbacks to histograms, so that as histograms are
 		// created, we can set the callback properly.
 		typedef std::unordered_map<std::string, OnSampleCallback> CallbackMap;
 
-		struct BucketRangesHash
-		{
+		struct BucketRangesHash {
 			size_t operator()(const BucketRanges* a) const;
 		};
 
-		struct BucketRangesEqual
-		{
+		struct BucketRangesEqual {
 			bool operator()(const BucketRanges* a, const BucketRanges* b) const;
 		};
 

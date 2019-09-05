@@ -26,7 +26,9 @@ namespace base {
 		// Used by ReplaceStringPlaceholders to track the position in the string of
 		// replaced parameters.
 		struct ReplacementOffset {
-			ReplacementOffset(uintptr_t parameter, size_t offset) : parameter(parameter), offset(offset) {}
+			ReplacementOffset(uintptr_t parameter, size_t offset)
+				: parameter(parameter), 
+				  offset(offset) {}
 
 			// Index of the parameter.
 			uintptr_t parameter;
@@ -35,7 +37,8 @@ namespace base {
 			size_t offset;
 		};
 
-		bool CompareParameter(const ReplacementOffset& elem1, const ReplacementOffset& elem2) {
+		static bool CompareParameter(const ReplacementOffset& elem1, 
+									 const ReplacementOffset& elem2) {
 			return elem1.parameter < elem2.parameter;
 		}
 
@@ -44,15 +47,21 @@ namespace base {
 		// efficient usage from functions templated to work with either type (avoiding a
 		// redundant call to the std::basic_string_view constructor in both cases).
 		template <typename string_type>
-		void AppendToString(string_type* target, const string_type& source) {
+		inline void AppendToString(string_type* target, const string_type& source) {
 			target->append(source);
+		}
+
+		template <typename string_type>
+		inline void AppendToString(string_type* target,
+		                           const std::basic_string_view<string_type>& source) {
+		  source.AppendToString(target);
 		}
 
 		// Assuming that a pointer is the size of a "machine word", then
 		// uintptr_t is an integer type that is also a machine word.
 		using MachineWord = uintptr_t;
 
-		bool IsMachineWordAligned(const void* pointer) {
+		inline bool IsMachineWordAligned(const void* pointer) {
 			return !(reinterpret_cast<MachineWord>(pointer) & (sizeof(MachineWord) - 1));
 		}
 
@@ -82,7 +91,7 @@ namespace base {
 	}  // namespace
 
 	bool IsWprintfFormatPortable(const wchar_t* format) {
-		for (const wchar_t* position = format; *position != '\0'; ++position) {
+		for (auto position = format; *position != '\0'; ++position) {
 			if (*position == '%') {
 				bool in_specification = true;
 				bool modifier_l = false;
@@ -98,8 +107,7 @@ namespace base {
 					if (*position == 'l') {
 						// 'l' is the only thing that can save the 's' and 'c' specifiers.
 						modifier_l = true;
-					}
-					else if (((*position == 's' || *position == 'c') && !modifier_l) ||
+					} else if (((*position == 's' || *position == 'c') && !modifier_l) ||
 						*position == 'S' || *position == 'C' || *position == 'F' ||
 						*position == 'D' || *position == 'O' || *position == 'U') {
 						// Not portable.
@@ -117,47 +125,54 @@ namespace base {
 		return true;
 	}
 
+	namespace {
+
+		template<typename Ch>
+		std::basic_string<Ch> ToLowerASCIIImpl(std::basic_string_view<Ch> str) {
+			std::basic_string<Ch> ret;
+			ret.reserve(str.size());
+			for (size_t i = 0; i < str.size(); i++)
+				ret.push_back(ToLowerASCII(str[i]));
+			return ret;
+		}
+
+		template<typename Ch>
+		std::basic_string<Ch> ToUpperASCIIImpl(std::basic_string_view<Ch> str) {
+			std::basic_string<Ch> ret;
+			ret.reserve(str.size());
+			for (size_t i = 0; i < str.size(); i++)
+				ret.push_back(ToUpperASCII(str[i]));
+			return ret;
+		}
+
+	}  // namespace
+	
 	std::string ToLowerASCII(std::string_view str) {
-		std::string ret;
-		ret.reserve(str.size());
-		for (auto i : str)
-			ret.push_back(ToLowerASCII(i));
-		return ret;
+		return ToLowerASCIIImpl<char>(str);
 	}
 
 	std::wstring ToLowerASCII(std::wstring_view str) {
-		std::wstring ret;
-		ret.reserve(str.size());
-		for (auto i : str)
-			ret.push_back(ToLowerASCII(i));
-		return ret;
+		return ToLowerASCIIImpl<wchar_t>(str);
 	}
 
 	std::string ToUpperASCII(std::string_view str) {
-		std::string ret;
-		ret.reserve(str.size());
-		for (auto i : str)
-			ret.push_back(ToUpperASCII(i));
-		return ret;
+		return ToUpperASCIIImpl<char>(str);
 	}
 
 	std::wstring ToUpperASCII(std::wstring_view str) {
-		std::wstring ret;
-		ret.reserve(str.size());
-		for (auto i : str)
-			ret.push_back(ToUpperASCII(i));
-		return ret;
+		return ToUpperASCIIImpl<wchar_t>(str);
 	}
 
-	template<class StringType>
-	int CompareCaseInsensitiveASCIIT(StringType a, StringType b) {
+	template<typename Ch>
+	int CompareCaseInsensitiveASCIIT(std::basic_string_view<Ch> a,
+									 std::basic_string_view<Ch> b) {
 		// Find the first characters that aren't equal and compare them.  If the end
 		// of one of the strings is found before a nonequal character, the lengths
 		// of the strings are compared.
 		size_t i = 0;
 		while (i < a.length() && i < b.length()) {
-			typename StringType::value_type lower_a = ToLowerASCII(a[i]);
-			typename StringType::value_type lower_b = ToLowerASCII(b[i]);
+			Ch lower_a = ToLowerASCII(a[i]);
+			Ch lower_b = ToLowerASCII(b[i]);
 			if (lower_a < lower_b)
 				return -1;
 			if (lower_a > lower_b)
@@ -176,32 +191,32 @@ namespace base {
 	}
 
 	int CompareCaseInsensitiveASCII(std::string_view a, std::string_view b) {
-		return CompareCaseInsensitiveASCIIT<std::string_view>(a, b);
+		return CompareCaseInsensitiveASCIIT<char>(a, b);
 	}
 
 	int CompareCaseInsensitiveASCII(std::wstring_view a, std::wstring_view b) {
-		return CompareCaseInsensitiveASCIIT<std::wstring_view>(a, b);
+		return CompareCaseInsensitiveASCIIT<wchar_t>(a, b);
 	}
 
 	bool EqualsCaseInsensitiveASCII(std::string_view a, std::string_view b) {
 		if (a.length() != b.length())
 			return false;
-		return CompareCaseInsensitiveASCIIT<std::string_view>(a, b) == 0;
+		return CompareCaseInsensitiveASCIIT<char>(a, b) == 0;
 	}
 
 	bool EqualsCaseInsensitiveASCII(std::wstring_view a, std::wstring_view b) {
 		if (a.length() != b.length())
 			return false;
-		return CompareCaseInsensitiveASCIIT<std::wstring_view>(a, b) == 0;
+		return CompareCaseInsensitiveASCIIT<wchar_t>(a, b) == 0;
 	}
 
 	const std::string& EmptyString() {
-		static const base::NoDestructor<std::string> s;
+		static const NoDestructor<std::string> s;
 		return *s;
 	}
 
-	const std::wstring& EmptyWstring() {
-		static const base::NoDestructor<std::wstring> s16;
+	const std::wstring& EmptyWString() {
+		static const NoDestructor<std::wstring> s16;
 		return *s16;
 	}
 
@@ -212,37 +227,37 @@ namespace base {
 		std::basic_string<Ch>* output);
 
 	bool ReplaceChars(const std::wstring& input,
-		std::wstring_view replace_chars,
-		const std::wstring& replace_with,
-		std::wstring* output) {
+					  std::wstring_view replace_chars,
+					  const std::wstring& replace_with,
+					  std::wstring* output) {
 		return ReplaceCharsT(input, replace_chars, std::wstring_view(replace_with),
 			output);
 	}
 
 	bool ReplaceChars(const std::string& input,
-		std::string_view replace_chars,
-		const std::string& replace_with,
-		std::string* output) {
+					  std::string_view replace_chars,
+					  const std::string& replace_with,
+					  std::string* output) {
 		return ReplaceCharsT(input, replace_chars, std::string_view(replace_with), output);
 	}
 
 	bool RemoveChars(const std::wstring& input,
-		std::wstring_view remove_chars,
-		std::wstring* output) {
+					 std::wstring_view remove_chars,
+					 std::wstring* output) {
 		return ReplaceCharsT(input, remove_chars, std::wstring_view(), output);
 	}
 
 	bool RemoveChars(const std::string& input,
-		std::string_view remove_chars,
-		std::string* output) {
+					 std::string_view remove_chars,
+					 std::string* output) {
 		return ReplaceCharsT(input, remove_chars, std::string_view(), output);
 	}
 
 	template<typename Ch>
 	TrimPositions TrimStringT(const std::basic_string<Ch>& input,
-		std::basic_string_view<Ch> trim_chars,
-		TrimPositions positions,
-		std::basic_string<Ch>* output) {
+							  std::basic_string_view<Ch> trim_chars,
+							  TrimPositions positions,
+							  std::basic_string<Ch>* output) {
 		// Find the edges of leading/trailing whitespace as desired. Need to use
 		// a std::string_view version of input to be able to call find* on it with the
 		// std::string_view version of trim_chars (normally the trim_chars will be a
@@ -265,7 +280,8 @@ namespace base {
 		}
 
 		// Trim.
-		*output = input.substr(first_good_char, last_good_char - first_good_char + 1);
+		*output = 
+			input.substr(first_good_char, last_good_char - first_good_char + 1);
 
 		// Return where we trimmed from.
 		return static_cast<TrimPositions>(
@@ -273,30 +289,44 @@ namespace base {
 			((last_good_char == last_char) ? TRIM_NONE : TRIM_TRAILING));
 	}
 
-	bool TrimString(const std::wstring& input, std::wstring_view trim_chars, std::wstring* output) {
+	bool TrimString(const std::wstring& input, 
+					std::wstring_view trim_chars, 
+					std::wstring* output) {
 		return TrimStringT(input, trim_chars, TRIM_ALL, output) != TRIM_NONE;
 	}
 
-	bool TrimString(const std::string& input, std::string_view trim_chars, std::string* output) {
+	bool TrimString(const std::string& input, 
+					std::string_view trim_chars, 
+					std::string* output) {
 		return TrimStringT(input, trim_chars, TRIM_ALL, output) != TRIM_NONE;
 	}
 
-	template<typename Str>
-	std::basic_string_view<Str> TrimStringPieceT(std::basic_string_view<Str> input, std::basic_string_view<Str> trim_chars, TrimPositions positions) {
-		size_t begin = (positions & TRIM_LEADING) ? input.find_first_not_of(trim_chars) : 0;
-		const size_t end = (positions & TRIM_TRAILING) ? input.find_last_not_of(trim_chars) + 1 : input.size();
+	template<typename Ch>
+	std::basic_string_view<Ch> TrimStringPieceT(std::basic_string_view<Ch> input,
+												 std::basic_string_view<Ch> trim_chars,
+												 TrimPositions positions) {
+		size_t begin = (positions & TRIM_LEADING) ? 
+			input.find_first_not_of(trim_chars) : 0;
+		const size_t end = (positions & TRIM_TRAILING) ? 
+			input.find_last_not_of(trim_chars) + 1 : input.size();
 		return input.substr(begin, end - begin);
 	}
 
-	std::wstring_view TrimString(std::wstring_view input, std::wstring_view trim_chars, TrimPositions positions) {
+	std::wstring_view TrimString(std::wstring_view input, 
+								 std::wstring_view trim_chars, 
+								 TrimPositions positions) {
 		return TrimStringPieceT(input, trim_chars, positions);
 	}
 
-	std::string_view TrimString(std::string_view input, std::string_view trim_chars, TrimPositions positions) {
+	std::string_view TrimString(std::string_view input, 
+								std::string_view trim_chars, 
+								TrimPositions positions) {
 		return TrimStringPieceT(input, trim_chars, positions);
 	}
 
-	void TruncateUTF8ToByteSize(const std::string& input, size_t byte_size, std::string* output) {
+	void TruncateUTF8ToByteSize(const std::string& input, 
+								size_t byte_size, 
+								std::string* output) {
 		DCHECK(output);
 		if (byte_size > input.length()) {
 			*output = input;
@@ -320,8 +350,7 @@ namespace base {
 			if (!IsValidCharacter(code_point) ||
 				!IsValidCodepoint(code_point)) {
 				char_index = prev - 1;
-			}
-			else {
+    		} else {
 				break;
 			}
 		}
@@ -332,15 +361,20 @@ namespace base {
 			output->clear();
 	}
 
-	TrimPositions TrimWhitespace(const std::wstring& input, TrimPositions positions, std::wstring* output) {
+	TrimPositions TrimWhitespace(const std::wstring& input, 
+								 TrimPositions positions, 
+								 std::wstring* output) {
 		return TrimStringT(input, std::wstring_view(kWhitespaceUTF16), positions, output);
 	}
 
-	std::wstring_view TrimWhitespace(std::wstring_view input, TrimPositions positions) {
+	std::wstring_view TrimWhitespace(std::wstring_view input, 
+									 TrimPositions positions) {
 		return TrimStringPieceT(input, std::wstring_view(kWhitespaceUTF16), positions);
 	}
 
-	TrimPositions TrimWhitespaceASCII(const std::string& input, TrimPositions positions, std::string* output) {
+	TrimPositions TrimWhitespaceASCII(const std::string& input, 
+									  TrimPositions positions, 
+									  std::string* output) {
 		return TrimStringT(input, std::string_view(kWhitespaceASCII), positions, output);
 	}
 
@@ -349,7 +383,8 @@ namespace base {
 	}
 
 	template<typename STR>
-	STR CollapseWhitespaceT(const STR& text, bool trim_sequences_with_line_breaks) {
+	STR CollapseWhitespaceT(const STR& text, 
+							bool trim_sequences_with_line_breaks) {
 		STR result;
 		result.resize(text.size());
 
@@ -372,8 +407,7 @@ namespace base {
 					already_trimmed = true;
 					--chars_written;
 				}
-			}
-			else {
+			} else {
 				// Non-whitespace chracters are copied straight across.
 				in_whitespace = false;
 				already_trimmed = false;
@@ -390,11 +424,13 @@ namespace base {
 		return result;
 	}
 
-	std::wstring CollapseWhitespace(const std::wstring& text, bool trim_sequences_with_line_breaks) {
+	std::wstring CollapseWhitespace(const std::wstring& text, 
+									bool trim_sequences_with_line_breaks) {
 		return CollapseWhitespaceT(text, trim_sequences_with_line_breaks);
 	}
 
-	std::string CollapseWhitespaceASCII(const std::string& text, bool trim_sequences_with_line_breaks) {
+	std::string CollapseWhitespaceASCII(const std::string& text, 
+										bool trim_sequences_with_line_breaks) {
 		return CollapseWhitespaceT(text, trim_sequences_with_line_breaks);
 	}
 
@@ -491,7 +527,8 @@ namespace base {
 	// string piece gives additional flexibility for the caller (doesn't have to be
 	// null terminated) so we choose the std::string_view route.
 	template<typename Ch>
-	static inline bool DoLowerCaseEqualsASCII(std::basic_string_view<Ch> str, std::string_view lowercase_ascii) {
+	static inline bool DoLowerCaseEqualsASCII(std::basic_string_view<Ch> str, 
+											  std::string_view lowercase_ascii) {
 		if (str.size() != lowercase_ascii.size())
 			return false;
 		for (size_t i = 0; i < str.size(); i++) {
@@ -515,12 +552,14 @@ namespace base {
 		return std::equal(ascii.begin(), ascii.end(), str.begin());
 	}
 
-	template<typename Str>
-	bool StartsWithT(std::basic_string_view<Str> str, std::basic_string_view<Str> search_for, CompareCase case_sensitivity) {
+	template<typename Ch>
+	bool StartsWithT(std::basic_string_view<Ch> str,
+					 std::basic_string_view<Ch> search_for,
+					 CompareCase case_sensitivity) {
 		if (search_for.size() > str.size())
 			return false;
 
-		std::basic_string_view<Str> source = str.substr(0, search_for.size());
+		std::basic_string_view<Ch> source = str.substr(0, search_for.size());
 
 		switch (case_sensitivity) {
 		case CompareCase::SENSITIVE:
@@ -530,7 +569,7 @@ namespace base {
 			return std::equal(
 				search_for.begin(), search_for.end(),
 				source.begin(),
-				CaseInsensitiveCompareASCII<Str>());
+				CaseInsensitiveCompareASCII<Ch>());
 
 		default:
 			NOTREACHED();
@@ -538,16 +577,22 @@ namespace base {
 		}
 	}
 
-	bool StartsWith(std::string_view str, std::string_view search_for, CompareCase case_sensitivity) {
+	bool StartsWith(std::string_view str, 
+					std::string_view search_for, 
+					CompareCase case_sensitivity) {
 		return StartsWithT<char>(str, search_for, case_sensitivity);
 	}
 
-	bool StartsWith(std::wstring_view str, std::wstring_view search_for, CompareCase case_sensitivity) {
+	bool StartsWith(std::wstring_view str, 
+					std::wstring_view search_for, 
+					CompareCase case_sensitivity) {
 		return StartsWithT<wchar_t>(str, search_for, case_sensitivity);
 	}
 
 	template <typename Str>
-	bool EndsWithT(std::basic_string_view<Str> str, std::basic_string_view<Str> search_for, CompareCase case_sensitivity) {
+	bool EndsWithT(std::basic_string_view<Str> str, 
+				   std::basic_string_view<Str> search_for, 
+				   CompareCase case_sensitivity) {
 		if (search_for.size() > str.size())
 			return false;
 
@@ -570,11 +615,15 @@ namespace base {
 		}
 	}
 
-	bool EndsWith(std::string_view str, std::string_view search_for, CompareCase case_sensitivity) {
+	bool EndsWith(std::string_view str, 
+				  std::string_view search_for, 
+				  CompareCase case_sensitivity) {
 		return EndsWithT<char>(str, search_for, case_sensitivity);
 	}
 
-	bool EndsWith(std::wstring_view str, std::wstring_view search_for, CompareCase case_sensitivity) {
+	bool EndsWith(std::wstring_view str, 
+				  std::wstring_view search_for, 
+				  CompareCase case_sensitivity) {
 		return EndsWithT<wchar_t>(str, search_for, case_sensitivity);
 	}
 
@@ -621,8 +670,7 @@ namespace base {
 		if (bytes != 0 && dimension > 0 && unit_amount < 100) {
 			base::snprintf(buf, base::size(buf), "%.1lf%s", unit_amount,
 				kByteStringsUnlocalized[dimension]);
-		}
-		else {
+		} else {
 			base::snprintf(buf, base::size(buf), "%.0lf%s", unit_amount,
 				kByteStringsUnlocalized[dimension]);
 		}
@@ -660,8 +708,11 @@ namespace base {
 	// This is parameterized on a |Matcher| traits type, so that it can be the
 	// implementation for both ReplaceChars() and ReplaceSubstringsAfterOffset().
 	template <class Ch, class Matcher>
-	bool DoReplaceMatchesAfterOffset(std::basic_string<Ch>* str, size_t initial_offset, Matcher matcher, std::basic_string_view<Ch> replace_with,
-		ReplaceType replace_type) {
+	bool DoReplaceMatchesAfterOffset(std::basic_string<Ch>* str, 
+									 size_t initial_offset, 
+									 Matcher matcher, 
+									 std::basic_string_view<Ch> replace_with,
+									 ReplaceType replace_type) {
 		using CharTraits = typename std::basic_string<Ch>::traits_type;
 
 		const size_t find_length = matcher.MatchSize();
@@ -757,7 +808,8 @@ namespace base {
 			if (shift_dst > str_length)
 				str->resize(shift_dst);
 
-			str->replace(shift_dst, str_length - shift_src, *str, shift_src, str_length - shift_src);
+			str->replace(shift_dst, str_length - shift_src, *str, shift_src, 
+						 str_length - shift_src);
 			str_length = final_length;
 		}
 
@@ -776,7 +828,8 @@ namespace base {
 		size_t read_offset = first_match + expansion;
 		do {
 			if (replace_length) {
-				CharTraits::copy(buffer + write_offset, replace_with.data(), replace_length);
+				CharTraits::copy(buffer + write_offset, replace_with.data(), 
+								 replace_length);
 				write_offset += replace_length;
 			}
 			read_offset += find_length;
@@ -799,34 +852,57 @@ namespace base {
 
 	template <class Ch>
 	bool ReplaceCharsT(const std::basic_string<Ch>& input,
-		std::basic_string_view<Ch> find_any_of_these,
-		std::basic_string_view<Ch> replace_with,
-		std::basic_string<Ch>* output) {
+					   std::basic_string_view<Ch> find_any_of_these,
+					   std::basic_string_view<Ch> replace_with,
+					   std::basic_string<Ch>* output) {
 		// Commonly, this is called with output and input being the same string; in
 		// that case, this assignment is inexpensive.
 		*output = input;
 
-		return DoReplaceMatchesAfterOffset(output, 0, CharacterMatcher<Ch>{find_any_of_these}, replace_with, ReplaceType::REPLACE_ALL);
+		return DoReplaceMatchesAfterOffset(
+			output, 0, CharacterMatcher<Ch>{find_any_of_these}, replace_with, 
+			ReplaceType::REPLACE_ALL);
 	}
 
-	void ReplaceFirstSubstringAfterOffset(std::wstring* str, size_t start_offset, std::wstring_view find_this, std::wstring_view replace_with) {
-		DoReplaceMatchesAfterOffset(str, start_offset, SubstringMatcher<wchar_t>{find_this}, replace_with, ReplaceType::REPLACE_FIRST);
+	void ReplaceFirstSubstringAfterOffset(std::wstring* str, 
+										  size_t start_offset, 
+										  std::wstring_view find_this, 
+										  std::wstring_view replace_with) {
+		DoReplaceMatchesAfterOffset(str, start_offset, 
+									SubstringMatcher<wchar_t>{find_this}, 
+									replace_with, ReplaceType::REPLACE_FIRST);
 	}
 
-	void ReplaceFirstSubstringAfterOffset(std::string* str, size_t start_offset, std::string_view find_this, std::string_view replace_with) {
-		DoReplaceMatchesAfterOffset(str, start_offset, SubstringMatcher<char>{find_this}, replace_with, ReplaceType::REPLACE_FIRST);
+	void ReplaceFirstSubstringAfterOffset(std::string* str, 
+										  size_t start_offset, 
+										  std::string_view find_this, 
+										  std::string_view replace_with) {
+		DoReplaceMatchesAfterOffset(str, start_offset, 
+									SubstringMatcher<char>{find_this}, 
+									replace_with, ReplaceType::REPLACE_FIRST);
 	}
 
-	void ReplaceSubstringsAfterOffset(std::wstring* str, size_t start_offset, std::wstring_view find_this, std::wstring_view replace_with) {
-		DoReplaceMatchesAfterOffset(str, start_offset, SubstringMatcher<wchar_t>{find_this}, replace_with, ReplaceType::REPLACE_ALL);
+	void ReplaceSubstringsAfterOffset(std::wstring* str, 
+									  size_t start_offset, 
+									  std::wstring_view find_this, 
+									  std::wstring_view replace_with) {
+		DoReplaceMatchesAfterOffset(str, start_offset, 
+									SubstringMatcher<wchar_t>{find_this}, 
+									replace_with, ReplaceType::REPLACE_ALL);
 	}
 
-	void ReplaceSubstringsAfterOffset(std::string* str, size_t start_offset, std::string_view find_this, std::string_view replace_with) {
-		DoReplaceMatchesAfterOffset(str, start_offset, SubstringMatcher<char>{find_this}, replace_with, ReplaceType::REPLACE_ALL);
+	void ReplaceSubstringsAfterOffset(std::string* str, 
+									  size_t start_offset, 
+									  std::string_view find_this, 
+									  std::string_view replace_with) {
+		DoReplaceMatchesAfterOffset(str, start_offset, 
+									SubstringMatcher<char>{find_this}, 
+									replace_with, ReplaceType::REPLACE_ALL);
 	}
 
 	template <class string_type>
-	inline typename string_type::value_type* WriteIntoT(string_type* str, size_t length_with_null) {
+	inline typename string_type::value_type* WriteIntoT(string_type* str, 
+														size_t length_with_null) {
 		DCHECK_GT(length_with_null, 1u);
 		str->reserve(length_with_null);
 		str->resize(length_with_null - 1);
@@ -851,7 +927,8 @@ namespace base {
 	// std::wstring, std::string_view or std::wstring_view). |string_type| is either std::string
 	// or std::wstring.
 	template <typename list_type, typename string_type>
-	static std::basic_string<string_type> JoinStringT(const list_type& parts, std::basic_string_view<string_type> sep) {
+	static std::basic_string<string_type> JoinStringT(const list_type& parts, 
+													  std::basic_string_view<string_type> sep) {
 		if (0 == parts.size())
 			return std::basic_string<string_type>();
 
@@ -885,11 +962,13 @@ namespace base {
 		return result;
 	}
 
-	std::string JoinString(const std::vector<std::string>& parts, std::string_view separator) {
+	std::string JoinString(const std::vector<std::string>& parts, 
+						   std::string_view separator) {
 		return JoinStringT(parts, separator);
 	}
 
-	std::wstring JoinString(const std::vector<std::wstring>& parts, std::wstring_view separator) {
+	std::wstring JoinString(const std::vector<std::wstring>& parts, 
+							std::wstring_view separator) {
 		return JoinStringT(parts, separator);
 	}
 
@@ -898,19 +977,23 @@ namespace base {
 #pragma optimize("", on)
 #endif
 
-	std::string JoinString(const std::vector<std::string_view>& parts, std::string_view separator) {
+	std::string JoinString(const std::vector<std::string_view>& parts, 
+						   std::string_view separator) {
 		return JoinStringT(parts, separator);
 	}
 
-	std::wstring JoinString(const std::vector<std::wstring_view>& parts, std::wstring_view separator) {
+	std::wstring JoinString(const std::vector<std::wstring_view>& parts, 
+							std::wstring_view separator) {
 		return JoinStringT(parts, separator);
 	}
 
-	std::string JoinString(std::initializer_list<std::string_view> parts, std::string_view separator) {
+	std::string JoinString(std::initializer_list<std::string_view> parts, 
+						   std::string_view separator) {
 		return JoinStringT(parts, separator);
 	}
 
-	std::wstring JoinString(std::initializer_list<std::wstring_view> parts, std::wstring_view separator) {
+	std::wstring JoinString(std::initializer_list<std::wstring_view> parts, 
+							std::wstring_view separator) {
 		return JoinStringT(parts, separator);
 	}
 
@@ -948,17 +1031,18 @@ namespace base {
 						}
 						uintptr_t index = *i - '1';
 						if (offsets) {
-							ReplacementOffset r_offset(index, static_cast<int>(formatted.size()));
+							ReplacementOffset r_offset(index, 
+													   static_cast<int>(formatted.size()));
 							r_offsets.insert(
-								std::upper_bound(r_offsets.begin(), r_offsets.end(), r_offset, &CompareParameter),
+								std::upper_bound(r_offsets.begin(), r_offsets.end(), r_offset, 
+												 &CompareParameter),
 								r_offset);
 						}
 						if (index < substitutions)
 							formatted.append(subst.at(index));
 					}
 				}
-			}
-			else {
+			} else {
 				formatted.push_back(*i);
 			}
 		}
@@ -969,19 +1053,25 @@ namespace base {
 		return formatted;
 	}
 
-	std::wstring ReplaceStringPlaceholders(const std::wstring& format_string, const std::vector<std::wstring>& subst, std::vector<size_t>* offsets) {
+	std::wstring ReplaceStringPlaceholders(const std::wstring& format_string, 
+										   const std::vector<std::wstring>& subst, 
+										   std::vector<size_t>* offsets) {
 		return DoReplaceStringPlaceholders(format_string, subst, offsets);
 	}
 
-	std::string ReplaceStringPlaceholders(std::string_view format_string, const std::vector<std::string>& subst, std::vector<size_t>* offsets) {
+	std::string ReplaceStringPlaceholders(std::string_view format_string, 
+										  const std::vector<std::string>& subst, 
+										  std::vector<size_t>* offsets) {
 		return DoReplaceStringPlaceholders(format_string, subst, offsets);
 	}
 
-	std::wstring ReplaceStringPlaceholders(const std::wstring& format_string, const std::wstring& a, size_t* offset) {
+	std::wstring ReplaceStringPlaceholders(const std::wstring& format_string, 
+										   const std::wstring& a, 
+										   size_t* offset) {
 		std::vector<size_t> offsets;
 		std::vector<std::wstring> subst;
 		subst.push_back(a);
-		std::wstring result = ReplaceStringPlaceholders(format_string, subst, &offsets);
+		auto result = ReplaceStringPlaceholders(format_string, subst, &offsets);
 
 		DCHECK_EQ(1U, offsets.size());
 		if (offset)

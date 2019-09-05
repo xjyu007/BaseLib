@@ -9,8 +9,8 @@
 #include "logging.h"
 #include "task/scoped_set_task_priority_for_current_thread.h"
 #include "task/task_executor.h"
-#include "task/thread_pool/thread_pool.h"
 #include "task/thread_pool/thread_pool_impl.h"
+#include "task/thread_pool/thread_pool_instance.h"
 #include "threading/post_task_and_reply_impl.h"
 
 namespace base {
@@ -130,14 +130,12 @@ namespace base {
 			traits, thread_mode);
 	}
 
-#if defined(OS_WIN)
 	scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunner(
 			const TaskTraits& traits, 
 			SingleThreadTaskRunnerThreadMode thread_mode) {
 		return GetTaskExecutorForTraits(traits)->CreateCOMSTATaskRunner(traits, 
 																		thread_mode);
 	}
-#endif  // defined(OS_WIN)
 
 	// TODO(crbug.com/968047): Update all call sites and remove these forwarding
 	// wrappers.
@@ -181,12 +179,10 @@ namespace base {
 		return CreateSingleThreadTaskRunner(traits, thread_mode);
 	}
 
-#if defined(OS_WIN)
 	scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunnerWithTraits(
 			const TaskTraits& traits, 
 			SingleThreadTaskRunnerThreadMode thread_mode) {
 		return CreateCOMSTATaskRunner(traits, thread_mode);
 	}
-#endif  // defined(OS_WIN)
 
 }  // namespace base

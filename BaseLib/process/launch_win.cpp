@@ -5,9 +5,9 @@
 #include "process/launch.h"
 
 #include <io.h>
+#include <Windows.h>
 #include <shellapi.h>
-#include <windows.h>
-#include <userenv.h>
+#include <UserEnv.h>
 
 #include <ios>
 #include <limits>
@@ -90,7 +90,7 @@ namespace base {
 			}
 
 			win::ScopedProcessInformation proc_info(temp_process_info);
-			debug::GlobalActivityTracker* tracker = debug::GlobalActivityTracker::Get();
+			auto tracker = debug::GlobalActivityTracker::Get();
 			if (tracker)
 				tracker->RecordProcessLaunch(proc_info.process_id(), cl.data());
 
@@ -104,7 +104,7 @@ namespace base {
 
 			for (;;) {
 				DWORD bytes_read = 0;
-				BOOL success = ::ReadFile(out_read, buffer, kBufferSize, &bytes_read, nullptr);
+				BOOL success = ReadFile(out_read, buffer, kBufferSize, &bytes_read, NULL);
 				if (!success || bytes_read == 0)
 					break;
 				output->append(buffer, bytes_read);
@@ -371,7 +371,7 @@ namespace base {
 	}
 
 	Process LaunchElevatedProcess(const CommandLine& cmdline,
-		const LaunchOptions& options) {
+								  const LaunchOptions& options) {
 		const std::wstring file = cmdline.GetProgram().value();
 		const std::wstring arguments = cmdline.GetArgumentsString();
 

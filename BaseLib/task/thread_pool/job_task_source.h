@@ -5,11 +5,14 @@
 #pragma once
 
 #include <atomic>
+#include <limits>
 
 #include "base_export.h"
 #include "callback.h"
 #include "macros.h"
 #include <optional>
+#include "synchronization/condition_variable.h"
+#include "synchronization/lock.h"
 #include "task/post_job.h"
 #include "task/task_traits.h"
 #include "task/thread_pool/sequence_sort_key.h"
@@ -19,6 +22,8 @@
 namespace base {
 	namespace internal {
 
+		class PooledTaskRunnerDelegate;
+
 		// A JobTaskSource generates many Tasks from a single RepeatingClosure.
 		//
 		// Derived classes control the intended concurrency with GetMaxConcurrency().
@@ -27,16 +32,27 @@ namespace base {
 			JobTaskSource(const Location& from_here,
 						  const TaskTraits& traits,
 						  RepeatingCallback<void(experimental::JobDelegate*)> worker_task,
-						  RepeatingCallback<size_t()> max_concurrency_callback);
+						  RepeatingCallback<size_t()> max_concurrency_callback,
+						  PooledTaskRunnerDelegate* delegate);
 
 			// Notifies this task source that max concurrency was increased, and the
 			// number of worker should be adjusted.
 			void NotifyConcurrencyIncrease();
 
 			// TaskSource:
-			RunIntent WillRunTask() override;
 			ExecutionEnvironment GetExecutionEnvironment() override;
 			size_t GetRemainingConcurrency() const override;
+
+			// Returns the maximum number of tasks from this TaskSource that can run
+			// concurrently.
+			size_t GetMaxConcurrency() const;
+
+#if DCHECK_IS_ON()
+			size_t GetConcurrencyIncreaseVersion() const;
+			// Returns true if the concurrency version was updated above
+			// |recorded_version|, or false on timeout.
+			bool WaitForConcurrencyIncreaseUpdate(size_t recorded_version);
+#endif  // DCHECK_IS_ON()
 
 		private:
 #undef max
@@ -45,15 +61,11 @@ namespace base {
 
 			~JobTaskSource() override;
 
-			// Returns the maximum number of tasks from this TaskSource that can run
-			// concurrently. The implementation can only return values lower than or equal
-			// to previously returned values.
-			size_t GetMaxConcurrency() const;
-
 			// TaskSource:
-			std::optional<Task> TakeTask() override;
-			std::optional<Task> Clear() override;
-			bool DidProcessTask() override;
+			RunStatus WillRunTask() override;
+			std::optional<Task> TakeTask(TaskSource::Transaction* transaction) override;
+			std::optional<Task> Clear(TaskSource::Transaction* transaction) override;
+			bool DidProcessTask(TaskSource::Transaction* transaction) override;
 			SequenceSortKey GetSortKey() const override;
 
 			// The current number of workers concurrently running tasks from this
@@ -61,9 +73,19 @@ namespace base {
 			std::atomic_size_t worker_count_{ 0U };
 
 			const Location from_here_;
-			base::RepeatingCallback<size_t()> max_concurrency_callback_;
-			base::RepeatingClosure worker_task_;
+			RepeatingCallback<size_t()> max_concurrency_callback_;
+			RepeatingClosure worker_task_;
 			const TimeTicks queue_time_;
+			PooledTaskRunnerDelegate* delegate_;
+
+#if DCHECK_IS_ON()
+			// Synchronizes accesses to |increase_version_|.
+			mutable Lock version_lock_;
+			// Signaled whenever increase_version_ is updated.
+			ConditionVariable version_condition_{&version_lock_};
+			// Incremented every time max concurrency is increased.
+			size_t increase_version_ GUARDED_BY(version_lock_) = 0;
+#endif  // DCHECK_IS_ON()
 
 			DISALLOW_COPY_AND_ASSIGN(JobTaskSource);
 		};

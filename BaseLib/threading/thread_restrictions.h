@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include "base_export.h"
 //#include "gtest_prod_util.h"
@@ -109,8 +109,14 @@ namespace audio {
 	class OutputDevice;
 }
 namespace blink {
+class RTCVideoDecoderAdapter;
+	class RTCVideoEncoder;
 	class SourceStream;
 	class VideoFrameResourceProvider;
+	class WorkerThread;
+	namespace scheduler {
+		class WorkerThread;
+	}
 }
 namespace cc {
 	class CompletionEvent;
@@ -141,8 +147,6 @@ namespace content {
 	class NestedMessagePumpAndroid;
 	class RenderWidgetHostViewMac;
 	class RTCVideoDecoder;
-	class RTCVideoDecoderAdapter;
-	class RTCVideoEncoder;
 	class SandboxHostLinux;
 	class ScopedAllowWaitForDebugURL;
 	class ServiceWorkerContextClient;
@@ -274,6 +278,7 @@ namespace base {
 	}
 
 	namespace internal {
+		class JobTaskSource;
 		class TaskTracker;
 	}
 
@@ -380,14 +385,19 @@ namespace base {
 		// This can only be instantiated by friends. Use
 		// ScopedAllowBaseSyncPrimitivesForTesting in unit tests to avoid the friend
 		// requirement.
-		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, ScopedAllowBaseSyncPrimitives);
-		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, ScopedAllowBaseSyncPrimitivesResetsState);
-		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, ScopedAllowBaseSyncPrimitivesWithBlockingDisallowed);
+		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, 
+		//						   ScopedAllowBaseSyncPrimitives);
+		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, 
+		//						   ScopedAllowBaseSyncPrimitivesResetsState);
+		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, 
+		//						   ScopedAllowBaseSyncPrimitivesWithBlockingDisallowed);
 
 		// Allowed usage:
 		friend class SimpleThread;
 		friend class base::GetAppOutputScopedAllowBaseSyncPrimitives;
 		friend class blink::SourceStream;
+		friend class blink::WorkerThread;
+		friend class blink::scheduler::WorkerThread;
 		friend class chrome_cleaner::SystemReportComponent;
 		friend class content::BrowserMainLoop;
 		friend class content::BrowserProcessSubThread;
@@ -428,8 +438,11 @@ namespace base {
 		// This can only be instantiated by friends. Use
 		// ScopedAllowBaseSyncPrimitivesForTesting in unit tests to avoid the friend
 		// requirement.
-		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, ScopedAllowBaseSyncPrimitivesOutsideBlockingScope);
-		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, ScopedAllowBaseSyncPrimitivesOutsideBlockingScopeResetsState);
+		//FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest, 
+		//						   ScopedAllowBaseSyncPrimitivesOutsideBlockingScope);
+		//FRIEND_TEST_ALL_PREFIXES(
+		//	ThreadRestrictionsTest, 
+		//	ScopedAllowBaseSyncPrimitivesOutsideBlockingScopeResetsState);
 
 		// Allowed usage:
 		friend class ::BrowserProcessImpl;  // http://crbug.com/125207
@@ -443,16 +456,17 @@ namespace base {
 		friend class audio::OutputDevice;
 		friend class base::sequence_manager::internal::TaskQueueImpl;
 		friend class base::FileDescriptorWatcher;
+		friend class base::internal::JobTaskSource;
 		friend class base::MessageLoopImpl;
 		friend class base::ScopedAllowThreadRecallForStackSamplingProfiler;
 		friend class base::StackSamplingProfiler;
+		friend class blink::RTCVideoDecoderAdapter;
+		friend class blink::RTCVideoEncoder;
 		friend class cc::TileTaskManagerImpl;
 		friend class content::CategorizedWorkerPool;
 		friend class content::DesktopCaptureDevice;
 		friend class content::InProcessUtilityThread;
 		friend class content::RTCVideoDecoder;
-		friend class content::RTCVideoDecoderAdapter;
-		friend class content::RTCVideoEncoder;
 		friend class content::SandboxHostLinux;
 		friend class content::ScopedAllowWaitForDebugURL;
 		friend class content::SynchronousCompositor;

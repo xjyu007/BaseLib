@@ -399,8 +399,10 @@ namespace base {
 		} else {
 			// TODO(gab): ::SetTimer()'s documentation claims it does this for us.
 			// Consider removing this safety net.
-			delay_msec = ClampToRange(delay_msec, UINT(USER_TIMER_MINIMUM), 
-									  UINT(USER_TIMER_MAXIMUM));
+			delay_msec = std::clamp(delay_msec, UINT(USER_TIMER_MINIMUM),
+				UINT(USER_TIMER_MAXIMUM));
+			//delay_msec = ClampToRange(delay_msec, UINT(USER_TIMER_MINIMUM), 
+			//						  UINT(USER_TIMER_MAXIMUM));
 
 			// Tell the optimizer to retain the delay to simplify analyzing hangs.
 			base::debug::Alias(&delay_msec);

@@ -12,16 +12,20 @@
 namespace base {
 
 	namespace {
+
 		// Maps TaskTraits extension IDs to registered TaskExecutors. Index |n|
 		// corresponds to id |n - 1|.
-		using TaskExecutorMap = std::array<TaskExecutor*, TaskTraitsExtensionStorage::kMaxExtensionId>;
+		using TaskExecutorMap = 
+			std::array<TaskExecutor*, TaskTraitsExtensionStorage::kMaxExtensionId>;
 		TaskExecutorMap* GetTaskExecutorMap() {
-			static_assert(std::is_trivially_destructible<TaskExecutorMap>::value, "TaskExecutorMap not trivially destructible");
+			static_assert(std::is_trivially_destructible<TaskExecutorMap>::value, 
+						  "TaskExecutorMap not trivially destructible");
 			static TaskExecutorMap executors{};
 			return &executors;
 		}
 
-		static_assert(TaskTraitsExtensionStorage::kInvalidExtensionId == 0,
+		static_assert(
+			TaskTraitsExtensionStorage::kInvalidExtensionId == 0,
 			"TaskExecutorMap depends on 0 being an invalid TaskTraits extension ID");
 
 	}  // namespace
@@ -43,9 +47,9 @@ namespace base {
 	}
 
 	TaskExecutor* GetRegisteredTaskExecutorForTraits(const TaskTraits& traits) {
-		uint8_t extension_id = traits.extension_id();
+		const auto extension_id = traits.extension_id();
 		if (extension_id != TaskTraitsExtensionStorage::kInvalidExtensionId) {
-			TaskExecutor* executor = (*GetTaskExecutorMap())[extension_id - 1];
+			const auto executor = (*GetTaskExecutorMap())[extension_id - 1];
 			DCHECK(executor);
 			return executor;
 		}

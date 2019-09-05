@@ -30,6 +30,7 @@ namespace base::trace_event {
 			"DownloadService",
 			"gpu::BufferManager",
 			"gpu::RenderbufferManager",
+			"gpu::SharedImageStub",
 			"gpu::TextureManager",
 			"GrShaderCache",
 			"FontCaches",
@@ -48,6 +49,7 @@ namespace base::trace_event {
 			"MojoMessages",
 			"PartitionAlloc",
 			"ProcessMemoryMetrics",
+			"SharedContextState",
 			"SharedMemoryTracker",
 			"Skia",
 			"Sql",
@@ -55,6 +57,7 @@ namespace base::trace_event {
 			"V8Isolate",
 			"SyncDirectory",
 			"TabRestoreServiceHelper",
+			"VizProcessContextProvider",
 			nullptr  // End of list marker.
 		};
 
@@ -82,7 +85,7 @@ namespace base::trace_event {
 			"blink_objects/UACSSResource",
 			"blink_objects/ResourceFetcher",
 			"components/download/controller_0x?",
-			"devtools/file_watcher_path_count",
+			"devtools/file_watcher_0x?",
 			"discardable",
 			"discardable/child_0x?",
 			"extensions/value_store/Extensions.Database.Open.Settings/0x?",
@@ -97,6 +100,7 @@ namespace base::trace_event {
 			"gpu/gl/renderbuffers/context_group_0x?",
 			"gpu/gl/textures/context_group_0x?",
 			"gpu/gr_shader_cache/cache_0x?",
+			"gpu/shared_images/client_0x?",
 			"history/delta_file_service/leveldb_0x?",
 			"history/usage_reports_buffer/leveldb_0x?",
 			"java_heap",
@@ -134,8 +138,10 @@ namespace base::trace_event {
 			"net/url_request_context/app_request/0x?",
 			"net/url_request_context/app_request/0x?/cookie_monster",
 			"net/url_request_context/app_request/0x?/cookie_monster/cookies",
-			"net/url_request_context/app_request/0x?/cookie_monster/tasks_pending_global",
-			"net/url_request_context/app_request/0x?/cookie_monster/tasks_pending_for_key",
+		    "net/url_request_context/app_request/0x?/cookie_monster/"
+		    "tasks_pending_global",
+		    "net/url_request_context/app_request/0x?/cookie_monster/"
+		    "tasks_pending_for_key",
 			"net/url_request_context/app_request/0x?/http_cache",
 			"net/url_request_context/app_request/0x?/http_cache/memory_backend",
 			"net/url_request_context/app_request/0x?/http_cache/simple_backend",
@@ -144,8 +150,10 @@ namespace base::trace_event {
 			"net/url_request_context/extensions/0x?",
 			"net/url_request_context/extensions/0x?/cookie_monster",
 			"net/url_request_context/extensions/0x?/cookie_monster/cookies",
-			"net/url_request_context/extensions/0x?/cookie_monster/tasks_pending_global",
-			"net/url_request_context/extensions/0x?/cookie_monster/tasks_pending_for_key",
+		    "net/url_request_context/extensions/0x?/cookie_monster/"
+		    "tasks_pending_global",
+		    "net/url_request_context/extensions/0x?/cookie_monster/"
+		    "tasks_pending_for_key",
 			"net/url_request_context/extensions/0x?/http_cache",
 			"net/url_request_context/extensions/0x?/http_cache/memory_backend",
 			"net/url_request_context/extensions/0x?/http_cache/simple_backend",
@@ -154,8 +162,10 @@ namespace base::trace_event {
 			"net/url_request_context/isolated_media/0x?",
 			"net/url_request_context/isolated_media/0x?/cookie_monster",
 			"net/url_request_context/isolated_media/0x?/cookie_monster/cookies",
-			"net/url_request_context/isolated_media/0x?/cookie_monster/tasks_pending_global",
-			"net/url_request_context/isolated_media/0x?/cookie_monster/tasks_pending_for_key",
+		    "net/url_request_context/isolated_media/0x?/cookie_monster/"
+		    "tasks_pending_global",
+		    "net/url_request_context/isolated_media/0x?/cookie_monster/"
+		    "tasks_pending_for_key",
 			"net/url_request_context/isolated_media/0x?/http_cache",
 			"net/url_request_context/isolated_media/0x?/http_cache/memory_backend",
 			"net/url_request_context/isolated_media/0x?/http_cache/simple_backend",
@@ -174,8 +184,10 @@ namespace base::trace_event {
 			"net/url_request_context/main_media/0x?",
 			"net/url_request_context/main_media/0x?/cookie_monster",
 			"net/url_request_context/main_media/0x?/cookie_monster/cookies",
-			"net/url_request_context/main_media/0x?/cookie_monster/tasks_pending_global",
-			"net/url_request_context/main_media/0x?/cookie_monster/tasks_pending_for_key",
+		    "net/url_request_context/main_media/0x?/cookie_monster/"
+		    "tasks_pending_global",
+		    "net/url_request_context/main_media/0x?/cookie_monster/"
+		    "tasks_pending_for_key",
 			"net/url_request_context/main_media/0x?/http_cache",
 			"net/url_request_context/main_media/0x?/http_cache/memory_backend",
 			"net/url_request_context/main_media/0x?/http_cache/simple_backend",
@@ -185,7 +197,8 @@ namespace base::trace_event {
 			"net/url_request_context/mirroring/0x?/cookie_monster",
 			"net/url_request_context/mirroring/0x?/cookie_monster/cookies",
 			"net/url_request_context/mirroring/0x?/cookie_monster/tasks_pending_global",
-			"net/url_request_context/mirroring/0x?/cookie_monster/tasks_pending_for_key",
+		    "net/url_request_context/mirroring/0x?/cookie_monster/"
+		    "tasks_pending_for_key",
 			"net/url_request_context/mirroring/0x?/http_cache",
 			"net/url_request_context/mirroring/0x?/http_cache/memory_backend",
 			"net/url_request_context/mirroring/0x?/http_cache/simple_backend",
@@ -204,8 +217,10 @@ namespace base::trace_event {
 			"net/url_request_context/safe_browsing/0x?",
 			"net/url_request_context/safe_browsing/0x?/cookie_monster",
 			"net/url_request_context/safe_browsing/0x?/cookie_monster/cookies",
-			"net/url_request_context/safe_browsing/0x?/cookie_monster/tasks_pending_global",
-			"net/url_request_context/safe_browsing/0x?/cookie_monster/tasks_pending_for_key",
+		    "net/url_request_context/safe_browsing/0x?/cookie_monster/"
+		    "tasks_pending_global",
+		    "net/url_request_context/safe_browsing/0x?/cookie_monster/"
+		    "tasks_pending_for_key",
 			"net/url_request_context/safe_browsing/0x?/http_cache",
 			"net/url_request_context/safe_browsing/0x?/http_cache/memory_backend",
 			"net/url_request_context/safe_browsing/0x?/http_cache/simple_backend",
@@ -246,6 +261,7 @@ namespace base::trace_event {
 			"partition_alloc/partitions/buffer",
 			"partition_alloc/partitions/fast_malloc",
 			"partition_alloc/partitions/layout",
+			"skia/gpu_resources/context_0x?",
 			"skia/sk_glyph_cache",
 			"skia/sk_resource_cache",
 			"sqlite",
@@ -341,6 +357,8 @@ namespace base::trace_event {
 			"sync/0x?/model_type/USER_CONSENT",
 			"sync/0x?/model_type/USER_EVENT",
 			"sync/0x?/model_type/WALLET_METADATA",
+		    "sync/0x?/model_type/WEB_APP",
+		    "sync/0x?/model_type/WIFI_CONFIGURATION",
 			"sync/0x?/model_type/WIFI_CREDENTIAL",
 			"tab_restore/service_helper_0x?/entries",
 			"tab_restore/service_helper_0x?/entries/tab_0x?",
@@ -399,8 +417,7 @@ namespace base::trace_event {
 				parsing_hex = true;
 				stripped_str.append("0x?");
 				++i;
-			}
-			else {
+			} else {
 				stripped_str.push_back(name[i]);
 			}
 		}

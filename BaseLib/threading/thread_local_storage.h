@@ -4,18 +4,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "atomicops.h"
 #include "base_export.h"
 #include "macros.h"
-#include "build_config.h"
 
-#if defined(OS_WIN)
 #include "win/windows_types.h"
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <pthread.h>
-#endif
 
 namespace ui {
 	class TLSDestructionCheckerForX11;
@@ -46,17 +41,8 @@ namespace base {
 		class BASE_EXPORT PlatformThreadLocalStorage {
 		public:
 
-#if defined(OS_WIN)
 			typedef unsigned long TLSKey;
 			enum : unsigned { TLS_KEY_OUT_OF_INDEXES = TLS_OUT_OF_INDEXES };
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-			typedef pthread_key_t TLSKey;
-			// The following is a "reserved key" which is used in our generic Chromium
-			// ThreadLocalStorage implementation.  We expect that an OS will not return
-			// such a key, but if it is returned (i.e., the OS tries to allocate it) we
-			// will just request another key.
-			enum { TLS_KEY_OUT_OF_INDEXES = 0x7FFFFFFF };
-#endif
 
 			// The following methods need to be supported on each OS platform, so that
 			// the Chromium ThreadLocalStore functionality can be constructed.
@@ -72,11 +58,7 @@ namespace base {
 			static void FreeTLS(TLSKey key);
 			static void SetTLSValue(TLSKey key, void* value);
 			static void* GetTLSValue(TLSKey key) {
-#if defined(OS_WIN)
 				return TlsGetValue(key);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-				return pthread_getspecific(key);
-#endif
 			}
 
 			// Each platform (OS implementation) is required to call this method on each
@@ -87,16 +69,9 @@ namespace base {
 			// Destructors may end up being called multiple times on a terminating
 			// thread, as other destructors may re-set slots that were previously
 			// destroyed.
-#if defined(OS_WIN)
-  // Since Windows which doesn't support TLS destructor, the implementation
-  // should use GetTLSValue() to retrieve the value of TLS slot.
+			// Since Windows which doesn't support TLS destructor, the implementation
+			// should use GetTLSValue() to retrieve the value of TLS slot.
 			static void OnThreadExit();
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-  // |Value| is the data stored in TLS slot, The implementation can't use
-  // GetTLSValue() to retrieve the value of slot as it has already been reset
-  // in Posix.
-			static void OnThreadExit(void* value);
-#endif
 		};
 
 	}  // namespace internal

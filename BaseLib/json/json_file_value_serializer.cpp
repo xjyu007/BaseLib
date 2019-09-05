@@ -56,7 +56,6 @@ JSONFileValueDeserializer::~JSONFileValueDeserializer() = default;
 int JSONFileValueDeserializer::ReadFileToString(std::string* json_string) {
 	DCHECK(json_string);
 	if (!base::ReadFileToString(json_file_path_, json_string)) {
-#if defined(OS_WIN)
 		const int error = ::GetLastError();
 		if (error == ERROR_SHARING_VIOLATION || error == ERROR_LOCK_VIOLATION) {
 			return JSON_FILE_LOCKED;
@@ -64,7 +63,6 @@ int JSONFileValueDeserializer::ReadFileToString(std::string* json_string) {
 		if (error == ERROR_ACCESS_DENIED) {
 			return JSON_ACCESS_DENIED;
 		}
-#endif
 		return PathExists(json_file_path_) ? JSON_CANNOT_READ_FILE
 			: JSON_NO_SUCH_FILE;
 	}

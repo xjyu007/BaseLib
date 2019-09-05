@@ -10,21 +10,8 @@
 #include "strings/string_util.h"
 #include "build_config.h"
 
-#if defined(OS_WIN)
 #include "win/current_module.h"
 #include "win/pe_image.h"
-#endif  // defined(OS_WIN)
-
-// TODO(peria): Enable profiling on Windows.
-/*#if BUILDFLAG(ENABLE_PROFILING) && BUILDFLAG(USE_TCMALLOC) && !defined(OS_WIN)
-
-#if BUILDFLAG(USE_NEW_TCMALLOC)
-#include "third_party/tcmalloc/chromium/src/gperftools/profiler.h"
-#else
-#include "third_party/tcmalloc/gperftools-2.0/chromium/src/gperftools/profiler.h"
-#endif
-
-#endif*/
 
 namespace base::debug {
 
@@ -48,22 +35,6 @@ namespace base::debug {
 	bool IsProfilingSupported() {
 		return false;
 	}
-
-#if !defined(OS_WIN)
-
-	ReturnAddressLocationResolver GetProfilerReturnAddrResolutionFunc() {
-		return nullptr;
-	}
-
-	AddDynamicSymbol GetProfilerAddDynamicSymbolFunc() {
-		return nullptr;
-	}
-
-	MoveDynamicSymbol GetProfilerMoveDynamicSymbolFunc() {
-		return nullptr;
-	}
-
-#else  // defined(OS_WIN)
 
 	namespace {
 
@@ -131,7 +102,5 @@ namespace base::debug {
 	MoveDynamicSymbol GetProfilerMoveDynamicSymbolFunc() {
 		return FindFunctionInImports<MoveDynamicSymbol>("MoveDynamicSymbol");
 	}
-
-#endif  // defined(OS_WIN)
 
 } // namespace base::debug

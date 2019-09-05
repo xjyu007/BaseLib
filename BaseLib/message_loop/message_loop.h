@@ -15,7 +15,6 @@
 #include "pending_task.h"
 #include "run_loop.h"
 #include "threading/thread_checker.h"
-#include "build_config.h"
 
 namespace base {
 	namespace internal {
@@ -80,18 +79,6 @@ namespace base {
 	// for tests. TODO(https://crbug.com/891670/) remove this class.
 	class BASE_EXPORT MessageLoop {
 	public:
-		// DEPRECATED: Use MessagePumpType instead
-		using Type = MessagePumpType;
-
-		// DEPRECATED: Use MessagePumpType::* instead
-		static constexpr Type TYPE_DEFAULT = Type::DEFAULT;
-		static constexpr Type TYPE_UI = Type::UI;
-		static constexpr Type TYPE_CUSTOM = Type::CUSTOM;
-		static constexpr Type TYPE_IO = Type::IO;
-#if defined(OS_ANDROID)
-		static constexpr Type TYPE_JAVA = Type::JAVA;
-#endif  // defined(OS_ANDROID)
-
 		// Normally, it is not necessary to instantiate a MessageLoop.  Instead, it
 		// is typical to make use of the current thread's MessageLoop instance.
 		explicit MessageLoop(MessagePumpType type = MessagePumpType::DEFAULT);
@@ -225,32 +212,8 @@ namespace base {
 	public:
 		explicit MessageLoopForUI(MessagePumpType type = MessagePumpType::UI);
 
-#if defined(OS_IOS)
-  // On iOS, the main message loop cannot be Run().  Instead call Attach(),
-  // which connects this MessageLoop to the UI thread's CFRunLoop and allows
-  // PostTask() to work.
-  void Attach();
-#endif
-
-#if defined(OS_ANDROID)
-  // On Android there are cases where we want to abort immediately without
-  // calling Quit(), in these cases we call Abort().
-  void Abort();
-
-  // True if this message pump has been aborted.
-  bool IsAborted();
-
-  // Since Run() is never called on Android, and the message loop is run by the
-  // java Looper, quitting the RunLoop won't join the thread, so we need a
-  // callback to run when the RunLoop goes idle to let the Java thread know when
-  // it can safely quit.
-  void QuitWhenIdle(base::OnceClosure callback);
-#endif
-
-#if defined(OS_WIN)
 		// See method of the same name in the Windows MessagePumpForUI implementation.
 		void EnableWmQuit() const;
-#endif
 	};
 
 	// Do not add any member variables to MessageLoopForUI!  This is important b/c

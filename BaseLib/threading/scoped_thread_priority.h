@@ -7,7 +7,6 @@
 #include <optional>
 #include "base_export.h"
 #include "feature_list.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -23,17 +22,13 @@ namespace base {
 		~ScopedThreadMayLoadLibraryOnBackgroundThread();
 
 	private:
-#if defined(OS_WIN)
 		// The original priority when entering the scope.
 		std::optional<ThreadPriority> original_thread_priority_;
-#endif
 
 		DISALLOW_COPY_AND_ASSIGN(ScopedThreadMayLoadLibraryOnBackgroundThread);
 	};
 
 	// Feature for mitigation of DLL loading on a background thread.
-#if defined(OS_WIN)
 	BASE_EXPORT extern const Feature kBoostThreadPriorityOnLibraryLoading;
-#endif  // OS_WIN
 
 }  // namespace base

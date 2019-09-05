@@ -268,7 +268,7 @@ namespace base {
 			// All trace categories are checked against this. A static_assert is triggered
 			// if at least one category fails this check.
 			static constexpr bool IsAllowedCategory(const char* category) {
-#if defined(OS_WIN) && defined(COMPONENT_BUILD)
+#if defined(COMPONENT_BUILD)
 				return true;
 #else
 				return IsBuiltinCategory(category) ||

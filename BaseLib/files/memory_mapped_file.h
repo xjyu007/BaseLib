@@ -9,7 +9,6 @@
 #include "base_export.h"
 #include "files/file.h"
 #include "macros.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -39,13 +38,11 @@ namespace base {
 			// in the process address space.
 			READ_WRITE_EXTEND,
 
-#if defined(OS_WIN)
 			// This provides read access, but as executable code used for prefetching
 			// DLLs into RAM to avoid inefficient hard fault patterns such as during
 			// process startup. The accessing thread could be paused while data from
 			// the file is read into memory (if needed).
 			READ_CODE_IMAGE,
-#endif
 		};
 
 		// The default constructor sets all members to invalid/null values.
@@ -115,11 +112,9 @@ namespace base {
 			size_t* aligned_size,
 			int32_t* offset);
 
-#if defined(OS_WIN)
 		// Maps the executable file to memory, set |data_| to that memory address.
 		// Return true on success.
 		bool MapImageToMemory(Access access);
-#endif
 
 		// Map the file to memory, set data_ to that memory address. Return true on
 		// success, false on any kind of failure. This is a helper for Initialize().
@@ -132,9 +127,7 @@ namespace base {
 		uint8_t* data_;
 		size_t length_;
 
-#if defined(OS_WIN)
 		win::ScopedHandle file_mapping_;
-#endif
 
 		DISALLOW_COPY_AND_ASSIGN(MemoryMappedFile);
 	};

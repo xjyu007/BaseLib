@@ -1,5 +1,3 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -53,6 +51,8 @@
 
 //------------------------------------------------------------------------------
 
+#pragma once
+
 #include <cstdint>
 
 #include <map>
@@ -75,11 +75,6 @@
 #include "pickle.h"
 #include "process/launch.h"
 #include "synchronization/lock.h"
-#include "build_config.h"
-
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-#include "mac/mach_port_rendezvous.h"
-#endif
 
 namespace base {
 
@@ -159,7 +154,7 @@ namespace base {
 			// resides in shared memory and has a pickle containing the trial name and
 			// group name following it.
 			bool GetTrialAndGroupName(std::string_view* trial_name,
-				std::string_view* group_name) const;
+									  std::string_view* group_name) const;
 
 			// Calling this is only valid when the entry is initialized as well. Reads
 			// the parameters following the trial and group name and stores them as
@@ -173,8 +168,8 @@ namespace base {
 			// Takes the iterator and writes out the first two items into |trial_name|
 			// and |group_name|.
 			static bool ReadStringPair(PickleIterator* iter,
-				std::string_view* trial_name,
-				std::string_view* group_name);
+									   std::string_view* trial_name,
+								       std::string_view* group_name);
 		};
 
 		typedef std::vector<ActiveGroup> ActiveGroups;
@@ -267,7 +262,8 @@ namespace base {
 		FRIEND_TEST_ALL_PREFIXES(FieldTrialTest, SetForcedChangeDefault_NonDefault);
 		FRIEND_TEST_ALL_PREFIXES(FieldTrialTest, FloatBoundariesGiveEqualGroupSizes);
 		FRIEND_TEST_ALL_PREFIXES(FieldTrialTest, DoesNotSurpassTotalProbability);
-		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, DoNotAddSimulatedFieldTrialsToAllocator);
+		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, 
+								 DoNotAddSimulatedFieldTrialsToAllocator);
 		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, ClearParamsFromSharedMemory);*/
 
 		friend class FieldTrialList;
@@ -285,7 +281,7 @@ namespace base {
 		// be done based on |entropy_value|, which must have a range of [0, 1).
 		FieldTrial(const std::string& trial_name,
 			Probability total_probability,
-			std::string default_group_name,
+			const std::string& default_group_name,
 			double entropy_value);
 		virtual ~FieldTrial();
 
@@ -496,7 +492,7 @@ namespace base {
 		// resurrection in another process. This allows randomization to be done in
 		// one process, and secondary processes can be synchronized on the result.
 		// The resulting string contains the name and group name pairs of all
-		// registered FieldTrials including disabled based on |include_expired|,
+		// registered FieldTrials including disabled based on |include_disabled|,
 		// with "/" used to separate all names and to terminate the string. All
 		// activated trials have their name prefixed with "*". This string is parsed
 		// by |CreateTrialsFromString()|.
@@ -505,7 +501,7 @@ namespace base {
 		// Creates a persistent representation of all FieldTrial params for
 		// resurrection in another process. The returned string contains the trial
 		// name and group name pairs of all registered FieldTrials including disabled
-		// based on |include_expired| separated by '.'. The pair is followed by ':'
+		// based on |include_disabled| separated by '.'. The pair is followed by ':'
 		// separator and list of param name and values separated by '/'. It also takes
 		// |encode_data_func| function pointer for encodeing special charactors.
 		// This string is parsed by |AssociateParamsFromString()|.
@@ -564,25 +560,11 @@ namespace base {
 			const char* disable_features_switch,
 			FeatureList* feature_list);
 
-#if defined(OS_WIN)
 		// On Windows, we need to explicitly pass down any handles to be inherited.
 		// This function adds the shared memory handle to field trial state to the
 		// list of handles to be inherited.
 		static void AppendFieldTrialHandleIfNeeded(HandlesToInheritVector* handles);
-#elif defined(OS_FUCHSIA)
-		// TODO(fuchsia): Implement shared-memory configuration (crbug.com/752368).
-#elif defined(OS_MACOSX) && !defined(OS_IOS)
-		// On Mac, the field trial shared memory is accessed via a Mach server, which
-		// the child looks up directly.
-		static void InsertFieldTrialHandleIfNeeded(
-			MachPortsForRendezvous* rendezvous_ports);
-#elif defined(OS_POSIX) && !defined(OS_NACL)
-		// On POSIX, we also need to explicitly pass down this file descriptor that
-		// should be shared with the child process. Returns -1 if it was not
-		// initialized properly. The current process remains the onwer of the passed
-		// descriptor.
-		static int GetFieldTrialDescriptor();
-#endif
+
 		static ReadOnlySharedMemoryRegion DuplicateFieldTrialSharedMemoryForTesting();
 
 		// Adds a switch to the command line containing the field trial state as a
@@ -674,10 +656,12 @@ namespace base {
 		// Allow tests to access our innards for testing purposes.
 		/*FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, InstantiateAllocator);
 		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, AddTrialsToAllocator);
-		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, DoNotAddSimulatedFieldTrialsToAllocator);
+		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, 
+								 DoNotAddSimulatedFieldTrialsToAllocator);
 		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, AssociateFieldTrialParams);
 		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, ClearParamsFromSharedMemory);
-		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, SerializeSharedMemoryRegionMetadata);
+		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, 
+								 SerializeSharedMemoryRegionMetadata);
 		friend int SerializeSharedMemoryRegionMetadata(void);
 		FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, CheckReadOnlySharedMemoryRegion);*/
 
@@ -687,31 +671,14 @@ namespace base {
 		// underlying OS resource - that must be done by the Process launcher.
 		static std::string SerializeSharedMemoryRegionMetadata(
 			const ReadOnlySharedMemoryRegion& shm);
-#if defined(OS_WIN) || defined(OS_FUCHSIA) || \
-    (defined(OS_MACOSX) && !defined(OS_IOS))
 		static ReadOnlySharedMemoryRegion DeserializeSharedMemoryRegionMetadata(
 			const std::string & switch_value);
-#elif defined(OS_POSIX) && !defined(OS_NACL)
-		static ReadOnlySharedMemoryRegion DeserializeSharedMemoryRegionMetadata(
-			int fd,
-			const std::string& switch_value);
-#endif
 
-#if defined(OS_WIN) || defined(OS_FUCHSIA) || \
-    (defined(OS_MACOSX) && !defined(OS_IOS))
 		// Takes in |handle_switch| from the command line which represents the shared
 		// memory handle for field trials, parses it, and creates the field trials.
 		// Returns true on success, false on failure.
 		// |switch_value| also contains the serialized GUID.
 		static bool CreateTrialsFromSwitchValue(const std::string & switch_value);
-#elif defined(OS_POSIX) && !defined(OS_NACL)
-		// On POSIX systems that use the zygote, we look up the correct fd that backs
-		// the shared memory segment containing the field trials by looking it up via
-		// an fd key in GlobalDescriptors. Returns true on success, false on failure.
-		// |switch_value| also contains the serialized GUID.
-		static bool CreateTrialsFromDescriptor(int fd_key,
-			const std::string& switch_value);
-#endif
 
 		// Takes an unmapped ReadOnlySharedMemoryRegion, maps it with the correct size
 		// and creates field trials via CreateTrialsFromSharedMemoryMapping(). Returns

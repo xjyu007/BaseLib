@@ -4,8 +4,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #include <string>
 
@@ -15,19 +15,13 @@
 #include "logging.h"
 #include "memory/ref_counted.h"
 
-#if defined(OS_POSIX)
-#include "files/file.h"
-#endif
-
-namespace base
-{
+namespace base {
 
 	class Pickle;
 
 	// PickleIterator reads data from a Pickle. The Pickle object must remain valid
 	// while the PickleIterator object is in use.
-	class BASE_EXPORT PickleIterator
-	{
+	class BASE_EXPORT PickleIterator {
 	public:
 		PickleIterator() : payload_(nullptr), read_index_(0), end_index_(0) {}
 		explicit PickleIterator(const Pickle& pickle);
@@ -68,15 +62,13 @@ namespace base
 
 		// A safer version of ReadInt() that checks for the result not being negative.
 		// Use it for reading the object sizes.
-		bool ReadLength(int* result) WARN_UNUSED_RESULT
-		{
+		bool ReadLength(int* result) WARN_UNUSED_RESULT {
 			return ReadInt(result) && *result >= 0;
 		}
 
 		// Skips bytes in the read buffer and returns true if there are at least
 		// num_bytes available. Otherwise, does nothing and returns false.
-		bool SkipBytes(int num_bytes) WARN_UNUSED_RESULT
-		{
+		bool SkipBytes(int num_bytes) WARN_UNUSED_RESULT {
 			return !!GetReadPointerAndAdvance(num_bytes);
 		}
 
@@ -126,15 +118,13 @@ namespace base
 	// space is controlled by the header_size parameter passed to the Pickle
 	// constructor.
 	//
-	class BASE_EXPORT Pickle
-	{
+	class BASE_EXPORT Pickle {
 	public:
 		// Auxiliary data attached to a Pickle. Pickle must be subclassed along with
 		// this interface in order to provide a concrete implementation of support
 		// for attachments. The base Pickle implementation does not accept
 		// attachments.
-		class BASE_EXPORT Attachment : public RefCountedThreadSafe<Attachment>
-		{
+		class BASE_EXPORT Attachment : public RefCountedThreadSafe<Attachment> {
 		public:
 			Attachment();
 
@@ -191,8 +181,7 @@ namespace base
 
 		void WriteBool(bool value) { WriteInt(value ? 1 : 0); }
 		void WriteInt(int value) { WritePOD(value); }
-		void WriteLong(long value)
-		{
+		void WriteLong(long value) {
 			// Always write long as a 64-bit value to ensure compatibility between
 			// 32-bit and 64-bit processes.
 			WritePOD(static_cast<int64_t>(value));
@@ -232,8 +221,7 @@ namespace base
 		void Reserve(size_t additional_capacity);
 
 		// Payload follows after allocation of Header (header size is customizable).
-		struct Header
-		{
+		struct Header {
 			uint32_t payload_size;  // Specifies the size of the payload.
 		};
 
@@ -241,33 +229,28 @@ namespace base
 		// subclass of Header and its size must correspond to the header_size passed
 		// to the Pickle constructor.
 		template <class T>
-		T* headerT()
-		{
+		T* headerT() {
 			DCHECK_EQ(header_size_, sizeof(T));
 			return static_cast<T*>(header_);
 		}
 		template <class T>
-		const T* headerT() const
-		{
+		const T* headerT() const {
 			DCHECK_EQ(header_size_, sizeof(T));
 			return static_cast<const T*>(header_);
 		}
 
 		// The payload is the pickle data immediately following the header.
-		size_t payload_size() const
-		{
+		size_t payload_size() const {
 			return header_ ? header_->payload_size : 0;
 		}
 
-		const char* payload() const
-		{
+		const char* payload() const {
 			return reinterpret_cast<const char*>(header_) + header_size_;
 		}
 
 		// Returns the address of the byte immediately following the currently valid
 		// header + payload.
-		const char* end_of_payload() const
-		{
+		const char* end_of_payload() const {
 			// This object may be invalid.
 			return header_ ? payload() + payload_size() : NULL;
 		}
@@ -277,13 +260,11 @@ namespace base
 		// calculated by passed raw data.
 		size_t header_size() const { return header_size_; }
 
-		char* mutable_payload()
-		{
+		char* mutable_payload() {
 			return reinterpret_cast<char*>(header_) + header_size_;
 		}
 
-		size_t capacity_after_header() const
-		{
+		size_t capacity_after_header() const {
 			return capacity_after_header_;
 		}
 
@@ -335,8 +316,7 @@ namespace base
 		template<size_t length> void BASE_EXPORT WriteBytesStatic(const void* data);
 
 		// Writes a POD by copying its bytes.
-		template <typename T> bool WritePOD(const T& data)
-		{
+		template <typename T> bool WritePOD(const T& data) {
 			WriteBytesStatic<sizeof(data)>(&data);
 			return true;
 		}

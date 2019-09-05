@@ -108,12 +108,7 @@ namespace base {
 	MessageLoopCurrentForUI MessageLoopCurrentForUI::Get() {
 		auto* sequence_manager = GetCurrentSequenceManagerImpl();
 		DCHECK(sequence_manager);
-#if defined(OS_ANDROID)
-		DCHECK(sequence_manager->IsType(MessagePumpType::UI) ||
-				sequence_manager->IsType(MessagePumpType::JAVA));
-#else   // defined(OS_ANDROID)
 		DCHECK(sequence_manager->IsType(MessagePumpType::UI));
-#endif  // defined(OS_ANDROID)
 		return MessageLoopCurrentForUI(sequence_manager);
 	}
 
@@ -122,44 +117,13 @@ namespace base {
 		const auto sequence_manager =
 			GetCurrentSequenceManagerImpl();
 		return sequence_manager &&
-#if defined(OS_ANDROID)
-		(sequence_manager->IsType(MessagePumpType::UI) ||
-			sequence_manager->IsType(MessagePumpType::JAVA));
-#else   // defined(OS_ANDROID)
 		sequence_manager->IsType(MessagePumpType::UI);
-#endif  // defined(OS_ANDROID)
 	}
 
 	MessagePumpForUI* MessageLoopCurrentForUI::GetMessagePumpForUI() const {
 		return dynamic_cast<MessagePumpForUI*>(current_->GetMessagePump());
 	}
 
-#if defined(USE_OZONE) && !defined(OS_FUCHSIA) && !defined(OS_WIN)
-	bool MessageLoopCurrentForUI::WatchFileDescriptor(
-		int fd,
-		bool persistent,
-		MessagePumpForUI::Mode mode,
-		MessagePumpForUI::FdWatchController* controller,
-		MessagePumpForUI::FdWatcher* delegate) {
-		DCHECK(current_->IsBoundToCurrentThread());
-		return GetMessagePumpForUI()->WatchFileDescriptor(fd, persistent, mode,
-		                                            controller, delegate);
-	}
-#endif
-
-#if defined(OS_IOS)
-	void MessageLoopCurrentForUI::Attach() {
-		current_->AttachToMessagePump();
-}
-#endif  // defined(OS_IOS)
-
-#if defined(OS_ANDROID)
-	void MessageLoopCurrentForUI::Abort() {
-		GetMessagePumpForUI()->Abort();
-	}
-#endif  // defined(OS_ANDROID)
-
-#if defined(OS_WIN)
 	void MessageLoopCurrentForUI::AddMessagePumpObserver(
 	    MessagePumpForUI::Observer* observer) const {
 		GetMessagePumpForUI()->AddObserver(observer);
@@ -169,7 +133,6 @@ namespace base {
 		MessagePumpForUI::Observer* observer) const {
 		GetMessagePumpForUI()->RemoveObserver(observer);
 	}
-#endif  // defined(OS_WIN)
 
 #endif  // !defined(OS_NACL)
 
@@ -196,7 +159,6 @@ namespace base {
 
 #if !defined(OS_NACL_SFI)
 
-#if defined(OS_WIN)
 	HRESULT MessageLoopCurrentForIO::RegisterIOHandler(
 	    HANDLE file,
 	    MessagePumpForIO::IOHandler* handler) const {
@@ -217,44 +179,7 @@ namespace base {
 		DCHECK(current_->IsBoundToCurrentThread());
 		return GetMessagePumpForIO()->WaitForIOCompletion(timeout, filter);
 	}
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-	bool MessageLoopCurrentForIO::WatchFileDescriptor(
-		int fd,
-		bool persistent,
-		MessagePumpForIO::Mode mode,
-		MessagePumpForIO::FdWatchController* controller,
-		MessagePumpForIO::FdWatcher* delegate) {
-		DCHECK(current_->IsBoundToCurrentThread());
-		return GetMessagePumpForIO()->WatchFileDescriptor(fd, persistent, mode,
-		controller, delegate);
-	}
-#endif  // defined(OS_WIN)
-
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-	bool MessageLoopCurrentForIO::WatchMachReceivePort(
-		mach_port_t port,
-		MessagePumpForIO::MachPortWatchController* controller,
-		MessagePumpForIO::MachPortWatcher* delegate) {
-		DCHECK(current_->IsBoundToCurrentThread());
-		return GetMessagePumpForIO()->WatchMachReceivePort(port, controller,
-		                                             delegate);
-	}
-#endif
 
 #endif  // !defined(OS_NACL_SFI)
-
-#if defined(OS_FUCHSIA)
-	// Additional watch API for native platform resources.
-	bool MessageLoopCurrentForIO::WatchZxHandle(
-		zx_handle_t handle,
-		bool persistent,
-		zx_signals_t signals,
-		MessagePumpForIO::ZxHandleWatchController* controller,
-		MessagePumpForIO::ZxHandleWatcher* delegate) {
-		DCHECK(current_->IsBoundToCurrentThread());
-		return GetMessagePumpForIO()->WatchZxHandle(handle, persistent, signals,
-	                                      controller, delegate);
-	}
-#endif
 
 }  // namespace base

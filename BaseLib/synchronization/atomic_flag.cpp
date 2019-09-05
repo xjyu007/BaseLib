@@ -3,15 +3,8 @@
 // found in the LICENSE file.
 
 #include "synchronization/atomic_flag.h"
-
 #include "logging.h"
-
-#if defined(OS_WIN)
 #include "win/windows_types.h"
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <errno.h>
-#include <pthread.h>
-#endif
 
 namespace base {
 

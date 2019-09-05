@@ -16,13 +16,7 @@
 #include "time/time.h"
 #include "build_config.h"
 
-#if defined(OS_WIN)
-#include <windows.h>
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <sys/stat.h>
-#include <unistd.h>
-#include <unordered_set>
-#endif
+#include <Windows.h>
 
 namespace base {
 
@@ -55,33 +49,21 @@ namespace base {
 			[[nodiscard]] int64_t GetSize() const;
 			[[nodiscard]] Time GetLastModifiedTime() const;
 
-#if defined(OS_WIN)
 			// Note that the cAlternateFileName (used to hold the "short" 8.3 name)
 			// of the WIN32_FIND_DATA will be empty. Since we don't use short file
 			// names, we tell Windows to omit it which speeds up the query slightly.
 			[[nodiscard]] const WIN32_FIND_DATA& find_data() const { return find_data_; }
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-			[[nodiscard]] const struct stat& stat() const { return stat_; }
-#endif
 
 		private:
 			friend class FileEnumerator;
 
-#if defined(OS_WIN)
 			WIN32_FIND_DATA find_data_{};
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-			struct stat stat_;
-			FilePath filename_;
-#endif
 		};
 
 		enum FileType {
 			FILES = 1 << 0,
 			DIRECTORIES = 1 << 1,
 			INCLUDE_DOT_DOT = 1 << 2,
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-			SHOW_SYM_LINKS = 1 << 4,
-#endif
 		};
 
 		// Search policy for intermediate folders.
@@ -135,22 +117,10 @@ namespace base {
 
 		[[nodiscard]] bool IsPatternMatched(const FilePath& src) const;
 
-#if defined(OS_WIN)
 		// True when find_data_ is valid.
 		bool has_find_data_ = false;
 		WIN32_FIND_DATA find_data_{};
 		HANDLE find_handle_ = INVALID_HANDLE_VALUE;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// The files in the current directory
-		std::vector<FileInfo> directory_entries_;
-
-		// Set of visited directories. Used to prevent infinite looping along
-		// circular symlinks.
-		std::unordered_set<ino_t> visited_directories_;
-
-		// The next entry to use from the directory_entries_ vector
-		size_t current_directory_entry_;
-#endif
 		FilePath root_path_;
 		const bool recursive_;
 		const int file_type_;
@@ -159,7 +129,7 @@ namespace base {
 
 		// A stack that keeps track of which subdirectories we still need to
 		// enumerate in the breadth-first search.
-		base::stack<FilePath> pending_paths_{};
+		stack<FilePath> pending_paths_{};
 
 		DISALLOW_COPY_AND_ASSIGN(FileEnumerator);
 	};

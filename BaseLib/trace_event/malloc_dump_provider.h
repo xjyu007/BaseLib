@@ -8,12 +8,8 @@
 #include "memory/singleton.h"
 #include "synchronization/lock.h"
 #include "trace_event/memory_dump_provider.h"
-#include "build_config.h"
 
-#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_WIN) || \
-    (defined(OS_MACOSX) && !defined(OS_IOS))
 #define MALLOC_MEMORY_TRACING_SUPPORTED
-#endif
 
 namespace base {
 	namespace trace_event {

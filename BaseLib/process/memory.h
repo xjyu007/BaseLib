@@ -5,8 +5,7 @@
 // found in the LICENSE file.
 
 #include "base_export.h"
-#include "process/process_handle.h"
-#include "build_config.h"
+#include <intsafe.h>
 
 namespace base {
 
@@ -21,23 +20,6 @@ namespace base {
 	// Crash reporting classifies such crashes as OOM.
 	BASE_EXPORT void TerminateBecauseOutOfMemory(size_t size);
 
-#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_AIX)
-	BASE_EXPORT extern size_t g_oom_size;
-
-	// The maximum allowed value for the OOM score.
-	const int kMaxOomScore = 1000;
-
-	// This adjusts /proc/<pid>/oom_score_adj so the Linux OOM killer will
-	// prefer to kill certain process types over others. The range for the
-	// adjustment is [-1000, 1000], with [0, 1000] being user accessible.
-	// If the Linux system doesn't support the newer oom_score_adj range
-	// of [0, 1000], then we revert to using the older oom_adj, and
-	// translate the given value into [0, 15].  Some aliasing of values
-	// may occur in that case, of course.
-	BASE_EXPORT bool AdjustOOMScore(ProcessId process, int score);
-#endif
-
-#if defined(OS_WIN)
 	namespace win {
 
 		// Custom Windows exception code chosen to indicate an out of memory error.
@@ -49,7 +31,6 @@ namespace base {
 		const DWORD kOomExceptionCode = 0xe0000008;
 
 	}  // namespace win
-#endif
 
 // Special allocator functions for callers that want to check for OOM.
 // These will not abort if the allocation fails even if

@@ -20,13 +20,7 @@
 #include "threading/thread_task_runner_handle.h"
 #include "build_config.h"
 
-#if defined(OS_POSIX) && !defined(OS_NACL)
-#include "files/file_descriptor_watcher_posix.h"
-#endif
-
-#if defined(OS_WIN)
 #include "win/scoped_com_initializer.h"
-#endif
 
 namespace base {
 
@@ -71,10 +65,8 @@ namespace base {
 		DCHECK(owning_sequence_checker_.CalledOnValidSequence());
 
 		Options options;
-#if defined(OS_WIN)
 		if (com_status_ == STA)
 			options.message_pump_type = MessagePumpType::UI;
-#endif
 		return StartWithOptions(options);
 	}
 
@@ -84,10 +76,8 @@ namespace base {
 		DCHECK(!IsRunning());
 		DCHECK(!stopping_) << "Starting a non-joinable thread a second time? That's "
 			<< "not allowed!";
-#if defined(OS_WIN)
 		DCHECK((com_status_ != STA) ||
 			   (options.message_pump_type == MessagePumpType::UI));
-#endif
 
 		// Reset |id_| here to support restarting the thread.
 		id_event_.Reset();
@@ -137,8 +127,7 @@ namespace base {
 		const auto result = Start();
 		if (!result)
 			return false;
-		WaitUntilThreadStarted();
-		return true;
+		return WaitUntilThreadStarted();
 	}
 
 	bool Thread::WaitUntilThreadStarted() const {
@@ -280,23 +269,12 @@ namespace base {
 		DCHECK(MessageLoopCurrent::Get());
 		DCHECK(ThreadTaskRunnerHandle::IsSet());
 
-#if defined(OS_POSIX) && !defined(OS_NACL)
-		// Allow threads running a MessageLoopForIO to use FileDescriptorWatcher API.
-		std::unique_ptr<FileDescriptorWatcher> file_descriptor_watcher;
-		if (MessageLoopCurrentForIO::IsSet()) {
-			file_descriptor_watcher.reset(
-				new FileDescriptorWatcher(delegate_->GetDefaultTaskRunner()));
-		}
-#endif
-
-#if defined(OS_WIN)
 		std::unique_ptr<win::ScopedCOMInitializer> com_initializer;
 		if (com_status_ != NONE) {
 			com_initializer.reset((com_status_ == STA) ?
 				new win::ScopedCOMInitializer() :
 				new win::ScopedCOMInitializer(win::ScopedCOMInitializer::kMTA));
 		}
-#endif
 
 		// Let the thread do extra initialization.
 		Init();
@@ -320,9 +298,7 @@ namespace base {
 		// Let the thread do extra cleanup.
 		CleanUp();
 
-#if defined(OS_WIN)
 		com_initializer.reset();
-#endif
 
 		DCHECK(GetThreadWasQuitProperly());
 

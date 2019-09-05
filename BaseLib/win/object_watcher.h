@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright (c) 2011 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include "win/windows_types.h"
 
@@ -56,7 +56,7 @@ namespace base {
 		public:
 			class BASE_EXPORT Delegate {
 			public:
-				virtual ~Delegate() {}
+				virtual ~Delegate() = default;
 				// Called from the sequence that started the watch when a signaled object is
 				// detected. To continue watching the object, StartWatching must be called
 				// again.
@@ -97,7 +97,8 @@ namespace base {
 			static void CALLBACK DoneWaiting(void* param, BOOLEAN timed_out);
 
 			// Helper used by StartWatchingOnce and StartWatchingMultipleTimes.
-			bool StartWatchingInternal(HANDLE object, Delegate* delegate, bool execute_only_once);
+			bool StartWatchingInternal(HANDLE object, Delegate* delegate, 
+									   bool execute_only_once);
 
 			void Signal(Delegate* delegate);
 
@@ -118,7 +119,7 @@ namespace base {
 
 			bool run_once_ = true;
 
-			WeakPtrFactory<ObjectWatcher> weak_factory_;
+			WeakPtrFactory<ObjectWatcher> weak_factory_{this};
 
 			DISALLOW_COPY_AND_ASSIGN(ObjectWatcher);
 		};

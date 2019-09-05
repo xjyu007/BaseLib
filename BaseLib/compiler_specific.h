@@ -6,8 +6,6 @@
 
 #include "build_config.h"
 
-#if defined(COMPILER_MSVC)
-
 #if !defined(__clang__)
 //#error "Only clang-cl is supported on Windows, see https://crbug.com/988071"
 #endif
@@ -31,31 +29,14 @@
 // Pop effects of innermost MSVC_PUSH_* macro.
 #define MSVC_POP_WARNING() __pragma(warning(pop))
 
-#else  // Not MSVC
-
-#define MSVC_PUSH_DISABLE_WARNING(n)
-#define MSVC_POP_WARNING()
-#define MSVC_DISABLE_OPTIMIZE()
-#define MSVC_ENABLE_OPTIMIZE()
-
-#endif  // COMPILER_MSVC
-
 // These macros can be helpful when investigating compiler bugs or when
 // investigating issues in local optimized builds, by temporarily disabling
 // optimizations for a single function or file. These macros should never be
 // used to permanently work around compiler bugs or other mysteries, and should
 // not be used in landed changes.
 #if !defined(OFFICIAL_BUILD)
-#if defined(__clang__)
-#define DISABLE_OPTIMIZE() __pragma(clang optimize off)
-#define ENABLE_OPTIMIZE() __pragma(clang optimize on)
-#elif defined(COMPILER_MSVC)
 #define DISABLE_OPTIMIZE() __pragma(optimize("", off))
 #define ENABLE_OPTIMIZE() __pragma(optimize("", on))
-#else
-// These macros are not currently available for other compiler options.
-#endif
-// These macros are not available in official builds.
 #endif  // !defined(OFFICIAL_BUILD)
 
 // Annotate a variable indicating it's ok if the variable is not used.
@@ -69,26 +50,14 @@
 // Annotate a typedef or function indicating it's ok if it's not used.
 // Use like:
 //   typedef Foo Bar ALLOW_UNUSED_TYPE;
-#if defined(COMPILER_GCC) || defined(__clang__)
-#define ALLOW_UNUSED_TYPE __attribute__((unused))
-#else
 #define ALLOW_UNUSED_TYPE
-#endif
 
 // Annotate a function indicating it should not be inlined.
 // Use like:
 //   NOINLINE void DoStuff() { ... }
-#if defined(COMPILER_GCC)
-#define NOINLINE __attribute__((noinline))
-#elif defined(COMPILER_MSVC)
 #define NOINLINE __declspec(noinline)
-#else
-#define NOINLINE
-#endif
 
-#if defined(COMPILER_GCC) && defined(NDEBUG)
-#define ALWAYS_INLINE inline __attribute__((__always_inline__))
-#elif defined(COMPILER_MSVC) && defined(NDEBUG)
+#if defined(NDEBUG)
 #define ALWAYS_INLINE __forceinline
 #else
 #define ALWAYS_INLINE inline
@@ -115,22 +84,14 @@
 // definition: visibility (used for exporting functions/classes) is one of
 // these attributes. This means that it is not possible to use alignas() with a
 // class that is marked as exported.
-#if defined(COMPILER_MSVC)
 #define ALIGNAS(byte_alignment) __declspec(align(byte_alignment))
-#elif defined(COMPILER_GCC)
-#define ALIGNAS(byte_alignment) __attribute__((aligned(byte_alignment)))
-#endif
 
 // Annotate a function indicating the caller must examine the return value.
 // Use like:
 //   int foo() WARN_UNUSED_RESULT;
 // To explicitly ignore a result, see |ignore_result()| in base/macros.h.
 #undef WARN_UNUSED_RESULT
-#if defined(COMPILER_GCC) || defined(__clang__)
-#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
-#else
 #define WARN_UNUSED_RESULT
-#endif
 
 // Tell the compiler a function is using a printf-style format string.
 // |format_param| is the one-based index of the format string parameter;
@@ -138,12 +99,7 @@
 // For v*printf functions (which take a va_list), pass 0 for dots_param.
 // (This is undocumented but matches what the system C headers do.)
 // For member functions, the implicit this parameter counts as index 1.
-#if defined(COMPILER_GCC) || defined(__clang__)
-#define PRINTF_FORMAT(format_param, dots_param) \
-    __attribute__((format(printf, format_param, dots_param)))
-#else
 #define PRINTF_FORMAT(format_param, dots_param)
-#endif
 
 // WPRINTF_FORMAT is the same, but for wide format strings.
 // This doesn't appear to yet be implemented in any compiler.
@@ -184,37 +140,21 @@
 
 // DISABLE_CFI_PERF -- Disable Control Flow Integrity for perf reasons.
 #if !defined(DISABLE_CFI_PERF)
-#if defined(__clang__) && defined(OFFICIAL_BUILD)
-#define DISABLE_CFI_PERF __attribute__((no_sanitize("cfi")))
-#else
 #define DISABLE_CFI_PERF
-#endif
 #endif
 
 // Macro useful for writing cross-platform function pointers.
 #if !defined(CDECL)
-#if defined(OS_WIN)
 #define CDECL __cdecl
-#else  // defined(OS_WIN)
-#define CDECL
-#endif  // defined(OS_WIN)
 #endif  // !defined(CDECL)
 
 // Macro for hinting that an expression is likely to be false.
 #if !defined(UNLIKELY)
-#if defined(COMPILER_GCC) || defined(__clang__)
-#define UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else
 #define UNLIKELY(x) (x)
-#endif  // defined(COMPILER_GCC)
 #endif  // !defined(UNLIKELY)
 
 #if !defined(LIKELY)
-#if defined(COMPILER_GCC) || defined(__clang__)
-#define LIKELY(x) __builtin_expect(!!(x), 1)
-#else
 #define LIKELY(x) (x)
-#endif  // defined(COMPILER_GCC)
 #endif  // !defined(LIKELY)
 
 // Compiler feature-detection.
@@ -232,29 +172,4 @@
 #define FALLTHROUGH
 #endif 
 
-#if defined(COMPILER_GCC)
-#define PRETTY_FUNCTION __PRETTY_FUNCTION__
-#elif defined(COMPILER_MSVC)
 #define PRETTY_FUNCTION __FUNCSIG__
-#else
-// See https://en.cppreference.com/w/c/language/function_definition#func
-#define PRETTY_FUNCTION __func__
-#endif
-
-#if !defined(CPU_ARM_NEON)
-#if defined(__arm__)
-#if !defined(__ARMEB__) && !defined(__ARM_EABI__) && !defined(__EABI__) && \
-    !defined(__VFP_FP__) && !defined(_WIN32_WCE) && !defined(ANDROID)
-#error Chromium does not support middle endian architecture
-#endif
-#if defined(__ARM_NEON__)
-#define CPU_ARM_NEON 1
-#endif
-#endif  // defined(__arm__)
-#endif  // !defined(CPU_ARM_NEON)
-
-#if !defined(HAVE_MIPS_MSA_INTRINSICS)
-#if defined(__mips_msa) && defined(__mips_isa_rev) && (__mips_isa_rev >= 5)
-#define HAVE_MIPS_MSA_INTRINSICS 1
-#endif
-#endif

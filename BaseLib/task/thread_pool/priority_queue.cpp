@@ -54,13 +54,19 @@ namespace base::internal {
 		void ClearHeapHandle() const {
 			// Ensure |task_source_| is not nullptr, which may be the case if
 			// take_task_source() was called before this.
-			if (task_source_) {
+			if (task_source_)
 				task_source_->ClearHeapHandle();
-			}
 		}
 
-		[[nodiscard]] const TaskSource* task_source() const { return task_source_.get(); }
-		TaskSource* task_source() { return task_source_.get(); }
+  // Required by IntrusiveHeap.
+		HeapHandle GetHeapHandle() const {
+			if (task_source_)
+				return task_source_->GetHeapHandle();
+			return HeapHandle::Invalid();
+		}
+
+		[[nodiscard]] const RegisteredTaskSource& task_source() const { return task_source_; }
+		RegisteredTaskSource& task_source() { return task_source_; }
 
 		[[nodiscard]] const SequenceSortKey& sort_key() const { return sort_key_; }
 
@@ -78,9 +84,8 @@ namespace base::internal {
 			return;
 
 		while (!container_.empty()) {
-		    auto task_source = PopTaskSource().Unregister();
-		    auto task =
-				task_source->BeginTransaction().Clear(task_source->WillRunTask());
+			auto task_source = PopTaskSource();
+			auto task = task_source.Clear();
 			if (task)
 				std::move(task->task).Run();
 		}
@@ -90,9 +95,10 @@ namespace base::internal {
 
 	void PriorityQueue::Push(
 		TransactionWithRegisteredTaskSource transaction_with_task_source) {
-		const auto sequence_sort_key = transaction_with_task_source.GetSortKey();
+		auto sequence_sort_key =
+			transaction_with_task_source.transaction.GetSortKey();
 		container_.insert(TaskSourceAndSortKey(
-			transaction_with_task_source.take_task_source(), sequence_sort_key));
+			std::move(transaction_with_task_source.task_source), sequence_sort_key));
 		IncrementNumTaskSourcesForPriority(sequence_sort_key.priority());
 	}
 
@@ -101,13 +107,13 @@ namespace base::internal {
 		return container_.Min().sort_key();
 	}
 
-	TaskSource* PriorityQueue::PeekTaskSource() const {
+	RegisteredTaskSource& PriorityQueue::PeekTaskSource() const {
 		DCHECK(!IsEmpty());
 
 		// The const_cast on Min() is okay since modifying the TaskSource cannot alter
 		// the sort order of TaskSourceAndSortKey.
 		auto& task_source_and_sort_key =
-			const_cast<TaskSourceAndSortKey&>(container_.Min());
+			const_cast<PriorityQueue::TaskSourceAndSortKey&>(container_.Min());
 		return task_source_and_sort_key.task_source();
 	}
 
@@ -139,9 +145,9 @@ namespace base::internal {
 			return nullptr;
 
 		auto& task_source_and_sort_key =
-			const_cast<TaskSourceAndSortKey&>(
+			const_cast<PriorityQueue::TaskSourceAndSortKey&>(
 				container_.at(heap_handle));
-		DCHECK_EQ(task_source_and_sort_key.task_source(), task_source.get());
+		DCHECK_EQ(task_source_and_sort_key.task_source().get(), task_source);
 		auto registered_task_source =
 			task_source_and_sort_key.take_task_source();
 
@@ -151,20 +157,18 @@ namespace base::internal {
 		return registered_task_source;
 	}
 
-	void PriorityQueue::UpdateSortKey(
-		TransactionWithOwnedTaskSource transaction_with_task_source) {
-		DCHECK(transaction_with_task_source);
+	void PriorityQueue::UpdateSortKey(TaskSource::Transaction transaction) {
+		DCHECK(transaction);
 
 		if (IsEmpty())
 			return;
 
-		const auto heap_handle =
-			transaction_with_task_source.task_source()->heap_handle();
+		const HeapHandle heap_handle = transaction.task_source()->heap_handle();
 		if (!heap_handle.IsValid())
 			return;
 
 		const auto old_sort_key = container_.at(heap_handle).sort_key();
-		const auto new_sort_key = transaction_with_task_source.GetSortKey();
+		const auto new_sort_key = transaction.GetSortKey();
 		auto registered_task_source =
 			const_cast<PriorityQueue::TaskSourceAndSortKey&>(
 				container_.at(heap_handle))

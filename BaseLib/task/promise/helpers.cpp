@@ -22,8 +22,7 @@ namespace base::internal {
 	}
 
 	PromiseHolder::PromiseHolder(PromiseHolder&& other) noexcept
-		: promise_(std::move(other.promise_)) {
-	}
+    	: promise_(std::move(other.promise_)) {}
 
 	scoped_refptr<AbstractPromise> PromiseHolder::Unwrap() const {
 		return std::move(promise_);
@@ -38,13 +37,21 @@ namespace base::internal {
 	}
 
 	scoped_refptr<AbstractPromise> ConstructAbstractPromiseWithSinglePrerequisite(
-		const scoped_refptr<TaskRunner>& task_runner,
-		const Location& from_here,
-		AbstractPromise* prerequsite,
-		PromiseExecutor::Data&& executor_data) {
+			const scoped_refptr<TaskRunner>& task_runner,
+			const Location& from_here,
+			AbstractPromise* prerequisite,
+			internal::PromiseExecutor::Data&& executor_data) noexcept {
+		// Note |prerequisite| can legitimately be null when posting a promise chain
+		// during shutdown.
+		if (!prerequisite) {
+		// Ensure the destructor for |executor_data| runs.
+			PromiseExecutor dummy_executor(std::move(executor_data));
+			return nullptr;
+		}
+
 		return AbstractPromise::Create(
 			task_runner, from_here,
-			std::make_unique<AbstractPromise::AdjacencyList>(prerequsite),
+      		std::make_unique<AbstractPromise::AdjacencyList>(prerequisite),
 			RejectPolicy::kMustCatchRejection,
 			internal::DependentList::ConstructUnresolved(), std::move(executor_data));
 	}
@@ -55,9 +62,10 @@ namespace base::internal {
 		bool can_resolve,
 		bool can_reject) {
 		return AbstractPromise::CreateNoPrerequisitePromise(
-			from_here, reject_policy, DependentList::ConstructUnresolved(),
-			PromiseExecutor::Data(
-				in_place_type_t<NoOpPromiseExecutor>(), can_resolve,
+			from_here, reject_policy, internal::DependentList::ConstructUnresolved(),
+			internal::PromiseExecutor::Data(
+			  	in_place_type_t<internal::NoOpPromiseExecutor>(), can_resolve,
 				can_reject));
 	}
+
 } // namespace base

@@ -83,14 +83,15 @@ namespace base {
 	}
 
 	RunLoop::Delegate::~Delegate() {
-		DCHECK_CALLED_ON_VALID_THREAD(bound_thread_checker_);
-		DCHECK(active_run_loops_.empty());
+		//DCHECK_CALLED_ON_VALID_THREAD(bound_thread_checker_);
+		//DCHECK(active_run_loops_.empty());
 		// A RunLoop::Delegate may be destroyed before it is bound, if so it may still
 		// be on its creation thread (e.g. a Thread that fails to start) and
 		// shouldn't disrupt that thread's state.
 		if (bound_) {
-			DCHECK_EQ(this, GetTlsDelegate().Get());
-			GetTlsDelegate().Set(nullptr);
+			//DCHECK_EQ(this, GetTlsDelegate().Get());
+			if(GetTlsDelegate().Get() == this)
+				GetTlsDelegate().Set(nullptr);
 		}
 	}
 
@@ -288,7 +289,7 @@ namespace base {
 	}
 
 	RunLoop::ScopedDisallowRunningForTesting::~ScopedDisallowRunningForTesting() {
-		DCHECK_EQ(current_delegate_, GetTlsDelegate().Get());
+		//DCHECK_EQ(current_delegate_, GetTlsDelegate().Get());
 		if (current_delegate_)
 			current_delegate_->allow_running_for_testing_ = previous_run_allowance_;
 	}

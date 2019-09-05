@@ -8,10 +8,6 @@
 #include "metrics/histogram.h"
 #include "build_config.h"
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <errno.h>
-#endif
-
 namespace base {
 
 	File::Info::Info()
@@ -39,11 +35,7 @@ namespace base {
 		: file_(platform_file),
 		error_details_(FILE_OK),
 		created_(false),
-      async_(async) {
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-  		DCHECK_GE(platform_file, -1);
-#endif
-}
+      async_(async) {}
 
 	File::File(Error error_details)
 		: error_details_(error_details),
@@ -72,16 +64,9 @@ namespace base {
 		return *this;
 	}
 
-#if !defined(OS_NACL)
 	void File::Initialize(const FilePath& path, uint32_t flags) {
 		if (path.ReferencesParent()) {
-#if defined(OS_WIN)
     		::SetLastError(ERROR_ACCESS_DENIED);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-			errno = EACCES;
-#else
-#error Unsupported platform
-#endif
 			error_details_ = FILE_ERROR_ACCESS_DENIED;
 			return;
 		}
@@ -90,7 +75,6 @@ namespace base {
 		SCOPED_FILE_TRACE("Initialize");
 		DoInitialize(path, flags);
 	}
-#endif
 
 	std::string File::ErrorToString(Error error) {
 		switch (error) {

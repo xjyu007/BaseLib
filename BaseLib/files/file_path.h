@@ -114,26 +114,16 @@
 // enabled and disabled independently, to aid testing.  These #defines are
 // here so that the same setting can be used in both the implementation and
 // in the unit test.
-#if defined(OS_WIN)
 #define FILE_PATH_USES_DRIVE_LETTERS
 #define FILE_PATH_USES_WIN_SEPARATORS
-#endif  // OS_WIN
 
 // To print path names portably use PRFilePath (based on PRIuS and friends from
 // C99 and format_macros.h) like this:
 // base::StringPrintf("Path is %" PRFilePath ".\n", path.value().c_str());
-#if defined(OS_WIN)
 #define PRFilePath "ls"
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#define PRFilePath "s"
-#endif  // OS_WIN
 
 // Macros for string literal initialization of FilePath::CharType[].
-#if defined(OS_WIN)
 #define FILE_PATH_LITERAL(x) L##x
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#define FILE_PATH_LITERAL(x) x
-#endif  // OS_WIN
 
 namespace base {
 
@@ -144,16 +134,9 @@ namespace base {
 	// pathnames on different platforms.
 	class BASE_EXPORT FilePath {
 	public:
-#if defined(OS_WIN)
 		// On Windows, for Unicode-aware applications, native pathnames are wchar_t
 		// arrays encoded in UTF-16.
 		typedef std::wstring StringType;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// On most platforms, native pathnames are char arrays, and the encoding
-		// may or may not be specified.  On Mac OS X, native pathnames are encoded
-		// in UTF-8.
-		typedef std::string StringType;
-#endif  // OS_WIN
 
 		typedef std::basic_string_view<StringType::value_type> StringPieceType;
 		typedef StringType::value_type CharType;
@@ -415,31 +398,6 @@ namespace base {
 		static bool CompareLessIgnoreCase(StringPieceType string1, StringPieceType string2) {
 			return CompareIgnoreCase(string1, string2) < 0;
 		}
-
-#if defined(OS_MACOSX)
-		// Returns the string in the special canonical decomposed form as defined for
-		// HFS, which is close to, but not quite, decomposition form D. See
-		// http://developer.apple.com/mac/library/technotes/tn/tn1150.html#UnicodeSubtleties
-		// for further comments.
-		// Returns the epmty string if the conversion failed.
-		static StringType GetHFSDecomposedForm(StringPieceType string);
-
-		// Special UTF-8 version of FastUnicodeCompare. Cf:
-		// http://developer.apple.com/mac/library/technotes/tn/tn1150.html#StringComparisonAlgorithm
-		// IMPORTANT: The input strings must be in the special HFS decomposed form!
-		// (cf. above GetHFSDecomposedForm method)
-		static int HFSFastUnicodeCompare(StringPieceType string1,
-		                               StringPieceType string2);
-#endif
-
-#if defined(OS_ANDROID)
-		// On android, file selection dialog can return a file with content uri
-		// scheme(starting with content://). Content uri needs to be opened with
-		// ContentResolver to guarantee that the app has appropriate permissions
-		// to access it.
-		// Returns true if the path is a content uri, or false otherwise.
-		bool IsContentUri() const;
-#endif
 
 	private:
 		// Remove trailing separators from this object.  If the path is absolute, it

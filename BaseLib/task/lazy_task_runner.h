@@ -14,7 +14,6 @@
 #include "task/single_thread_task_runner_thread_mode.h"
 #include "task/task_traits.h"
 #include "thread_annotations.h"
-#include "build_config.h"
 
 // Lazy(Sequenced|SingleThread|COMSTA)TaskRunner lazily creates a TaskRunner.
 //
@@ -76,11 +75,9 @@ namespace base {
 	using LazySingleThreadTaskRunner =
 		internal::LazyTaskRunner<SingleThreadTaskRunner, false>;
 
-#if defined(OS_WIN)
 	// Lazy COM-STA enabled SingleThreadTaskRunner.
 	using LazyCOMSTATaskRunner =
 		internal::LazyTaskRunner<SingleThreadTaskRunner, true>;
-#endif
 
 	// Helper macros to generate a variable name by concatenation.
 #define LAZY_TASK_RUNNER_CONCATENATE_INTERNAL2(a, b) a##b
@@ -195,9 +192,7 @@ namespace base {
 			friend class LazyTaskRunner<SequencedTaskRunner, false>;
 			friend class LazyTaskRunner<SingleThreadTaskRunner, false>;
 
-#if defined(OS_WIN)
 			friend class LazyTaskRunner<SingleThreadTaskRunner, true>;
-#endif
 
 			// Add |callback| to the list of callbacks to run on destruction.
 			void AddCallback(OnceClosure callback);

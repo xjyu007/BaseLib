@@ -255,9 +255,6 @@
     <ClCompile Include="test\launcher\test_launcher_tracer.cpp">
       <Filter>test\launcher</Filter>
     </ClCompile>
-    <ClCompile Include="test\scoped_task_environment.cpp">
-      <Filter>test</Filter>
-    </ClCompile>
     <ClCompile Include="hash\hash_unittest.cpp">
       <Filter>hash</Filter>
     </ClCompile>
@@ -290,6 +287,9 @@
     </ClCompile>
     <ClCompile Include="json\string_escape_unittest.cpp">
       <Filter>json</Filter>
+    </ClCompile>
+    <ClCompile Include="test\task_environment.cpp">
+      <Filter>test</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -361,13 +361,13 @@
     <ClInclude Include="test\launcher\test_launcher_tracer.h">
       <Filter>test\launcher</Filter>
     </ClInclude>
-    <ClInclude Include="test\scoped_task_environment.h">
-      <Filter>test</Filter>
-    </ClInclude>
     <ClInclude Include="test\test_pending_task.h">
       <Filter>test</Filter>
     </ClInclude>
     <ClInclude Include="test\test_simple_task_runner.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="test\task_environment.h">
       <Filter>test</Filter>
     </ClInclude>
   </ItemGroup>

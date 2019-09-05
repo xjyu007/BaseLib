@@ -65,14 +65,12 @@
    * Unit tests are in base/time/pr_time_unittest.cc.
    */
 
-#include <limits.h>
+#include <climits>
 
 #include "logging.h"
 #include "third_party/nspr/prtime.h"
-#include "build_config.h"
 
-#include <errno.h>  /* for EINVAL */
-#include <time.h>
+#include <ctime>
 
    /*
 	* The COUNT_LEAPS macro counts the number of leap years passed by
@@ -94,12 +92,9 @@
 #define DAYS_BETWEEN_YEARS(A, B) (COUNT_DAYS(B) - COUNT_DAYS(A))
 
 	/* Implements the Unix localtime_r() function for windows */
-#if defined(OS_WIN)
-static void localtime_r(const time_t* secs, struct tm* time)
-{
+static void localtime_r(const time_t* secs, struct tm* time) {
 	(void)localtime_s(time, secs);
 }
-#endif
 
 /*
  * Static variables used by functions in this file
@@ -135,23 +130,20 @@ static const PRInt8 nDays[2][12] = {
  *------------------------------------------------------------------------
  */
 PRTime
-PR_ImplodeTime(const PRExplodedTime* exploded)
-{
+PR_ImplodeTime(const PRExplodedTime* exploded) {
 	PRExplodedTime copy;
 	PRTime retVal;
 	PRInt64 secPerDay, usecPerSec;
 	PRInt64 temp;
 	PRInt64 numSecs64;
-	PRInt32 numDays;
-	PRInt32 numSecs;
 
 	/* Normalize first.  Do this on our copy */
 	copy = *exploded;
 	PR_NormalizeTime(&copy, PR_GMTParameters);
 
-	numDays = DAYS_BETWEEN_YEARS(1970, copy.tm_year);
+	PRInt32 numDays = DAYS_BETWEEN_YEARS(1970, copy.tm_year);
 
-	numSecs = copy.tm_yday * 86400 + copy.tm_hour * 3600 + copy.tm_min * 60 +
+	PRInt32 numSecs = copy.tm_yday * 86400 + copy.tm_hour * 3600 + copy.tm_min * 60 +
 		copy.tm_sec;
 
 	LL_I2L(temp, numDays);
@@ -184,8 +176,7 @@ PR_ImplodeTime(const PRExplodedTime* exploded)
  *-------------------------------------------------------------------------
  */
 
-static int IsLeapYear(PRInt16 year)
-{
+static int IsLeapYear(PRInt16 year) {
 	if ((year % 4 == 0 && year % 100 != 0) || year % 400 == 0)
 		return 1;
 	else
@@ -198,8 +189,7 @@ static int IsLeapYear(PRInt16 year)
  */
 
 static void
-ApplySecOffset(PRExplodedTime* time, PRInt32 secOffset)
-{
+ApplySecOffset(PRExplodedTime* time, PRInt32 secOffset) {
 	time->tm_sec += secOffset;
 
 	/* Note that in this implementation we do not count leap seconds */
@@ -241,8 +231,7 @@ ApplySecOffset(PRExplodedTime* time, PRInt32 secOffset)
 		time->tm_wday--;
 		if (time->tm_wday < 0)
 			time->tm_wday = 6;
-	}
-	else if (time->tm_hour > 23) {
+	} else if (time->tm_hour > 23) {
 		/* Increment mday, yday, and wday */
 		time->tm_hour -= 24;
 		time->tm_mday++;
@@ -264,8 +253,7 @@ ApplySecOffset(PRExplodedTime* time, PRInt32 secOffset)
 }
 
 void
-PR_NormalizeTime(PRExplodedTime* time, PRTimeParamFn params)
-{
+PR_NormalizeTime(PRExplodedTime* time, PRTimeParamFn params) {
 	int daysInMonth;
 	PRInt32 numDays;
 
@@ -337,8 +325,7 @@ PR_NormalizeTime(PRExplodedTime* time, PRTimeParamFn params)
 			}
 			time->tm_mday += nDays[IsLeapYear(time->tm_year)][time->tm_month];
 		} while (time->tm_mday < 1);
-	}
-	else {
+	} else {
 		daysInMonth = nDays[IsLeapYear(time->tm_year)][time->tm_month];
 		while (time->tm_mday > daysInMonth) {
 			/* mday too large */
@@ -382,8 +369,7 @@ PR_NormalizeTime(PRExplodedTime* time, PRTimeParamFn params)
  */
 
 PRTimeParameters
-PR_GMTParameters(const PRExplodedTime* gmt)
-{
+PR_GMTParameters(const PRExplodedTime* gmt) {
 	PRTimeParameters retVal = { 0, 0 };
 	return retVal;
 }
@@ -410,8 +396,7 @@ PR_GMTParameters(const PRExplodedTime* gmt)
   * JST: Japan Standard Time
   */
 
-typedef enum
-{
+typedef enum {
 	TT_UNKNOWN,
 
 	TT_SUN, TT_MON, TT_TUE, TT_WED, TT_THU, TT_FRI, TT_SAT,
@@ -459,8 +444,7 @@ PRStatus
 PR_ParseTimeString(
 	const char* string,
 	PRBool default_to_gmt,
-	PRTime* result_imploded)
-{
+	PRTime* result_imploded) {
 	PRExplodedTime tm;
 	PRExplodedTime* result = &tm;
 	TIME_TOKEN dotw = TT_UNKNOWN;
@@ -792,8 +776,7 @@ PR_ParseTimeString(
 				if (*rest == 'Z') {
 					zone = TT_GMT;
 					rest++;
-				}
-				else if (tmp_hour <= 12) {
+				} else if (tmp_hour <= 12) {
 					/* If we made it here, we've parsed hour and min,
 					   and possibly sec, so the current token is a time.
 					   Now skip over whitespace and see if there's an AM
@@ -819,8 +802,7 @@ PR_ParseTimeString(
 				usec = tmp_usec;
 				rest = end;
 				break;
-			}
-			else if ((*end == '/' || *end == '-') &&
+			} else if ((*end == '/' || *end == '-') &&
 				end[1] >= '0' && end[1] <= '9') {
 				/* Perhaps this is 6/16/95, 16/6/95, 6-16-95, or 16-6-95
 				   or even 95-06-05 or 1995-06-22.
@@ -922,8 +904,7 @@ PR_ParseTimeString(
 					date = n1;
 					month = (TIME_TOKEN)(n2 + ((int)TT_JAN) - 1);
 					year = n3;
-				}
-				else                  /* assume MM/DD/YY */
+				} else                  /* assume MM/DD/YY */
 				{
 					/* #### In the ambiguous case, should we consult the
 					   locale to find out the local default? */
@@ -932,8 +913,7 @@ PR_ParseTimeString(
 					year = n3;
 				}
 				rest = s;
-			}
-			else if ((*end >= 'A' && *end <= 'Z') ||
+			} else if ((*end >= 'A' && *end <= 'Z') ||
 				(*end >= 'a' && *end <= 'z'))
 				/* Digits followed by non-punctuation - what's that? */
 				;
@@ -975,8 +955,7 @@ PR_ParseTimeString(
 						year = n;
 				}
 				/* else what the hell is this. */
-			}
-			else if ((end - rest) == 1)                /* one digit - date */
+			} else if ((end - rest) == 1)                /* one digit - date */
 				date = (date < 0 ? (rest[0] - '0') : date);
 			/* else, three or more than five digits - what's that? */
 
@@ -1136,8 +1115,7 @@ PR_ParseTimeString(
 				/* Emulate what mktime would have done. */
 				errno = EINVAL;
 				secs = (time_t)-1;
-			}
-			else {
+			} else {
 				secs = mktime(&localTime);
 			}
 #else

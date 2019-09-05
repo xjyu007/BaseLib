@@ -11,7 +11,6 @@
 #include <optional>
 #include "sequence_token.h"
 #include "task/task_traits.h"
-#include "task/thread_pool/pooled_parallel_task_runner.h"
 #include "task/thread_pool/sequence_sort_key.h"
 #include "task/thread_pool/task.h"
 #include "task/thread_pool/task_source.h"
@@ -82,7 +81,6 @@ namespace base {
 
 			// TaskSource:
 			ExecutionEnvironment GetExecutionEnvironment() override;
-			RunIntent WillRunTask() override;
 			size_t GetRemainingConcurrency() const override;
 
 			// Returns a token that uniquely identifies this Sequence.
@@ -96,9 +94,10 @@ namespace base {
 			~Sequence() override;
 
 			// TaskSource:
-			std::optional<Task> TakeTask() override WARN_UNUSED_RESULT;
-			std::optional<Task> Clear() override WARN_UNUSED_RESULT;
-			bool DidProcessTask() override;
+			RunStatus WillRunTask() override;
+			std::optional<Task> TakeTask(TaskSource::Transaction* transaction) override;
+			std::optional<Task> Clear(TaskSource::Transaction* transaction) override;
+			bool DidProcessTask(TaskSource::Transaction* transaction) override;
 			SequenceSortKey GetSortKey() const override;
 
 			// Releases reference to TaskRunner. This might cause this object to be

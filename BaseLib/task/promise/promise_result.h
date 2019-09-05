@@ -49,15 +49,14 @@ namespace base {
 		template <typename T>
 		PromiseResult(T&& t)
 			: PromiseResult(typename Analyze<std::decay_t<T>>::TagType(),
-				std::forward<T>(t)) {
-		}
+				std::forward<T>(t)) {}
 
 		PromiseResult(PromiseResult&& other) noexcept = default;
 
 		PromiseResult(const PromiseResult&) = delete;
 		PromiseResult& operator=(const PromiseResult&) = delete;
 
-		unique_any& value() { return value_; }
+		internal::PromiseValue& value() { return value_; }
 
 	private:
 		struct IsWrapped {};
@@ -124,23 +123,20 @@ namespace base {
 		template <typename... Args>
 		PromiseResult(IsResolved, Args&& ... args)
 			: value_(in_place_type_t<Resolved<ResolveType>>(),
-				std::forward<Args>(args)...) {
-		}
+				std::forward<Args>(args)...) {}
 
 		template <typename... Args>
 		PromiseResult(IsRejected, Args&& ... args)
 			: value_(in_place_type_t<Rejected<RejectType>>(),
-				std::forward<Args>(args)...) {
-		}
+				std::forward<Args>(args)...) {}
 
 		PromiseResult(IsPromise, const Promise<ResolveType, RejectType>& promise)
-			: value_(promise.abstract_promise_) {
-		}
+			: value_(promise.abstract_promise_) {}
 
 		template <typename T>
 		PromiseResult(IsWrapped, T&& t) : value_(std::forward<T>(t)) {}
 
-		unique_any value_;
+		internal::PromiseValue value_;
 	};
 
 }  // namespace base

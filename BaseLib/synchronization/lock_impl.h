@@ -8,14 +8,8 @@
 #include "logging.h"
 #include "macros.h"
 #include "thread_annotations.h"
-#include "build_config.h"
 
-#if defined(OS_WIN)
 #include "win/windows_types.h"
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <errno.h>
-#include <pthread.h>
-#endif
 
 namespace base {
 	namespace internal {
@@ -25,11 +19,7 @@ namespace base {
 		// should instead use Lock.
 		class BASE_EXPORT LockImpl {
 		public:
-#if defined(OS_WIN)
 			using NativeHandle = CHROME_SRWLOCK;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-			using NativeHandle = pthread_mutex_t;
-#endif
 
 			LockImpl();
 			~LockImpl();
@@ -50,27 +40,15 @@ namespace base {
 			// unnecessary.
 			NativeHandle* native_handle() { return &native_handle_; }
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-			// Whether this lock will attempt to use priority inheritance.
-			static bool PriorityInheritanceAvailable();
-#endif
-
 		private:
 			NativeHandle native_handle_;
 
 			DISALLOW_COPY_AND_ASSIGN(LockImpl);
 		};
 
-#if defined(OS_WIN)
 		void LockImpl::Unlock() {
 			::ReleaseSRWLockExclusive(reinterpret_cast<PSRWLOCK>(&native_handle_));
 		}
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		void LockImpl::Unlock() {
-			int rv = pthread_mutex_unlock(&native_handle_);
-			DCHECK_EQ(rv, 0) << ". " << strerror(rv);
-		}
-#endif
 
 		// This is an implementation used for AutoLock templated on the lock type.
 		template <class LockType>

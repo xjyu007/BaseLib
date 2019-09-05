@@ -17,10 +17,8 @@
 #include "task/sequence_manager/thread_controller.h"
 #include "task/sequence_manager/work_deduplicator.h"
 #include "thread_annotations.h"
-#include "threading/platform_thread.h"
 #include "threading/sequence_local_storage_map.h"
 #include "threading/thread_task_runner_handle.h"
-#include "build_config.h"
 
 namespace base {
 	namespace sequence_manager {
@@ -57,15 +55,12 @@ namespace base {
 					scoped_refptr<SingleThreadTaskRunner> task_runner) override;
 				scoped_refptr<SingleThreadTaskRunner> GetDefaultTaskRunner() override;
 				void RestoreDefaultTaskRunner() override;
-				void AddNestingObserver(RunLoop::NestingObserver* observer) override;
-				void RemoveNestingObserver(RunLoop::NestingObserver* observer) override;
+				void AddNestingObserver(NestingObserver* observer) override;
+				void RemoveNestingObserver(NestingObserver* observer) override;
 				const scoped_refptr<AssociatedThreadId>& GetAssociatedThread() const override;
 				void SetTaskExecutionAllowed(bool allowed) override;
 				bool IsTaskExecutionAllowed() const override;
 				MessagePump* GetBoundMessagePump() const override;
-#if defined(OS_IOS) || defined(OS_ANDROID)
-				void AttachToMessagePump() override;
-#endif
 				bool ShouldQuitRunLoopWhenIdle() override;
 
 				// RunLoop::NestingObserver:
@@ -103,7 +98,7 @@ namespace base {
 					~MainThreadOnly();
 
 					SequencedTaskSource* task_source = nullptr;            // Not owned.
-					RunLoop::NestingObserver* nesting_observer = nullptr;  // Not owned.
+					NestingObserver* nesting_observer = nullptr;  // Not owned.
 					std::unique_ptr<ThreadTaskRunnerHandle> thread_task_runner_handle;
 
 					// Indicates that we should yield DoWork between each task to let a possibly

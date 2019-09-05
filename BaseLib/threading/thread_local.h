@@ -63,7 +63,7 @@ namespace base {
 		ThreadLocalPointer() = default;
 		~ThreadLocalPointer() = default;
 
-		T* Get() const { return static_cast<T*>(slot_.Get()); }
+		[[nodiscard]] T* Get() const { return static_cast<T*>(slot_.Get()); }
 
 		void Set(T* ptr) {
 			slot_.Set(const_cast<void*>(static_cast<const void*>(ptr)));

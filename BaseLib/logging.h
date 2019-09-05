@@ -17,7 +17,6 @@
 #include "macros.h"
 #include "scoped_clear_last_error.h"
 #include "template_util.h"
-#include "build_config.h"
 
 //
 // Optional message capabilities
@@ -156,11 +155,7 @@
 namespace logging {
 
 	// TODO(avi): do we want to do a unification of character types here?
-#if defined(OS_WIN)
 	typedef wchar_t PathChar;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-	typedef char PathChar;
-#endif
 
 	// A bitmask of potential logging destinations.
 	using LoggingDestination = uint32_t;
@@ -180,13 +175,7 @@ namespace logging {
 		// On POSIX platforms, where it may not even be possible to locate the
 		// executable on disk, use stderr.
 		// On Fuchsia, use the Fuchsia logging service.
-#if defined(OS_FUCHSIA) || defined(OS_NACL)
-		LOG_DEFAULT = LOG_TO_SYSTEM_DEBUG_LOG,
-#elif defined(OS_WIN)
 		LOG_DEFAULT = LOG_TO_FILE,
-#elif defined(OS_POSIX)
-		LOG_DEFAULT = LOG_TO_SYSTEM_DEBUG_LOG | LOG_TO_STDERR,
-#endif
 	};
 
 	// Indicates that the log file should be locked when being written to.
@@ -212,13 +201,6 @@ namespace logging {
 		const PathChar* log_file_path = nullptr;
 		LogLockingState lock_log = LOCK_LOG_FILE;
 		OldFileDeletionState delete_old = APPEND_TO_OLD_LOG_FILE;
-#if defined(OS_CHROMEOS)
-		// Contains an optional file that logs should be written to. If present,
-		// |log_file_path| will be ignored, and the logging system will take ownership
-		// of the FILE. If there's an error writing to this file, no fallback paths
-		// will be opened.
-		FILE* log_file = nullptr;
-#endif
 	};
 
 	// Define different names for the BaseInitLoggingImpl() function depending on
@@ -400,7 +382,6 @@ namespace logging {
 #define COMPACT_GOOGLE_LOG_DFATAL COMPACT_GOOGLE_LOG_EX_DFATAL(LogMessage)
 #define COMPACT_GOOGLE_LOG_DCHECK COMPACT_GOOGLE_LOG_EX_DCHECK(LogMessage)
 
-#if defined(OS_WIN)
 // wingdi.h defines ERROR to be 0. When we call LOG(ERROR), it gets
 // substituted with 0, and it expands to COMPACT_GOOGLE_LOG_0. To allow us
 // to keep using this syntax, we define this macro to do the same thing
@@ -412,7 +393,6 @@ namespace logging {
 #define COMPACT_GOOGLE_LOG_0 COMPACT_GOOGLE_LOG_ERROR
 // Needed for LOG_IS_ON(ERROR).
 	const LogSeverity LOG_0 = LOG_ERROR;
-#endif
 
 	// As special cases, we can assume that LOG_IS_ON(FATAL) always holds. Also,
 	// LOG_IS_ON(DFATAL) always holds in debug mode. In particular, CHECK()s will
@@ -457,15 +437,9 @@ namespace logging {
 	LAZY_STREAM(VLOG_STREAM(verbose_level), \
       VLOG_IS_ON(verbose_level) && (condition))
 
-#if defined (OS_WIN)
 #define VPLOG_STREAM(verbose_level) \
 	::logging::Win32ErrorLogMessage(__FILE__, __LINE__, -verbose_level, \
     ::logging::GetLastSystemErrorCode()).stream()
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#define VPLOG_STREAM(verbose_level) \
-	::logging::ErrnoLogMessage(__FILE__, __LINE__, -verbose_level, \
-    ::logging::GetLastSystemErrorCode()).stream()
-#endif
 
 #define VPLOG(verbose_level) \
 	LAZY_STREAM(VPLOG_STREAM(verbose_level), VLOG_IS_ON(verbose_level))
@@ -480,15 +454,9 @@ namespace logging {
 	LOG_IF(FATAL, !(ANALYZER_ASSUME_TRUE(condition))) \
       << "Assert failed: " #condition ". "
 
-#if defined(OS_WIN)
 #define PLOG_STREAM(severity) \
 	COMPACT_GOOGLE_LOG_EX_ ## severity(Win32ErrorLogMessage, \
       ::logging::GetLastSystemErrorCode()).stream()
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#define PLOG_STREAM(severity) \
-	COMPACT_GOOGLE_LOG_EX_ ## severity(ErrnoLogMessage, \
-      ::logging::GetLastSystemErrorCode()).stream()
-#endif
 
 #define PLOG(severity)                                          \
 	LAZY_STREAM(PLOG_STREAM(severity), LOG_IS_ON(severity))
@@ -515,7 +483,7 @@ namespace logging {
 		: ::logging::LogMessageVoidify() & (*::logging::g_swallow_stream)
 
 	// Captures the result of a CHECK_EQ (for example) and facilitates testing as a
-// boolean.
+	// boolean.
 	class CheckOpResult {
 	public:
 		// |message| must be non-null if and only if the check failed.
@@ -523,7 +491,7 @@ namespace logging {
 		// Returns true if the check succeeded.
 		operator bool() const { return !message_; }
 		// Returns the message.
-		std::string* message() { return message_; }
+		[[nodiscard]] std::string* message() const { return message_; }
 
 	private:
 		std::string* message_;
@@ -675,20 +643,20 @@ namespace logging {
 	// static analysis builds, blocks analysis of the current path if the
 	// condition is false.
 #define DEFINE_CHECK_OP_IMPL(name, op)                                       \
-  template <class t1, class t2>                                              \
-  inline std::string* Check##name##Impl(const t1& v1, const t2& v2,          \
-                                        const char* names) {                 \
-    if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
-      return NULL;                                                           \
-    else                                                                     \
-      return ::logging::MakeCheckOpString(v1, v2, names);                    \
-  }                                                                          \
-  inline std::string* Check##name##Impl(int v1, int v2, const char* names) { \
-    if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
-      return NULL;                                                           \
-    else                                                                     \
-      return ::logging::MakeCheckOpString(v1, v2, names);                    \
-  }
+	template <class t1, class t2>                                              \
+	inline std::string* Check##name##Impl(const t1& v1, const t2& v2,          \
+	                                      const char* names) {                 \
+		if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
+			return NULL;                                                           \
+		else                                                                     \
+			return ::logging::MakeCheckOpString(v1, v2, names);                    \
+		}                                                                          \
+		inline std::string* Check##name##Impl(int v1, int v2, const char* names) { \
+		if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
+		return NULL;                                                           \
+		else                                                                     \
+		return ::logging::MakeCheckOpString(v1, v2, names);                    \
+	}
 	DEFINE_CHECK_OP_IMPL(EQ, == )
 	DEFINE_CHECK_OP_IMPL(NE, != )
 	DEFINE_CHECK_OP_IMPL(LE, <= )
@@ -929,18 +897,13 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
 		void operator&(std::ostream&) {}
 	};
 
-#if defined(OS_WIN)
 	typedef unsigned long SystemErrorCode;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-	typedef int SystemErrorCode;
-#endif
 
 	// Alias for ::GetLastError() on Windows and errno on POSIX. Avoids having to
 	// pull in windows.h just for GetLastError() and DWORD.
 	BASE_EXPORT SystemErrorCode GetLastSystemErrorCode();
 	BASE_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code);
 
-#if defined(OS_WIN)
 	// Appends a formatted system message of the GetLastError() type.
 	class BASE_EXPORT Win32ErrorLogMessage {
 	public:
@@ -960,41 +923,12 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
 
 		DISALLOW_COPY_AND_ASSIGN(Win32ErrorLogMessage);
 	};
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-	// Appends a formatted system message of the errno type
-	class BASE_EXPORT ErrnoLogMessage {
-	public:
-		ErrnoLogMessage(const char* file,
-			int line,
-			LogSeverity severity,
-			SystemErrorCode err);
-
-		// Appends the error message before destructing the encapsulated class.
-		~ErrnoLogMessage();
-
-		std::ostream& stream() { return log_message_.stream(); }
-
-	private:
-		SystemErrorCode err_;
-		LogMessage log_message_;
-
-		DISALLOW_COPY_AND_ASSIGN(ErrnoLogMessage);
-	};
-#endif  // OS_WIN
 
 	// Closes the log file explicitly if open.
 	// NOTE: Since the log file is opened as necessary by the action of logging
 	//       statements, there's no guarantee that it will stay closed
 	//       after this call.
 	BASE_EXPORT void CloseLogFile();
-
-#if defined(OS_CHROMEOS)
-	// Returns a new file handle that will write to the same destination as the
-	// currently open log file. Returns nullptr if logging to a file is disabled,
-	// or if opening the file failed. This is intended to be used to initialize
-	// logging in child processes that are unable to open files.
-	BASE_EXPORT FILE* DuplicateLogFILE();
-#endif
 
 	// Async signal safe logging mechanism.
 	BASE_EXPORT void RawLog(int level, const char* message);
@@ -1009,13 +943,11 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
                         "Check failed: " #condition "\n"); \
   } while (0)
 
-#if defined(OS_WIN)
 	// Returns true if logging to file is enabled.
 	BASE_EXPORT bool IsLoggingToFileEnabled();
 
 	// Returns the default log file path.
 	BASE_EXPORT std::wstring GetLogFileFullPath();
-#endif
 }  // namespace logging
 
 // Note that "The behavior of a C++ program is undefined if it adds declarations
@@ -1043,13 +975,7 @@ namespace std {
 // implemented yet. If output spam is a serious concern,
 // NOTIMPLEMENTED_LOG_ONCE can be used.
 
-#if defined(COMPILER_GCC)
-// On Linux, with GCC, we can use __PRETTY_FUNCTION__ to get the demangled name
-// of the current function in the NOTIMPLEMENTED message.
-#define NOTIMPLEMENTED_MSG "Not implemented reached in " << __PRETTY_FUNCTION__
-#else
 #define NOTIMPLEMENTED_MSG "NOT IMPLEMENTED"
-#endif
 
 #define NOTIMPLEMENTED() DLOG(ERROR) << NOTIMPLEMENTED_MSG
 #define NOTIMPLEMENTED_LOG_ONCE()                       \

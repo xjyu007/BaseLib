@@ -8,27 +8,10 @@
 // base/process/.
 
 #include "environment.h"
-#include "build_config.h"
 
 namespace base {
 	namespace internal {
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// Returns a modified environment vector constructed from the given environment
-		// and the list of changes given in |changes|. Each key in the environment is
-		// matched against the first element of the pairs. In the event of a match, the
-		// value is replaced by the second of the pair, unless the second is empty, in
-		// which case the key-value is removed.
-		//
-		// This POSIX version takes and returns a POSIX-style environment block, which
-		// is a null-terminated list of pointers to null-terminated strings. The
-		// returned array will have appended to it the storage for the array itself so
-		// there is only one pointer to manage, but this means that you can't copy the
-		// array without keeping the original around.
-		BASE_EXPORT std::unique_ptr<char* []> AlterEnvironment(
-			const char* const* env,
-			const EnvironmentMap & changes);
-#elif defined(OS_WIN)
 		// Returns a modified environment vector constructed from the given environment
 		// and the list of changes given in |changes|. Each key in the environment is
 		// matched against the first element of the pairs. In the event of a match, the
@@ -40,7 +23,6 @@ namespace base {
 		// extra terminating null character. So, e.g., the environment A=1 B=2 is
 		// represented as L"A=1\0B=2\0\0".
 		BASE_EXPORT NativeEnvironmentString AlterEnvironment(const wchar_t* env, const EnvironmentMap& changes);
-#endif  // OS_*
 
 	}  // namespace internal
 }  // namespace base

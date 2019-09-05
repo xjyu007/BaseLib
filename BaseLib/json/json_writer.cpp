@@ -13,15 +13,10 @@
 #include "logging.h"
 #include "strings/string_number_conversions.h"
 #include "values.h"
-#include "build_config.h"
 
 namespace base {
 
-#if defined(OS_WIN)
 	const char kPrettyPrintLineEnding[] = "\r\n";
-#else
-	const char kPrettyPrintLineEnding[] = "\n";
-#endif
 
 	// static
 	bool JSONWriter::Write(const Value& node, std::string* json) {

@@ -322,7 +322,6 @@ namespace base {
 
 	namespace internal {
 
-#if defined(OS_WIN)
 		void PlatformThreadLocalStorage::OnThreadExit() {
 			const TLSKey key = 
 				subtle::NoBarrier_Load(&g_native_tls_key);
@@ -340,23 +339,6 @@ namespace base {
 				return;
 			OnThreadExitInternal(tls_vector);
 		}
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		void PlatformThreadLocalStorage::OnThreadExit(void* value) {
-			// On posix this function may be called twice. The first pass calls dtors and
-			// sets state to kDestroyed. The second pass sets kDestroyed to
-			// kUninitialized.
-			TlsVectorEntry* tls_vector = nullptr;
-			const TlsVectorState state = GetTlsVectorStateAndValue(value, &tls_vector);
-			if (state == TlsVectorState::kDestroyed) {
-				PlatformThreadLocalStorage::TLSKey key =
-					base::subtle::NoBarrier_Load(&g_native_tls_key);
-				SetTlsVectorValue(key, nullptr, TlsVectorState::kUninitialized);
-				return;
-			}
-
-			OnThreadExitInternal(tls_vector);
-		}
-#endif  // defined(OS_WIN)
 
 	}  // namespace internal
 

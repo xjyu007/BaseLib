@@ -16,7 +16,6 @@
 #include "task/thread_pool/tracked_ref.h"
 #include "thread_annotations.h"
 #include "threading/platform_thread.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -72,7 +71,6 @@ namespace base {
 				const TaskTraits& traits,
 				SingleThreadTaskRunnerThreadMode thread_mode);
 
-#if defined(OS_WIN)
 			// Creates a SingleThreadTaskRunner which runs tasks with |traits| on a COM
 			// STA thread named "ThreadPoolSingleThreadCOMSTA[Shared]" +
 			// kEnvironmentParams[GetEnvironmentIndexForTraits(traits)].name_suffix +
@@ -80,7 +78,6 @@ namespace base {
 			scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunner(
 				const TaskTraits& traits,
 				SingleThreadTaskRunnerThreadMode thread_mode);
-#endif  // defined(OS_WIN)
 
 			void JoinForTesting();
 
@@ -139,10 +136,8 @@ namespace base {
 			WorkerThread* shared_worker_threads_[ENVIRONMENT_COUNT]
 				[CONTINUE_ON_SHUTDOWN_COUNT] GUARDED_BY(
 					lock_) = {};
-#if defined(OS_WIN)
 			WorkerThread* shared_com_worker_threads_
 				[ENVIRONMENT_COUNT][CONTINUE_ON_SHUTDOWN_COUNT] GUARDED_BY(lock_) = {};
-#endif  // defined(OS_WIN)
 
 			// Set to true when Start() is called.
 			bool started_ GUARDED_BY(lock_) = false;

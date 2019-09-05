@@ -10,16 +10,14 @@
 #include "logging.h"
 #include "build_config.h"
 
-#if defined(OS_WIN)
-#include <windows.h>  // Must be in front of other Windows header files.
+#include <Windows.h>  // Must be in front of other Windows header files.
 
 #include <VersionHelpers.h>
-#endif
 
 namespace base {
 
-void* GetRandomPageBase() {
-  uintptr_t random = static_cast<uintptr_t>(RandomValue(GetRandomContext()));
+	void* GetRandomPageBase() {
+		uintptr_t random = static_cast<uintptr_t>(RandomValue(GetRandomContext()));
 
 #if defined(ARCH_CPU_64_BITS)
 		random <<= 32ULL;
@@ -27,7 +25,7 @@ void* GetRandomPageBase() {
 
 		// The kASLRMask and kASLROffset constants will be suitable for the
 		// OS and build configuration.
-#if defined(OS_WIN) && !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
+#if !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
   // Windows >= 8.1 has the full 47 bits. Use them where available.
 		static bool windows_81 = false;
 		static bool windows_81_initialized = false;
@@ -44,9 +42,8 @@ void* GetRandomPageBase() {
 #else
 		random &= internal::kASLRMask;
 		random += internal::kASLROffset;
-#endif  // defined(OS_WIN) && !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
+#endif  // !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
 #else   // defined(ARCH_CPU_32_BITS)
-#if defined(OS_WIN)
 		// On win32 host systems the randomization plus huge alignment causes
 		// excessive fragmentation. Plus most of these systems lack ASLR, so the
 		// randomization isn't buying anything. In that case we just skip it.
@@ -56,7 +53,6 @@ void* GetRandomPageBase() {
 			is_wow64 = FALSE;
 		if (!is_wow64)
 			return nullptr;
-#endif  // defined(OS_WIN)
 		random &= internal::kASLRMask;
 		random += internal::kASLROffset;
 #endif  // defined(ARCH_CPU_32_BITS)

@@ -12,9 +12,7 @@
 #include "task/thread_pool/tracked_ref.h"
 #include "build_config.h"
 
-#if defined(OS_WIN)
 #include "win/scoped_windows_thread_environment.h"
-#endif
 
 namespace base {
 	namespace internal {
@@ -40,12 +38,10 @@ namespace base {
 			enum class WorkerEnvironment {
 				// No special worker environment required.
 				NONE,
-#if defined(OS_WIN)
 				// Initialize a COM MTA on the worker.
 				COM_MTA,
 				// Initialize a COM STA on the worker.
 				COM_STA,
-#endif  // defined(OS_WIN)
 			};
 
 			virtual ~ThreadGroup();
@@ -65,13 +61,12 @@ namespace base {
 			// is running a task from it.
 			RegisteredTaskSource RemoveTaskSource(scoped_refptr<TaskSource> task_source);
 
-			// Updates the position of the TaskSource in |transaction_with_task_source| in
-			// this ThreadGroup's PriorityQueue based on the TaskSource's current traits.
+			// Updates the position of the TaskSource in |transaction| in this
+			// ThreadGroup's PriorityQueue based on the TaskSource's current traits.
 			//
 			// Implementations should instantiate a concrete ScopedWorkersExecutor and
 			// invoke UpdateSortKeyImpl().
-			virtual void UpdateSortKey(
-				TransactionWithOwnedTaskSource transaction_with_task_source) = 0;
+			virtual void UpdateSortKey(TaskSource::Transaction transaction) = 0;
 
 			// Pushes the TaskSource in |transaction_with_task_source| into this
 			// ThreadGroup's PriorityQueue and wakes up workers as appropriate.
@@ -170,10 +165,8 @@ namespace base {
 				TrackedRef<Delegate> delegate,
 				ThreadGroup* predecessor_thread_group = nullptr);
 
-#if defined(OS_WIN)
 			static std::unique_ptr<win::ScopedWindowsThreadEnvironment>
 				GetScopedWindowsThreadEnvironment(WorkerEnvironment environment);
-#endif
 
 			const TrackedRef<TaskTracker> task_tracker_;
 			const TrackedRef<Delegate> delegate_;
@@ -207,13 +200,12 @@ namespace base {
 			// pops |priority_queue_| if the task source returned no longer needs to be
 			// queued (reached its maximum concurrency). Otherwise returns nullptr and
 			// pops |priority_queue_| so this can be called again.
-			RunIntentWithRegisteredTaskSource TakeRunIntentWithRegisteredTaskSource(
+			RegisteredTaskSource TakeRegisteredTaskSource(
 				BaseScopedWorkersExecutor* executor) EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Must be invoked by implementations of the corresponding non-Impl() methods.
-			void UpdateSortKeyImpl(
-				BaseScopedWorkersExecutor* executor,
-				TransactionWithOwnedTaskSource transaction_with_task_source);
+			void UpdateSortKeyImpl(BaseScopedWorkersExecutor* executor,
+			                       TaskSource::Transaction transaction);
 			void PushTaskSourceAndWakeUpWorkersImpl(
 				BaseScopedWorkersExecutor* executor,
 				TransactionWithRegisteredTaskSource transaction_with_task_source);

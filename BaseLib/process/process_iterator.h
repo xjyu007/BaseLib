@@ -16,46 +16,16 @@
 #include "process/process.h"
 #include "build_config.h"
 
-#if defined(OS_WIN)
-#include <windows.h>
-#include <tlhelp32.h>
-#elif defined(OS_MACOSX) || defined(OS_OPENBSD)
-#include <sys/sysctl.h>
-#elif defined(OS_FREEBSD)
-#include <sys/user.h>
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <dirent.h>
-#endif
+#include <Windows.h>
+#include <TlHelp32.h>
 
 namespace base {
 
-#if defined(OS_WIN)
 	struct ProcessEntry : public PROCESSENTRY32 {
 		[[nodiscard]] ProcessId pid() const { return th32ProcessID; }
 		[[nodiscard]] ProcessId parent_pid() const { return th32ParentProcessID; }
 		[[nodiscard]] const wchar_t* exe_file() const { return szExeFile; }
 	};
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-	struct BASE_EXPORT ProcessEntry {
-		ProcessEntry();
-		ProcessEntry(const ProcessEntry& other);
-		~ProcessEntry();
-
-		ProcessId pid() const { return pid_; }
-		ProcessId parent_pid() const { return ppid_; }
-		ProcessId gid() const { return gid_; }
-		const char* exe_file() const { return exe_file_.c_str(); }
-		const std::vector<std::string>& cmd_line_args() const {
-			return cmd_line_args_;
-		}
-
-		ProcessId pid_;
-		ProcessId ppid_;
-		ProcessId gid_;
-		std::string exe_file_;
-		std::vector<std::string> cmd_line_args_;
-	};
-#endif  // defined(OS_WIN)
 
 	// Used to filter processes by process ID.
 	class ProcessFilter {
@@ -103,15 +73,8 @@ namespace base {
 		// use with Process32First/Process32Next.
 		void InitProcessEntry(ProcessEntry* entry);
 
-#if defined(OS_WIN)
 		HANDLE snapshot_;
 		bool started_iteration_;
-#elif defined(OS_MACOSX) || defined(OS_BSD)
-		std::vector<kinfo_proc> kinfo_procs_;
-		size_t index_of_kinfo_proc_;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		DIR * procfs_dir_;
-#endif
 		ProcessEntry entry_;
 		const ProcessFilter* filter_;
 

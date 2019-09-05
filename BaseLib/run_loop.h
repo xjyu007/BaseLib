@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <utility>
 #include <vector>
 
 #include "base_export.h"
@@ -20,13 +19,6 @@
 #include "build_config.h"
 
 namespace base {
-#if defined(OS_ANDROID)
-	class MessagePumpForUI;
-#endif
-
-#if defined(OS_IOS)
-	class MessagePumpUIApplication;
-#endif
 
 	class SingleThreadTaskRunner;
 
@@ -281,10 +273,10 @@ namespace base {
 
 			// Returns the active ScopedRunTimeoutForTest on the calling thread, if any,
 			// or null otherwise.
-			static const RunLoop::ScopedRunTimeoutForTest* Current();
+			static const ScopedRunTimeoutForTest* Current();
 
-			TimeDelta timeout() const { return timeout_; }
-			const RepeatingClosure& on_timeout() const { return on_timeout_; }
+			[[nodiscard]] TimeDelta timeout() const { return timeout_; }
+			[[nodiscard]] const RepeatingClosure& on_timeout() const { return on_timeout_; }
 
 		private:
 			const TimeDelta timeout_;
@@ -327,18 +319,6 @@ namespace base {
 
 	private:
 		//FRIEND_TEST_ALL_PREFIXES(MessageLoopTypedTest, RunLoopQuitOrderAfter);
-
-#if defined(OS_ANDROID)
-		// Android doesn't support the blocking RunLoop::Run, so it calls
-		// BeforeRun and AfterRun directly.
-		friend class MessagePumpForUI;
-#endif
-
-#if defined(OS_IOS)
-		// iOS doesn't support the blocking RunLoop::Run, so it calls
-		// BeforeRun directly.
-		friend class MessagePumpUIApplication;
-#endif
 
 		// Return false to abort the Run.
 		bool BeforeRun();

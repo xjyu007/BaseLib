@@ -12,8 +12,7 @@
 #include "task/post_task.h"
 #include "task/task_traits.h"
 #include "task/thread_pool/task_tracker.h"
-#include "task/thread_pool/thread_pool.h"
-
+#include "task/thread_pool/thread_pool_instance.h"
 
 namespace base::internal {
 

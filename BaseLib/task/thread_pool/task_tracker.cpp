@@ -13,13 +13,11 @@
 #include "compiler_specific.h"
 #include "debug_/alias.h"
 #include "json/json_writer.h"
-#include "memory/ptr_util.h"
 #include "metrics/histogram_macros.h"
 #include <optional>
 #include "sequence_token.h"
 #include "synchronization/condition_variable.h"
 #include "task/scoped_set_task_priority_for_current_thread.h"
-#include "task/thread_pool/thread_pool_clock.h"
 #include "threading/sequence_local_storage_map.h"
 #include "threading/sequenced_task_runner_handle.h"
 #include "threading/thread_restrictions.h"
@@ -410,7 +408,7 @@ namespace base::internal {
 		return true;
 	}
 
-	RegisteredTaskSource TaskTracker::WillQueueTaskSource(
+	RegisteredTaskSource TaskTracker::RegisterTaskSource(
 		scoped_refptr<TaskSource> task_source) {
 		DCHECK(task_source);
 
@@ -437,9 +435,8 @@ namespace base::internal {
 	}
 
 	RegisteredTaskSource TaskTracker::RunAndPopNextTask(
-		RunIntentWithRegisteredTaskSource run_intent_with_task_source) {
-		DCHECK(run_intent_with_task_source);
-		auto task_source = run_intent_with_task_source.take_task_source();
+    		RegisteredTaskSource task_source) {
+  		DCHECK(task_source);
 
 		const bool can_run_worker_task =
 			BeforeRunTask(task_source->shutdown_behavior());
@@ -448,13 +445,10 @@ namespace base::internal {
 		std::optional<Task> task;
 		TaskTraits traits{ ThreadPool() };
 		{
-			auto task_source_transaction(
-				task_source->BeginTransaction());
-		    task = can_run_worker_task
-		               ? task_source_transaction.TakeTask(&run_intent_with_task_source)
-		               : task_source_transaction.Clear(
-		                     std::move(run_intent_with_task_source));
-			traits = task_source_transaction.traits();
+		    auto transaction = task_source->BeginTransaction();
+		    task = can_run_worker_task ? task_source.TakeTask(&transaction)
+		                               : task_source.Clear(&transaction);
+		    traits = transaction.traits();
 		}
 
 		if (task) {
@@ -463,9 +457,7 @@ namespace base::internal {
 		}
 		if (can_run_worker_task) {
 			AfterRunTask(task_source->shutdown_behavior());
-			const bool task_source_must_be_queued =
-				task_source->BeginTransaction().DidProcessTask(
-					std::move(run_intent_with_task_source));
+    		const bool task_source_must_be_queued = task_source.DidProcessTask();
 			// |task_source| should be reenqueued iff requested by DidProcessTask().
 			if (task_source_must_be_queued)
 				return task_source;

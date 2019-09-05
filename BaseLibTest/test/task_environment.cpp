@@ -4,15 +4,12 @@
 
 #include "pch.h"
 
-#include "test/scoped_task_environment.h"
+#include "test/task_environment.h"
 
 #include <algorithm>
 #include <memory>
 
-#include "bind_helpers.h"
-#include "lazy_instance.h"
 #include "logging.h"
-#include "memory/ptr_util.h"
 #include "message_loop/message_pump.h"
 #include "message_loop/message_pump_type.h"
 #include "run_loop.h"
@@ -22,18 +19,14 @@
 #include "task/sequence_manager/sequence_manager_impl.h"
 #include "task/sequence_manager/time_domain.h"
 #include "task/thread_pool/thread_pool.h"
-#include "task/thread_pool/thread_pool_clock.h"
 #include "task/thread_pool/thread_pool_impl.h"
 #include "bind_test_util.h"
 #include "test_mock_time_task_runner.h"
 #include "test_timeouts.h"
 #include "thread_annotations.h"
-#include "threading/sequence_local_storage_map.h"
-#include "threading/thread_local.h"
 #include "threading/thread_restrictions.h"
 #include "threading/thread_task_runner_handle.h"
 #include "time/clock.h"
-#include "time/default_tick_clock.h"
 #include "time/tick_clock.h"
 #include "time/time.h"
 #include "time/time_override.h"
@@ -47,13 +40,13 @@ namespace base::test {
 	namespace {
 
 		MessagePumpType GetMessagePumpTypeForMainThreadType(
-				ScopedTaskEnvironment::MainThreadType main_thread_type) {
+				TaskEnvironment::MainThreadType main_thread_type) {
 			switch (main_thread_type) {
-			case ScopedTaskEnvironment::MainThreadType::DEFAULT:
+			case TaskEnvironment::MainThreadType::DEFAULT:
 				return MessagePumpType::DEFAULT;
-			case ScopedTaskEnvironment::MainThreadType::UI:
+			case TaskEnvironment::MainThreadType::UI:
 				return MessagePumpType::UI;
-			case ScopedTaskEnvironment::MainThreadType::IO:
+			case TaskEnvironment::MainThreadType::IO:
 				return MessagePumpType::IO;
 			}
 			NOTREACHED();
@@ -62,11 +55,11 @@ namespace base::test {
 
 		std::unique_ptr<sequence_manager::SequenceManager> 
 		CreateSequenceManagerForMainThreadType(
-			ScopedTaskEnvironment::MainThreadType main_thread_type) {
-			auto type = GetMessagePumpTypeForMainThreadType(main_thread_type);
-				return sequence_manager::CreateSequenceManagerOnCurrentThreadWithPump(
+			TaskEnvironment::MainThreadType main_thread_type) {
+			const auto type = GetMessagePumpTypeForMainThreadType(main_thread_type);
+				return CreateSequenceManagerOnCurrentThreadWithPump(
 					MessagePump::Create(type),
-					base::sequence_manager::SequenceManager::Settings::Builder()
+					sequence_manager::SequenceManager::Settings::Builder()
 					.SetMessagePumpType(type)
 					.Build());
 		}
@@ -90,7 +83,7 @@ namespace base::test {
 
 	}  // namespace
 
-	class ScopedTaskEnvironment::TestTaskTracker
+	class TaskEnvironment::TestTaskTracker
 		: public internal::ThreadPoolImpl::TaskTrackerImpl {
 	public:
 		TestTaskTracker();
@@ -112,13 +105,12 @@ namespace base::test {
 		bool TasksAllowedToRun() const;
 
 	private:
-		friend class ScopedTaskEnvironment;
+		friend class TaskEnvironment;
 
 		// internal::ThreadPoolImpl::TaskTrackerImpl:
-		void RunOrSkipTask(internal::Task task,
-			internal::TaskSource* sequence,
-			const TaskTraits& traits,
-			bool can_run_task) override;
+		void RunTask(internal::Task task,
+					 internal::TaskSource* sequence,
+					 const TaskTraits& traits) override;
 
 		// Synchronizes accesses to members below.
 		mutable Lock lock_;
@@ -138,9 +130,8 @@ namespace base::test {
 		DISALLOW_COPY_AND_ASSIGN(TestTaskTracker);
 	};
 
-	class ScopedTaskEnvironment::MockTimeDomain
-		: public sequence_manager::TimeDomain,
-		public TickClock {
+	class TaskEnvironment::MockTimeDomain : public sequence_manager::TimeDomain,
+											public TickClock {
 	public:
 		explicit MockTimeDomain(sequence_manager::SequenceManager* sequence_manager)
 			: sequence_manager_(sequence_manager) {
@@ -170,11 +161,10 @@ namespace base::test {
 			return TimeDomain::NextScheduledRunTime();
 		}
 
-		static std::unique_ptr<ScopedTaskEnvironment::MockTimeDomain>
-			CreateAndRegister(sequence_manager::SequenceManager* sequence_manager) {
+		static std::unique_ptr<TaskEnvironment::MockTimeDomain> CreateAndRegister(
+			sequence_manager::SequenceManager* sequence_manager) {
 			auto mock_time_domain =
-				std::make_unique<ScopedTaskEnvironment::MockTimeDomain>(
-					sequence_manager);
+				std::make_unique<TaskEnvironment::MockTimeDomain>(sequence_manager);
 			sequence_manager->RegisterTimeDomain(mock_time_domain.get());
 			return mock_time_domain;
 		}
@@ -207,7 +197,7 @@ namespace base::test {
 			// Make sure TimeDomain::NextScheduledRunTime has taken canceled tasks into
 			// account, ReclaimMemory sweeps canceled delayed tasks.
 			sequence_manager()->ReclaimMemory();
-			std::optional<TimeTicks> run_time = NextScheduledRunTime();
+			const auto run_time = NextScheduledRunTime();
 			// Check if we've run out of tasks.
 			if (!run_time)
 				return std::nullopt;
@@ -219,15 +209,15 @@ namespace base::test {
 
 			// The next task is a future delayed task. Since we're using mock time, we
 			// don't want an actual OS level delayed wake up scheduled, so pretend we
-			// have no more work. This will result in appearing idle,
-			// ScopedTaskEnvironment will decide what to do based on that (return to
-			// caller or fast-forward time).
+		    // have no more work. This will result in appearing idle, TaskEnvironment
+		    // will decide what to do based on that (return to caller or fast-forward
+		    // time).
 			return std::nullopt;
 		}
 
 		// This method is called when the underlying message pump has run out of
 		// non-delayed work. Advances time to the next task unless
-		// |quit_when_idle_requested| or ScopedTaskEnvironment controls mock time.
+		// |quit_when_idle_requested| or TaskEnvironment controls mock time.
 		bool MaybeFastForwardToNextTask(bool quit_when_idle_requested) override {
 			if (quit_when_idle_requested)
 				return false;
@@ -338,10 +328,10 @@ namespace base::test {
 		};
 	};
 
-	ScopedTaskEnvironment::MockTimeDomain*
-		ScopedTaskEnvironment::MockTimeDomain::current_mock_time_domain_ = nullptr;
+	TaskEnvironment::MockTimeDomain*
+		TaskEnvironment::MockTimeDomain::current_mock_time_domain_ = nullptr;
 
-	ScopedTaskEnvironment::ScopedTaskEnvironment(
+	TaskEnvironment::TaskEnvironment(
 		TimeSource time_source,
 		MainThreadType main_thread_type,
 		ThreadPoolExecutionMode thread_pool_execution_mode,
@@ -384,7 +374,7 @@ namespace base::test {
 		// deferred until DeferredInitFromSubclass().
 		if (!subclass_creates_default_taskrunner) {
 			task_queue_ = sequence_manager_->CreateTaskQueue(
-				sequence_manager::TaskQueue::Spec("scoped_task_environment_default")
+				sequence_manager::TaskQueue::Spec("task_environment_default")
 				.SetTimeDomain(mock_time_domain_.get()));
 			task_runner_ = task_queue_->task_runner();
 			sequence_manager_->SetDefaultTaskRunner(task_runner_);
@@ -402,7 +392,7 @@ namespace base::test {
 		}
 	}
 
-	void ScopedTaskEnvironment::InitializeThreadPool() {
+	void TaskEnvironment::InitializeThreadPool() {
 		CHECK(!ThreadPoolInstance::Get())
 			<< "Someone has already installed a ThreadPoolInstance. If nothing in "
 			"your test does so, then a test that ran earlier may have installed "
@@ -412,7 +402,7 @@ namespace base::test {
 
 		// Instantiate a ThreadPoolInstance with 4 workers per thread group. Having
 		// multiple threads prevents deadlocks should some blocking APIs not use
-		// ScopedBlockingCall. It also allows enough concurrency to allow TSAN to spot
+		// BlockingCall. It also allows enough concurrency to allow TSAN to spot
 		// data races.
 		constexpr int kMaxThreads = 4;
 		ThreadPoolInstance::InitParams init_params(kMaxThreads);
@@ -434,18 +424,15 @@ namespace base::test {
 
 		auto task_tracker = std::make_unique<TestTaskTracker>();
 		task_tracker_ = task_tracker.get();
-		const TickClock* tick_clock =
-			mock_time_domain_ ? static_cast<TickClock*>(mock_time_domain_.get())
-			: DefaultTickClock::GetInstance();
 		auto thread_pool = std::make_unique<internal::ThreadPoolImpl>(
-			"ScopedTaskEnvironment", std::move(task_tracker), tick_clock);
+			"TaskEnvironment", std::move(task_tracker));
 		if (mock_time_domain_)
 			mock_time_domain_->SetThreadPool(thread_pool.get(), task_tracker_);
 		ThreadPoolInstance::Set(std::move(thread_pool));
 		ThreadPoolInstance::Get()->Start(init_params);
 	}
 
-	void ScopedTaskEnvironment::CompleteInitialization() const {
+	void TaskEnvironment::CompleteInitialization() const {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
 #if defined(OS_POSIX) || defined(OS_FUCHSIA)
@@ -456,10 +443,9 @@ namespace base::test {
 #endif  // defined(OS_POSIX) || defined(OS_FUCHSIA)
 	}
 
-	ScopedTaskEnvironment::ScopedTaskEnvironment(ScopedTaskEnvironment&& other) =
-		default;
+	TaskEnvironment::TaskEnvironment(TaskEnvironment&& other) = default;
 
-	ScopedTaskEnvironment::~ScopedTaskEnvironment() {
+	TaskEnvironment::~TaskEnvironment() {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
 		// If we've been moved then bail out.
@@ -470,7 +456,7 @@ namespace base::test {
 		NotifyDestructionObserversAndReleaseSequenceManager();
 	}
 
-	void ScopedTaskEnvironment::DestroyThreadPool() const {
+	void TaskEnvironment::DestroyThreadPool() const {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
 		if (threading_mode_ == ThreadingMode::MAIN_THREAD_ONLY)
@@ -494,18 +480,17 @@ namespace base::test {
 		ThreadPoolInstance::Set(nullptr);
 	}
 
-	sequence_manager::TimeDomain* ScopedTaskEnvironment::GetTimeDomain() const {
+	sequence_manager::TimeDomain* TaskEnvironment::GetTimeDomain() const {
 		return mock_time_domain_ ? mock_time_domain_.get()
 			: sequence_manager_->GetRealTimeDomain();
 	}
 
-	sequence_manager::SequenceManager* ScopedTaskEnvironment::sequence_manager()
-		const {
+	sequence_manager::SequenceManager* TaskEnvironment::sequence_manager() const {
 		DCHECK(subclass_creates_default_taskrunner_);
 		return sequence_manager_.get();
 	}
 
-	void ScopedTaskEnvironment::DeferredInitFromSubclass(
+	void TaskEnvironment::DeferredInitFromSubclass(
 		scoped_refptr<base::SingleThreadTaskRunner> task_runner) {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
@@ -514,8 +499,7 @@ namespace base::test {
 		CompleteInitialization();
 	}
 
-	void ScopedTaskEnvironment::
-		NotifyDestructionObserversAndReleaseSequenceManager() {
+	void TaskEnvironment::NotifyDestructionObserversAndReleaseSequenceManager() {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
 		// A derived classes may call this method early.
@@ -529,15 +513,15 @@ namespace base::test {
 	}
 
 	scoped_refptr<base::SingleThreadTaskRunner>
-		ScopedTaskEnvironment::GetMainThreadTaskRunner() const {
+		TaskEnvironment::GetMainThreadTaskRunner() const {
 		DCHECK(task_runner_);
 		return task_runner_;
 	}
 
-	bool ScopedTaskEnvironment::MainThreadIsIdle() const {
+	bool TaskEnvironment::MainThreadIsIdle() const {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
-		sequence_manager::internal::SequenceManagerImpl* sequence_manager_impl =
+		auto sequence_manager_impl =
 			static_cast<sequence_manager::internal::SequenceManagerImpl*>(
 				sequence_manager_.get());
 		// ReclaimMemory sweeps canceled delayed tasks.
@@ -545,8 +529,13 @@ namespace base::test {
 		return sequence_manager_impl->IsIdleForTesting();
 	}
 
-	void ScopedTaskEnvironment::RunUntilIdle() const {
+	void TaskEnvironment::RunUntilIdle() {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
+
+		if (threading_mode_ == ThreadingMode::MAIN_THREAD_ONLY) {
+			RunLoop(RunLoop::Type::kNestableTasksAllowed).RunUntilIdle();
+			return;
+		}
 
 		// TODO(gab): This can be heavily simplified to essentially:
 		//     bool HasMainThreadTasks() {
@@ -565,18 +554,19 @@ namespace base::test {
 		//
 		// Other than that it works because once |task_tracker_->HasIncompleteTasks()|
 		// is false we know for sure that the only thing that can make it true is a
-		// main thread task (ScopedTaskEnvironment owns all the threads). As such we
-		// can't racily see it as false on the main thread and be wrong as if it the
-		// main thread sees the atomic count at zero, it's the only one that can make
-		// it go up. And the only thing that can make it go up on the main thread are
-		// main thread tasks and therefore we're done if there aren't any left.
+		// main thread task (TaskEnvironment owns all the threads). As such we can't
+		// racily see it as false on the main thread and be wrong as if it the main
+		// thread sees the atomic count at zero, it's the only one that can make it go
+		// up. And the only thing that can make it go up on the main thread are main
+		// thread tasks and therefore we're done if there aren't any left.
 		//
 		// This simplification further allows simplification of DisallowRunTasks().
 		//
 		// This can also be simplified even further once TaskTracker becomes directly
 		// aware of main thread tasks. https://crbug.com/660078.
 
-		const bool could_run_tasks = task_tracker_->AllowRunTasks();
+		const auto could_run_tasks = task_tracker_->AllowRunTasks();
+
 		for (;;) {
 			task_tracker_->AllowRunTasks();
 
@@ -630,12 +620,12 @@ namespace base::test {
 			task_tracker_->AllowRunTasks();
 	}
 
-	void ScopedTaskEnvironment::FastForwardBy(TimeDelta delta) {
+	void TaskEnvironment::FastForwardBy(TimeDelta delta) {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 		DCHECK(mock_time_domain_);
 		DCHECK_GE(delta, TimeDelta());
 
-		const bool could_run_tasks = task_tracker_->AllowRunTasks();
+		const bool could_run_tasks = task_tracker_&& task_tracker_->AllowRunTasks();
 
 		const TimeTicks fast_forward_until = mock_time_domain_->NowTicks() + delta;
 		do {
@@ -643,32 +633,32 @@ namespace base::test {
 		} while (mock_time_domain_->FastForwardToNextTaskOrCap(fast_forward_until) !=
 			MockTimeDomain::NextTaskSource::kNone);
 
-		if (!could_run_tasks)
+		if (task_tracker_ && !could_run_tasks)
 			task_tracker_->DisallowRunTasks();
 	}
 
-	void ScopedTaskEnvironment::FastForwardUntilNoTasksRemain() {
+	void TaskEnvironment::FastForwardUntilNoTasksRemain() {
 		// TimeTicks::operator+(TimeDelta) uses saturated arithmetic so it's safe to
 		// pass in TimeDelta::Max().
 		FastForwardBy(TimeDelta::Max());
 	}
 
-	const TickClock* ScopedTaskEnvironment::GetMockTickClock() const {
+	const TickClock* TaskEnvironment::GetMockTickClock() const {
 		DCHECK(mock_time_domain_);
 		return mock_time_domain_.get();
 	}
 
-	base::TimeTicks ScopedTaskEnvironment::NowTicks() const {
+	base::TimeTicks TaskEnvironment::NowTicks() const {
 		DCHECK(mock_time_domain_);
 		return mock_time_domain_->Now();
 	}
 
-	const Clock* ScopedTaskEnvironment::GetMockClock() const {
+	const Clock* TaskEnvironment::GetMockClock() const {
 		DCHECK(mock_clock_);
 		return mock_clock_.get();
 	}
 
-	size_t ScopedTaskEnvironment::GetPendingMainThreadTaskCount() const {
+	size_t TaskEnvironment::GetPendingMainThreadTaskCount() const {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
 		// ReclaimMemory sweeps canceled delayed tasks.
@@ -676,7 +666,7 @@ namespace base::test {
 		return sequence_manager_->GetPendingTaskCountForTesting();
 	}
 
-	TimeDelta ScopedTaskEnvironment::NextMainThreadPendingTaskDelay() const {
+	TimeDelta TaskEnvironment::NextMainThreadPendingTaskDelay() const {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
 		// ReclaimMemory sweeps canceled delayed tasks.
@@ -688,24 +678,24 @@ namespace base::test {
 		return TimeDelta::Max();
 	}
 
-	bool ScopedTaskEnvironment::NextTaskIsDelayed() const {
+	bool TaskEnvironment::NextTaskIsDelayed() const {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 
-		TimeDelta delay = NextMainThreadPendingTaskDelay();
+		const auto delay = NextMainThreadPendingTaskDelay();
 		return !delay.is_zero() && !delay.is_max();
 	}
 
-	void ScopedTaskEnvironment::DescribePendingMainThreadTasks() const {
+	void TaskEnvironment::DescribePendingMainThreadTasks() const {
 		DCHECK_CALLED_ON_VALID_THREAD(main_thread_checker_);
 		LOG(INFO) << sequence_manager_->DescribeAllPendingTasks();
 	}
 
-	ScopedTaskEnvironment::TestTaskTracker::TestTaskTracker()
-		: internal::ThreadPoolImpl::TaskTrackerImpl("ScopedTaskEnvironment"),
+	TaskEnvironment::TestTaskTracker::TestTaskTracker()
+		: internal::ThreadPoolImpl::TaskTrackerImpl("TaskEnvironment"),
 		can_run_tasks_cv_(&lock_),
 		task_completed_(&lock_) {}
 
-	bool ScopedTaskEnvironment::TestTaskTracker::AllowRunTasks() {
+	bool TaskEnvironment::TestTaskTracker::AllowRunTasks() {
 		AutoLock auto_lock(lock_);
 		const bool could_run_tasks = can_run_tasks_;
 		can_run_tasks_ = true;
@@ -713,12 +703,12 @@ namespace base::test {
 		return could_run_tasks;
 	}
 
-	bool ScopedTaskEnvironment::TestTaskTracker::TasksAllowedToRun() const {
+	bool TaskEnvironment::TestTaskTracker::TasksAllowedToRun() const {
 		AutoLock auto_lock(lock_);
 		return can_run_tasks_;
 	}
 
-	bool ScopedTaskEnvironment::TestTaskTracker::DisallowRunTasks() {
+	bool TaskEnvironment::TestTaskTracker::DisallowRunTasks() {
 		AutoLock auto_lock(lock_);
 
 		// Can't disallow run task if there are tasks running.
@@ -734,11 +724,9 @@ namespace base::test {
 		return true;
 	}
 
-	void ScopedTaskEnvironment::TestTaskTracker::RunOrSkipTask(
-		internal::Task task,
-		internal::TaskSource* sequence,
-		const TaskTraits& traits,
-		bool can_run_task) {
+	void TaskEnvironment::TestTaskTracker::RunTask(internal::Task task,
+	                                               internal::TaskSource* sequence,
+	                                               const TaskTraits& traits) {
 			{
 				AutoLock auto_lock(lock_);
 
@@ -748,8 +736,8 @@ namespace base::test {
 				++num_tasks_running_;
 			}
 
-			internal::ThreadPoolImpl::TaskTrackerImpl::RunOrSkipTask(
-				std::move(task), sequence, traits, can_run_task);
+			internal::ThreadPoolImpl::TaskTrackerImpl::RunTask(std::move(task), sequence,
+			                                                   traits);
 
 			{
 				AutoLock auto_lock(lock_);

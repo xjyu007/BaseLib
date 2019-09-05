@@ -16,7 +16,6 @@
 #include "task/sequence_manager/associated_thread_id.h"
 #include "task/sequence_manager/thread_controller.h"
 #include "task/sequence_manager/work_deduplicator.h"
-#include "build_config.h"
 
 namespace base {
 	namespace sequence_manager {
@@ -57,15 +56,12 @@ namespace base {
 				void SetDefaultTaskRunner(scoped_refptr<SingleThreadTaskRunner>) override;
 				scoped_refptr<SingleThreadTaskRunner> GetDefaultTaskRunner() override;
 				void RestoreDefaultTaskRunner() override;
-				void AddNestingObserver(RunLoop::NestingObserver* observer) override;
-				void RemoveNestingObserver(RunLoop::NestingObserver* observer) override;
+				void AddNestingObserver(NestingObserver* observer) override;
+				void RemoveNestingObserver(NestingObserver* observer) override;
 				const scoped_refptr<AssociatedThreadId>& GetAssociatedThread() const override;
 				void SetTaskExecutionAllowed(bool allowed) override;
 				bool IsTaskExecutionAllowed() const override;
 				MessagePump* GetBoundMessagePump() const override;
-#if defined(OS_IOS) || defined(OS_ANDROID)
-				void AttachToMessagePump() override;
-#endif
 				bool ShouldQuitRunLoopWhenIdle() override;
 
 				// RunLoop::NestingObserver:
@@ -82,7 +78,7 @@ namespace base {
 				SequenceManagerImpl* funneled_sequence_manager_;
 				scoped_refptr<SingleThreadTaskRunner> task_runner_;
 
-				RunLoop::NestingObserver* nesting_observer_ = nullptr;
+				NestingObserver* nesting_observer_ = nullptr;
 
 			private:
 				enum class WorkType { kImmediate, kDelayed };

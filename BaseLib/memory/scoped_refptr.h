@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <cstddef>
 
@@ -10,7 +10,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "compiler_specific.h"
 #include "logging.h"
 
 template <class T>
@@ -25,7 +24,7 @@ namespace base {
 	class SequencedTaskRunner;
 
 	template <typename T>
-	scoped_refptr<T> AdoptRef(T* t);
+	scoped_refptr<T> AdoptRef(T* obj);
 
 	namespace subtle {
 
@@ -35,7 +34,7 @@ namespace base {
 
 		template <typename T, typename U, typename V>
 		constexpr bool IsRefCountPreferenceOverridden(const T*,
-			const RefCounted<U, V>*) {
+													  const RefCounted<U, V>*) {
 			return !std::is_same<std::decay_t<decltype(T::kRefCountPreference)>,
 				std::decay_t<decltype(U::kRefCountPreference)>>::value;
 		}
@@ -180,9 +179,9 @@ public:
 
 	// Copy conversion constructor.
 	template <typename U,
-		typename = typename std::enable_if<
-		std::is_convertible<U*, T*>::value>::type>
-		scoped_refptr(const scoped_refptr<U>& r) : scoped_refptr(r.ptr_) {}
+			  typename = typename std::enable_if<
+					std::is_convertible<U*, T*>::value>::type>
+	scoped_refptr(const scoped_refptr<U>& r) : scoped_refptr(r.ptr_) {}
 
 	// Move constructor. This is required in addition to the move conversion
 	// constructor below.
@@ -190,9 +189,9 @@ public:
 
 	// Move conversion constructor.
 	template <typename U,
-		typename = typename std::enable_if<
-		std::is_convertible<U*, T*>::value>::type>
-		scoped_refptr(scoped_refptr<U>&& r) noexcept : ptr_(r.ptr_) {
+			  typename = typename std::enable_if<
+					std::is_convertible<U*, T*>::value>::type>
+	scoped_refptr(scoped_refptr<U>&& r) noexcept : ptr_(r.ptr_) {
 		r.ptr_ = nullptr;
 	}
 
@@ -206,7 +205,7 @@ public:
 			Release(ptr_);
 	}
 
-	T* get() const { return ptr_; }
+	[[nodiscard]] T* get() const { return ptr_; }
 
 	T& operator*() const {
 		DCHECK(ptr_);

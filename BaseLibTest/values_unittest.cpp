@@ -1261,16 +1261,6 @@ namespace base {
 		ASSERT_EQ(original_buffer, binary->GetBlob().data());
 		ASSERT_EQ(15U, binary->GetBlob().size());
 
-		char stack_buffer[42];
-		memset(stack_buffer, '!', 42);
-		binary = Value::CreateWithCopiedBuffer(stack_buffer, 42);
-		ASSERT_TRUE(binary.get());
-		ASSERT_TRUE(binary->GetBlob().data());
-		ASSERT_NE(stack_buffer,
-			reinterpret_cast<const char*>(binary->GetBlob().data()));
-		ASSERT_EQ(42U, binary->GetBlob().size());
-		ASSERT_EQ(0, memcmp(stack_buffer, binary->GetBlob().data(),
-			binary->GetBlob().size()));
 	}
 
 	TEST(ValuesTest, StringValue) {

@@ -6,10 +6,8 @@
 
 #include "base_export.h"
 #include "macros.h"
-#include "memory/ref_counted.h"
 #include "power_monitor/power_observer.h"
 #include "timer/timer.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -34,10 +32,8 @@ namespace base {
 
 		bool hi_res_clock_available_;
 
-#if defined(OS_WIN)
 		// Timer for polling the high resolution timer usage.
-		base::RepeatingTimer timer_;
-#endif
+		RepeatingTimer timer_;
 
 		DISALLOW_COPY_AND_ASSIGN(HighResolutionTimerManager);
 	};

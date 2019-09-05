@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "base_switches.h"
-#include "build_config.h"
 
 namespace switches {
 
@@ -109,41 +108,10 @@ namespace switches {
 	// Will wait for 60 seconds for a debugger to come to attach to the process.
 	const char kWaitForDebugger[] = "wait-for-debugger";
 
-	#if defined(OS_WIN)
 	// Disable high-resolution timer on Windows.
 	const char kDisableHighResTimer[] = "disable-highres-timer";
 
 	// Disables the USB keyboard detection for blocking the OSK on Win8+.
 	const char kDisableUsbKeyboardDetect[]      = "disable-usb-keyboard-detect";
-	#endif
-
-	#if defined(OS_LINUX) && !defined(OS_CHROMEOS)
-	// The /dev/shm partition is too small in certain VM environments, causing
-	// Chrome to fail or crash (see http://crbug.com/715363). Use this flag to
-	// work-around this issue (a temporary directory will always be used to create
-	// anonymous shared memory files).
-	const char kDisableDevShmUsage[] = "disable-dev-shm-usage";
-	#endif
-
-	#if defined(OS_POSIX)
-	// Used for turning on Breakpad crash reporting in a debug environment where
-	// crash reporting is typically compiled but disabled.
-	const char kEnableCrashReporterForTesting[] =
-	    "enable-crash-reporter-for-testing";
-	#endif
-
-	#if defined(OS_ANDROID)
-	// Enables the reached code profiler that samples all threads in all processes
-	// to determine which functions are almost never executed.
-	const char kEnableReachedCodeProfiler[] = "enable-reached-code-profiler";
-	#endif
-
-	#if defined(OS_LINUX)
-	// Controls whether or not retired instruction counts are surfaced for threads
-	// in trace events on Linux.
-	//
-	// This flag requires the BPF sandbox to be disabled.
-	const char kEnableThreadInstructionCount[] = "enable-thread-instruction-count";
-	#endif
 
 }  // namespace switches

@@ -9,19 +9,12 @@
 #include "trace_event/traced_value.h"
 #include "build_config.h"
 
-#if defined(OS_MACOSX)
-#include <malloc/malloc.h>
-#else
 #include <malloc.h>
-#endif
-#if defined(OS_WIN)
 #include <Windows.h>
-#endif
 
 namespace base::trace_event {
 
 	namespace {
-#if defined(OS_WIN)
 		// A structure containing some information about a given heap.
 		struct WinHeapInfo {
 			size_t committed_size;
@@ -51,7 +44,6 @@ namespace base::trace_event {
 			}
 			CHECK(::HeapUnlock(crt_heap) == TRUE);
 		}
-#endif  // defined(OS_WIN)
 	}  // namespace
 
 	// static
@@ -90,25 +82,7 @@ namespace base::trace_event {
 			res = allocator::GetNumericProperty("generic.current_allocated_bytes",
 				&allocated_objects_size);
 			DCHECK(res);
-#elif defined(OS_MACOSX) || defined(OS_IOS)
-			malloc_statistics_t stats = { 0 };
-			malloc_zone_statistics(nullptr, &stats);
-			total_virtual_size = stats.size_allocated;
-			allocated_objects_size = stats.size_in_use;
-
-			// Resident size is approximated pretty well by stats.max_size_in_use.
-			// However, on macOS, freed blocks are both resident and reusable, which is
-			// semantically equivalent to deallocated. The implementation of libmalloc
-			// will also only hold a fixed number of freed regions before actually
-			// starting to deallocate them, so stats.max_size_in_use is also not
-			// representative of the peak size. As a result, stats.max_size_in_use is
-			// typically somewhere between actually resident [non-reusable] pages, and
-			// peak size. This is not very useful, so we just use stats.size_in_use for
-			// resident_size, even though it's an underestimate and fails to account for
-			// fragmentation. See
-			// https://bugs.chromium.org/p/chromium/issues/detail?id=695263#c1.
-			resident_size = stats.size_in_use;
-#elif defined(OS_WIN)
+#else
 			// This is too expensive on Windows, crbug.com/780735.
 			if (args.level_of_detail == MemoryDumpLevelOfDetail::DETAILED) {
 				WinHeapInfo main_heap_info = {};
@@ -123,20 +97,6 @@ namespace base::trace_event {
 				allocated_objects_size = main_heap_info.allocated_size;
 				allocated_objects_count = main_heap_info.block_count;
 			}
-#elif defined(OS_FUCHSIA)
-			// TODO(fuchsia): Port, see https://crbug.com/706592.
-#else
-			struct mallinfo info = mallinfo();
-			DCHECK_GE(info.arena + info.hblkhd, info.uordblks);
-
-			// In case of Android's jemalloc |arena| is 0 and the outer pages size is
-			// reported by |hblkhd|. In case of dlmalloc the total is given by
-			// |arena| + |hblkhd|. For more details see link: http://goo.gl/fMR8lF.
-			total_virtual_size = info.arena + info.hblkhd;
-			resident_size = info.uordblks;
-
-			// Total allocated space is given by |uordblks|.
-			allocated_objects_size = info.uordblks;
 #endif
 
 			auto outer_dump = pmd->CreateAllocatorDump("malloc");

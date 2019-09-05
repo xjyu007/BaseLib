@@ -1,10 +1,10 @@
-#pragma once
-
 // Copyright (c) 2013 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 // This file defines some bit utilities.
+
+#pragma once
 
 #include <cstdint>
 
@@ -19,7 +19,7 @@ namespace base {
 		// Returns true iff |value| is a power of 2.
 		template <typename T,
 			typename = std::enable_if<std::is_integral<T>::value>>
-			constexpr bool IsPowerOfTwo(T value) {
+		constexpr bool IsPowerOfTwo(T value) {
 			// From "Hacker's Delight": Section 2.1 Manipulating Rightmost Bits.
 			//
 			// Only positive integers with a single bit set are powers of two. If only one
@@ -56,8 +56,8 @@ namespace base {
 		template <typename T, unsigned bits = sizeof(T) * 8>
 		ALWAYS_INLINE
 			typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) <= 4,
-			unsigned>::type
-			CountLeadingZeroBits(T x) {
+				unsigned>::type
+		CountLeadingZeroBits(T x) {
 			static_assert(bits > 0, "invalid instantiation");
 			unsigned long index;
 			return LIKELY(_BitScanReverse(&index, static_cast<uint32_t>(x)))
@@ -68,8 +68,8 @@ namespace base {
 		template <typename T, unsigned bits = sizeof(T) * 8>
 		ALWAYS_INLINE
 			typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) == 8,
-			unsigned>::type
-			CountLeadingZeroBits(T x) {
+				unsigned>::type
+		CountLeadingZeroBits(T x) {
 			static_assert(bits > 0, "invalid instantiation");
 			unsigned long index;
 			// MSVC only supplies _BitScanReverse64 when building for a 64-bit target.
@@ -78,11 +78,11 @@ namespace base {
 				? (63 - index)
 				: 64;
 #else
-			uint32_t left = static_cast<uint32_t>(x >> 32);
+			const auto left = static_cast<uint32_t>(x >> 32);
 			if (LIKELY(_BitScanReverse(&index, left)))
 				return 31 - index;
 
-			uint32_t right = static_cast<uint32_t>(x);
+			const auto right = static_cast<uint32_t>(x);
 			if (LIKELY(_BitScanReverse(&index, right)))
 				return 63 - index;
 
@@ -93,8 +93,8 @@ namespace base {
 		template <typename T, unsigned bits = sizeof(T) * 8>
 		ALWAYS_INLINE
 			typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) <= 4,
-			unsigned>::type
-			CountTrailingZeroBits(T x) {
+				unsigned>::type
+		CountTrailingZeroBits(T x) {
 			static_assert(bits > 0, "invalid instantiation");
 			unsigned long index;
 			return LIKELY(_BitScanForward(&index, static_cast<uint32_t>(x))) ? index
@@ -104,19 +104,19 @@ namespace base {
 		template <typename T, unsigned bits = sizeof(T) * 8>
 		ALWAYS_INLINE
 			typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) == 8,
-			unsigned>::type
-			CountTrailingZeroBits(T x) {
+				unsigned>::type
+		CountTrailingZeroBits(T x) {
 			static_assert(bits > 0, "invalid instantiation");
 			unsigned long index;
 			// MSVC only supplies _BitScanForward64 when building for a 64-bit target.
 #if defined(ARCH_CPU_64_BITS)
 			return LIKELY(_BitScanForward64(&index, static_cast<uint64_t>(x))) ? index : 64;
 #else
-			uint32_t right = static_cast<uint32_t>(x);
+			const auto right = static_cast<uint32_t>(x);
 			if (LIKELY(_BitScanForward(&index, right)))
 				return index;
 
-			uint32_t left = static_cast<uint32_t>(x >> 32);
+			const auto left = static_cast<uint32_t>(x >> 32);
 			if (LIKELY(_BitScanForward(&index, left)))
 				return 32 + index;
 

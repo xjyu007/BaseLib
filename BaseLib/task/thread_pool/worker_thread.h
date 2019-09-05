@@ -17,7 +17,6 @@
 #include "thread_annotations.h"
 #include "threading/platform_thread.h"
 #include "time/time.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -47,10 +46,8 @@ namespace base {
 				POOLED,
 				SHARED,
 				DEDICATED,
-#if defined(OS_WIN)
 				SHARED_COM,
 				DEDICATED_COM,
-#endif  // defined(OS_WIN)
 			};
 
 			// Delegate interface for WorkerThread. All methods are called from the
@@ -67,7 +64,7 @@ namespace base {
 				virtual void OnMainEntry(const WorkerThread* worker) = 0;
 
 				// Called by |worker|'s thread to get a TaskSource from which to run a Task.
-				virtual RunIntentWithRegisteredTaskSource GetWork(WorkerThread* worker) = 0;
+				virtual RegisteredTaskSource GetWork(WorkerThread* worker) = 0;
 
 				// Called by the WorkerThread after it ran a Task. If the Task's
 				// TaskSource should be reenqueued, it is passed to |task_source|.
@@ -119,9 +116,9 @@ namespace base {
 			// the GetWork() method of its delegate until it returns nullptr. No-op if
 			// Start() wasn't called. DCHECKs if called after Start() has failed or after
 			// Cleanup() has been called.
-			void WakeUp() const;
+			void WakeUp();
 
-			Delegate* delegate() const { return delegate_.get(); }
+			WorkerThread::Delegate* delegate() { return delegate_.get(); }
 
 			// Joins this WorkerThread. If a Task is already running, it will be
 			// allowed to complete its execution. This can only be called once.
@@ -180,12 +177,10 @@ namespace base {
 			void RunBackgroundSharedWorker();
 			void RunDedicatedWorker();
 			void RunBackgroundDedicatedWorker();
-#if defined(OS_WIN)
 			void RunSharedCOMWorker();
 			void RunBackgroundSharedCOMWorker();
 			void RunDedicatedCOMWorker();
 			void RunBackgroundDedicatedCOMWorker();
-#endif  // defined(OS_WIN)
 
 			// The real main, invoked through :
 			//     ThreadMain() -> RunLabeledWorker() -> RunWorker().

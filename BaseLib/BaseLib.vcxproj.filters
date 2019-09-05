@@ -130,6 +130,9 @@
     <Filter Include="third_party\cityhash">
       <UniqueIdentifier>{b8d0df16-014b-4ee0-85c2-cbf1726b2b5c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="third_party\double_conversion">
+      <UniqueIdentifier>{c5743757-0261-4c54-9323-14930518d52a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="build_config.h">
@@ -1035,9 +1038,6 @@
     <ClInclude Include="containers\unique_ptr_adapters.h">
       <Filter>containers</Filter>
     </ClInclude>
-    <ClInclude Include="type_id.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="trace_event\memory_usage_estimator.h">
       <Filter>trace_event</Filter>
     </ClInclude>
@@ -1230,12 +1230,6 @@
     <ClInclude Include="task\thread_pool\thread_group_native_win.h">
       <Filter>task\thread_pool</Filter>
     </ClInclude>
-    <ClInclude Include="task\thread_pool\thread_pool.h">
-      <Filter>task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="task\thread_pool\thread_pool_clock.h">
-      <Filter>task\thread_pool</Filter>
-    </ClInclude>
     <ClInclude Include="task\thread_pool\thread_pool_impl.h">
       <Filter>task\thread_pool</Filter>
     </ClInclude>
@@ -1418,6 +1412,66 @@
     </ClInclude>
     <ClInclude Include="allocator\partition_allocator\random.h">
       <Filter>allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\free_deleter.h">
+      <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="scoped_observer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="task\promise\then_and_catch_executor.h">
+      <Filter>task\promise</Filter>
+    </ClInclude>
+    <ClInclude Include="containers\intrusive_heap.h">
+      <Filter>containers</Filter>
+    </ClInclude>
+    <ClInclude Include="task\promise\promise_value.h">
+      <Filter>task\promise</Filter>
+    </ClInclude>
+    <ClInclude Include="win\file_pre_reader.h">
+      <Filter>win</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\bignum.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\bignum-dtoa.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\cached-powers.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\diy-fp.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\double-conversion.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\double-to-string.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\fast-dtoa.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\fixed-dtoa.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\ieee.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\string-to-double.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\strtod.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\double_conversion\utils.h">
+      <Filter>third_party\double_conversion</Filter>
+    </ClInclude>
+    <ClInclude Include="task\thread_pool\thread_pool_instance.h">
+      <Filter>task\thread_pool</Filter>
+    </ClInclude>
+    <ClInclude Include="syslog_logging.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2054,9 +2108,6 @@
     <ClCompile Include="containers\unique_any.cpp">
       <Filter>containers</Filter>
     </ClCompile>
-    <ClCompile Include="type_id.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="trace_event\memory_usage_estimator.cpp">
       <Filter>trace_event</Filter>
     </ClCompile>
@@ -2219,12 +2270,6 @@
     <ClCompile Include="task\thread_pool\thread_group_native_win.cpp">
       <Filter>task\thread_pool</Filter>
     </ClCompile>
-    <ClCompile Include="task\thread_pool\thread_pool.cpp">
-      <Filter>task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="task\thread_pool\thread_pool_clock.cpp">
-      <Filter>task\thread_pool</Filter>
-    </ClCompile>
     <ClCompile Include="task\thread_pool\thread_pool_impl.cpp">
       <Filter>task\thread_pool</Filter>
     </ClCompile>
@@ -2383,6 +2428,51 @@
     </ClCompile>
     <ClCompile Include="allocator\partition_allocator\random.cpp">
       <Filter>allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="task\promise\then_and_catch_executor.cpp">
+      <Filter>task\promise</Filter>
+    </ClCompile>
+    <ClCompile Include="containers\intrusive_heap.cpp">
+      <Filter>containers</Filter>
+    </ClCompile>
+    <ClCompile Include="task\promise\promise_value.cpp">
+      <Filter>task\promise</Filter>
+    </ClCompile>
+    <ClCompile Include="win\file_pre_reader.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="strings\string_util_constants.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\double_conversion\bignum.cpp">
+      <Filter>third_party\double_conversion</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\double_conversion\bignum-dtoa.cpp">
+      <Filter>third_party\double_conversion</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\double_conversion\cached-powers.cpp">
+      <Filter>third_party\double_conversion</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\double_conversion\double-to-string.cpp">
+      <Filter>third_party\double_conversion</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\double_conversion\fast-dtoa.cpp">
+      <Filter>third_party\double_conversion</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\double_conversion\fixed-dtoa.cpp">
+      <Filter>third_party\double_conversion</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\double_conversion\string-to-double.cpp">
+      <Filter>third_party\double_conversion</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\double_conversion\strtod.cpp">
+      <Filter>third_party\double_conversion</Filter>
+    </ClCompile>
+    <ClCompile Include="task\thread_pool\thread_pool_instance.cpp">
+      <Filter>task\thread_pool</Filter>
+    </ClCompile>
+    <ClCompile Include="syslog_logging.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

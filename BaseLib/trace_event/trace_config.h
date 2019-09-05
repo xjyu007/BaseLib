@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright 2015 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <cstdint>
 
@@ -183,7 +183,7 @@ namespace base {
 			// Example: TraceConfig("-webkit", "");
 			//          would enable everything but webkit; and use default options.
 			TraceConfig(std::string_view category_filter_string,
-				std::string_view trace_options_string);
+						std::string_view trace_options_string);
 
 			TraceConfig(std::string_view category_filter_string, TraceRecordMode record_mode);
 
@@ -289,7 +289,8 @@ namespace base {
 
 		private:
 			//FRIEND_TEST_ALL_PREFIXES(TraceConfigTest, TraceConfigFromValidLegacyFormat);
-			//FRIEND_TEST_ALL_PREFIXES(TraceConfigTest, TraceConfigFromInvalidLegacyStrings);
+			//FRIEND_TEST_ALL_PREFIXES(TraceConfigTest, 
+			//							TraceConfigFromInvalidLegacyStrings);
 
 			// The default trace config, used when none is provided.
 			// Allows all non-disabled-by-default categories through, except if they end
@@ -304,7 +305,7 @@ namespace base {
 
 			// Initialize from category filter and trace options strings
 			void InitializeFromStrings(std::string_view category_filter_string,
-				std::string_view trace_options_string);
+									   std::string_view trace_options_string);
 
 			void SetMemoryDumpConfigFromConfigDict(const Value& memory_dump_config);
 			void SetDefaultMemoryDumpConfig();

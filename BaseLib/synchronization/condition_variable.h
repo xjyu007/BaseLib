@@ -61,18 +61,12 @@
 // may improve performance, as the selected thread may have a greater chance of
 // having some of its stack data in various CPU caches.
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <pthread.h>
-#endif
-
 #include "base_export.h"
 #include "logging.h"
 #include "macros.h"
 #include "synchronization/lock.h"
 
-#if defined(OS_WIN)
 #include "win/windows_types.h"
-#endif
 
 namespace base {
 
@@ -108,21 +102,16 @@ namespace base {
 
 	private:
 
-#if defined(OS_WIN)
 		CHROME_CONDITION_VARIABLE cv_{};
 		CHROME_SRWLOCK* const srwlock_;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		pthread_cond_t condition_;
-		pthread_mutex_t* user_mutex_;
-#endif
 
 #if DCHECK_IS_ON()
-		base::Lock* const user_lock_;  // Needed to adjust shadow lock state on wait.
+		Lock* const user_lock_;  // Needed to adjust shadow lock state on wait.
 #endif
 
-  // Whether a thread invoking Wait() on this ConditionalVariable should be
-  // considered blocked as opposed to idle (and potentially replaced if part of
-  // a pool).
+		// Whether a thread invoking Wait() on this ConditionalVariable should be
+		// considered blocked as opposed to idle (and potentially replaced if part of
+		// a pool).
 		bool waiting_is_blocking_ = true;
 
 		DISALLOW_COPY_AND_ASSIGN(ConditionVariable);

@@ -116,61 +116,6 @@ namespace base {
 		// allocate.
 		static size_t VMAllocationGranularity();
 
-#if defined(OS_CHROMEOS)
-		// Set |value| and return true if LsbRelease contains information about |key|.
-		static bool GetLsbReleaseValue(const std::string& key, std::string* value);
-
-		// Convenience function for GetLsbReleaseValue("CHROMEOS_RELEASE_BOARD",...).
-		// Returns "unknown" if CHROMEOS_RELEASE_BOARD is not set. Otherwise, returns
-		// the full name of the board. Note that the returned value often differs
-		// between developers' systems and devices that use official builds. E.g. for
-		// a developer-built image, the function could return 'glimmer', while in an
-		// official build, it may be something like 'glimmer-signed-mp-v4keys'.
-		//
-		// NOTE: Strings returned by this function should be treated as opaque values
-		// within Chrome (e.g. for reporting metrics elsewhere). If you need to make
-		// Chrome behave differently for different Chrome OS devices, either directly
-		// check for the hardware feature that you care about (preferred) or add a
-		// command-line flag to Chrome and pass it from session_manager (based on
-		// whether a USE flag is set or not). See https://goo.gl/BbBkzg for more
-		// details.
-		static std::string GetLsbReleaseBoard();
-
-		// Returns the creation time of /etc/lsb-release. (Used to get the date and
-		// time of the Chrome OS build).
-		static Time GetLsbReleaseTime();
-
-		// Returns true when actually running in a Chrome OS environment.
-		static bool IsRunningOnChromeOS();
-
-		// Test method to force re-parsing of lsb-release.
-		static void SetChromeOSVersionInfoForTest(const std::string& lsb_release,
-		                                        const Time& lsb_release_time);
-
-		// Returns the kernel version of the host operating system.
-		static std::string KernelVersion();
-#endif  // defined(OS_CHROMEOS)
-
-#if defined(OS_ANDROID)
-		// Returns the Android build's codename.
-		static std::string GetAndroidBuildCodename();
-
-		// Returns the Android build ID.
-		static std::string GetAndroidBuildID();
-
-		static int DalvikHeapSizeMB();
-		static int DalvikHeapGrowthLimitMB();
-#endif  // defined(OS_ANDROID)
-
-#if defined(OS_IOS)
-		// Returns the iOS build number string which is normally an alphanumeric
-		// string like 12E456. This build number can differentiate between different
-		// versions of iOS that may have the same major/minor/bugfix version numbers.
-		// For example, iOS beta releases have the same version number but different
-		// build number strings.
-		static std::string GetIOSBuildNumber();
-#endif  // defined(OS_IOS)
-
 		// Returns true if this is a low-end device.
 		// Low-end device refers to devices having a very low amount of total
 		// system memory, typically <= 1GB.
@@ -185,10 +130,6 @@ namespace base {
 		static bool IsLowEndDeviceImpl();
 		static HardwareInfo GetHardwareInfoSync();
 
-#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_AIX)
-		static int64_t AmountOfAvailablePhysicalMemory(
-			const SystemMemoryInfoKB& meminfo);
-#endif
 	};
 
 }  // namespace base

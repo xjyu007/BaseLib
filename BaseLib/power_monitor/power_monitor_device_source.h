@@ -7,16 +7,9 @@
 #include "base_export.h"
 #include "macros.h"
 #include "power_monitor/power_monitor_source.h"
-#include "power_monitor/power_observer.h"
 #include "build_config.h"
 
-#if defined(OS_WIN)
 #include <windows.h>
-#endif  // !OS_WIN
-
-#if defined(OS_IOS)
-#include <objc/runtime.h>
-#endif  // OS_IOS
 
 namespace base {
 
@@ -27,30 +20,7 @@ namespace base {
 		PowerMonitorDeviceSource();
 		~PowerMonitorDeviceSource() override;
 
-#if defined(OS_MACOSX)
-		// Allocate system resources needed by the PowerMonitor class.
-		//
-		// This function must be called before instantiating an instance of the class
-		// and before the Sandbox is initialized.
-#if !defined(OS_IOS)
-		static void AllocateSystemIOPorts();
-#else
-		static void AllocateSystemIOPorts() {}
-#endif  // OS_IOS
-#endif  // OS_MACOSX
-
-#if defined(OS_CHROMEOS)
-		// On Chrome OS, Chrome receives power-related events from powerd, the system
-		// power daemon, via D-Bus signals received on the UI thread. base can't
-		// directly depend on that code, so this class instead exposes static methods
-		// so that events can be passed in.
-		static void SetPowerSource(bool on_battery);
-		static void HandleSystemSuspending();
-		static void HandleSystemResumed();
-#endif
-
 	private:
-#if defined(OS_WIN)
 		// Represents a message-only window for power message handling on Windows.
 		// Only allow PowerMonitor to create it.
 		class PowerMessageWindow {
@@ -68,26 +38,13 @@ namespace base {
 			// A hidden message-only window.
 			HWND message_hwnd_;
 		};
-#endif  // OS_WIN
-
-#if defined(OS_MACOSX)
-		void PlatformInit();
-		void PlatformDestroy();
-#endif
 
 		// Platform-specific method to check whether the system is currently
 		// running on battery power.  Returns true if running on batteries,
 		// false otherwise.
 		bool IsOnBatteryPowerImpl() override;
 
-#if defined(OS_IOS)
-		// Holds pointers to system event notification observers.
-		std::vector<id> notification_observers_;
-#endif
-
-#if defined(OS_WIN)
 		PowerMessageWindow power_message_window_;
-#endif
 
 		DISALLOW_COPY_AND_ASSIGN(PowerMonitorDeviceSource);
 	};

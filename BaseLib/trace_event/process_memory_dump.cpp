@@ -17,19 +17,9 @@
 #include "unguessable_token.h"
 #include "build_config.h"
 
-#if defined(OS_IOS)
-#include <mach/vm_page_size.h>
-#endif
-
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <sys/mman.h>
-#endif
-
-#if defined(OS_WIN)
-#include <windows.h>  // Must be in front of other Windows header files
+#include <Windows.h>  // Must be in front of other Windows header files
 
 #include <Psapi.h>
-#endif
 
 namespace base {
 	namespace trace_event {
@@ -62,15 +52,7 @@ namespace base {
 #if defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 		// static
 		size_t ProcessMemoryDump::GetSystemPageSize() {
-#if defined(OS_IOS)
-			// On iOS, getpagesize() returns the user page sizes, but for allocating
-			// arrays for mincore(), kernel page sizes is needed. Use vm_kernel_page_size
-			// as recommended by Apple, https://forums.developer.apple.com/thread/47532/.
-			// Refer to http://crbug.com/542671 and Apple rdar://23651782
-			return vm_kernel_page_size;
-#else
-			return base::GetPageSize();
-#endif  // defined(OS_IOS)
+			return GetPageSize();
 		}
 
 		// static
@@ -91,21 +73,14 @@ namespace base {
 #undef min
 			const auto max_vec_size =
 				GetSystemPageCount(std::min(mapped_size, kMaxChunkSize), page_size);
-#if defined(OS_WIN)
 			const std::unique_ptr<PSAPI_WORKING_SET_EX_INFORMATION[]> vec(
 				new PSAPI_WORKING_SET_EX_INFORMATION[max_vec_size]);
-#elif defined(OS_MACOSX)
-			std::unique_ptr<char[]> vec(new char[max_vec_size]);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-			std::unique_ptr<unsigned char[]> vec(new unsigned char[max_vec_size]);
-#endif
 
 			while (offset < mapped_size) {
 				const auto chunk_start = (start_pointer + offset);
 				const auto chunk_size = std::min(mapped_size - offset, kMaxChunkSize);
 				const auto page_count = GetSystemPageCount(chunk_size, page_size);
 				size_t resident_page_count = 0;
-#if defined(OS_WIN)
 				for (size_t i = 0; i < page_count; i++) {
 					vec[i].VirtualAddress =
 						reinterpret_cast<void*>(chunk_start + i * page_size);
@@ -116,34 +91,6 @@ namespace base {
 
 				for (size_t i = 0; i < page_count; i++)
 					resident_page_count += vec[i].VirtualAttributes.Valid;
-#elif defined(OS_FUCHSIA)
-			    // TODO(fuchsia): Port, see https://crbug.com/706592.
-			    ALLOW_UNUSED_LOCAL(chunk_start);
-			    ALLOW_UNUSED_LOCAL(page_count);
-#elif defined(OS_MACOSX)
-			    // mincore in MAC does not fail with EAGAIN.
-			    failure =
-			        !!mincore(reinterpret_cast<void*>(chunk_start), chunk_size, vec.get());
-			    for (size_t i = 0; i < page_count; i++)
-					resident_page_count += vec[i] & MINCORE_INCORE ? 1 : 0;
-#elif defined(OS_POSIX)
-			    int error_counter = 0;
-			    int result = 0;
-			    // HANDLE_EINTR tries for 100 times. So following the same pattern.
-			    do {
-					result =
-#if defined(OS_AIX)
-					mincore(reinterpret_cast<char*>(chunk_start), chunk_size,
-			                  reinterpret_cast<char*>(vec.get()));
-#else
-					mincore(reinterpret_cast<void*>(chunk_start), chunk_size, vec.get());
-#endif
-			    } while (result == -1 && errno == EAGAIN && error_counter++ < 100);
-			    failure = !!result;
-
-			    for (size_t i = 0; i < page_count; i++)
-					resident_page_count += vec[i] & 1;
-#endif
 
 				if (failure)
 					break;
@@ -164,66 +111,7 @@ namespace base {
 		std::optional<size_t> ProcessMemoryDump::CountResidentBytesInSharedMemory(
 			void* start_address, 
 			size_t mapped_size) {
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-			// On macOS, use mach_vm_region instead of mincore for performance
-			// (crbug.com/742042).
-			mach_vm_size_t dummy_size = 0;
-			mach_vm_address_t address =
-				reinterpret_cast<mach_vm_address_t>(start_address);
-			vm_region_top_info_data_t info;
-			MachVMRegionResult result =
-				GetTopInfo(mach_task_self(), &dummy_size, &address, &info);
-			if (result == MachVMRegionResult::Error) {
-				LOG(ERROR) << "CountResidentBytesInSharedMemory failed. The resident size "
-							  "is invalid";
-				return base::Optional<size_t>();
-			}
-
-			size_t resident_pages =
-				info.private_pages_resident + info.shared_pages_resident;
-
-			// On macOS, measurements for private memory footprint overcount by
-			// faulted pages in anonymous shared memory. To discount for this, we touch
-			// all the resident pages in anonymous shared memory here, thus making them
-			// faulted as well. This relies on two assumptions:
-			//
-			// 1) Consumers use shared memory from front to back. Thus, if there are
-			// (N) resident pages, those pages represent the first N * PAGE_SIZE bytes in
-			// the shared memory region.
-			//
-			// 2) This logic is run shortly before the logic that calculates
-			// phys_footprint, thus ensuring that the discrepancy between faulted and
-			// resident pages is minimal.
-			//
-			// The performance penalty is expected to be small.
-			//
-			// * Most of the time, we expect the pages to already be resident and faulted,
-			// thus incurring a cache penalty read hit [since we read from each resident
-			// page].
-			//
-			// * Rarely, we expect the pages to be resident but not faulted, resulting in
-			// soft faults + cache penalty.
-			//
-			// * If assumption (1) is invalid, this will potentially fault some
-			// previously non-resident pages, thus increasing memory usage, without fixing
-			// the accounting.
-			//
-			// Sanity check in case the mapped size is less than the total size of the
-			// region.
-			size_t pages_to_fault =
-				std::min(resident_pages, (mapped_size + PAGE_SIZE - 1) / PAGE_SIZE);
-
-			volatile char* base_address = static_cast<char*>(start_address);
-			for (size_t i = 0; i < pages_to_fault; ++i) {
-				// Reading from a volatile is a visible side-effect for the purposes of
-				// optimization. This guarantees that the optimizer will not kill this line.
-				base_address[i * PAGE_SIZE];
-			}
-
-			return resident_pages * PAGE_SIZE;
-#else
 			return CountResidentBytes(start_address, mapped_size);
-#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 		}
 
 #endif  // defined(COUNT_RESIDENT_BYTES_SUPPORTED)

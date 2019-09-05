@@ -91,6 +91,9 @@ namespace base {
 				// Required by IntrusiveHeap.
 				void ClearHeapHandle() {}
 
+			    // Required by IntrusiveHeap.
+			    HeapHandle GetHeapHandle() const { return HeapHandle::Invalid(); }
+
 			private:
 				bool scheduled_ = false;
 				DISALLOW_COPY_AND_ASSIGN(DelayedTask);

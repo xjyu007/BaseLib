@@ -7,22 +7,9 @@
 #include <string>
 
 #include "base_export.h"
-#include "hash/hash.h"
 #include "macros.h"
 #include "memory/shared_memory_handle.h"
 #include "build_config.h"
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <stdio.h>
-#include <sys/types.h>
-#include <semaphore.h>
-#include "file_descriptor_posix.h"
-#include "files/file_util.h"
-#include "files/scoped_file.h"
-#endif
-
-#if defined(OS_WIN)
-#include "win/scoped_handle.h"
-#endif
 
 namespace base {
 
@@ -52,12 +39,10 @@ namespace base {
 	public:
 		SharedMemory();
 
-#if defined(OS_WIN)
 		// Similar to the default constructor, except that this allows for
 		// calling LockDeprecated() to acquire the named mutex before either Create or
 		// Open are called on Windows.
 		explicit SharedMemory(const std::wstring& name);
-#endif
 
 		// Create a new SharedMemory object from an existing, open
 		// shared memory file.
@@ -83,11 +68,6 @@ namespace base {
 		// primitive.
 		static SharedMemoryHandle DuplicateHandle(const SharedMemoryHandle& handle);
 
-#if defined(OS_POSIX) && !(defined(OS_MACOSX) && !defined(OS_IOS))
-		// This method requires that the SharedMemoryHandle is backed by a POSIX fd.
-		static int GetFdFromSharedMemoryHandle(const SharedMemoryHandle& handle);
-#endif
-
 		// Creates a shared memory object as described by the options struct.
 		// Returns true on success and false on failure.
 		bool Create(const SharedMemoryCreateOptions& options);
@@ -104,7 +84,7 @@ namespace base {
 			return Create(options);
 		}
 
-  // Maps the shared memory into the caller's address space.
+		// Maps the shared memory into the caller's address space.
 		// Returns true on success, false otherwise.  The memory address
 		// is accessed via the memory() accessor.  The mapped address is guaranteed to
 		// have an alignment of at least MAP_MINIMUM_ALIGNMENT. This method will fail
@@ -165,20 +145,9 @@ namespace base {
 		[[nodiscard]] const UnguessableToken& mapped_id() const { return mapped_id_; }
 
 	private:
-#if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_ANDROID) && \
-    (!defined(OS_MACOSX) || defined(OS_IOS))
-		bool FilePathForMemoryName(const std::string& mem_name, FilePath* path);
-#endif
-
-#if defined(OS_WIN)
 		// If true indicates this came from an external source so needs extra checks
 		// before being mapped.
 		bool external_section_ = false;
-#elif !defined(OS_ANDROID) && !defined(OS_FUCHSIA)
-		// If valid, points to the same memory region as shm_, but with readonly
-		// permissions.
-		SharedMemoryHandle readonly_shm_;
-#endif
 
 		// The OS primitive that backs the shared memory region.
 		SharedMemoryHandle shm_;

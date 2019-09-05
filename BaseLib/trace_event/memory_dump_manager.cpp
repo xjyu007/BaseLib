@@ -27,15 +27,6 @@
 #include "trace_event/trace_event.h"
 #include "build_config.h"
 
-#if defined(OS_ANDROID)
-#include "trace_event/java_heap_dump_provider_android.h"
-
-#if BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE)
-#include "trace_event/cfi_backtrace_android.h"
-#endif
-
-#endif  // defined(OS_ANDROID)
-
 namespace base::trace_event {
 
 	namespace {
@@ -127,10 +118,6 @@ namespace base::trace_event {
 			RegisterDumpProvider(MallocDumpProvider::GetInstance(), "Malloc", nullptr);
 #endif
 
-#if defined(OS_ANDROID)
-			RegisterDumpProvider(JavaHeapDumpProvider::GetInstance(), "JavaHeap",
-				nullptr);
-#endif
 	}
 
 	void MemoryDumpManager::RegisterDumpProvider(
@@ -261,7 +248,7 @@ namespace base::trace_event {
 		return false;
 	}
 
-	scoped_refptr<base::SequencedTaskRunner>
+	scoped_refptr<SequencedTaskRunner>
 		MemoryDumpManager::GetOrCreateBgTaskRunnerLocked() {
 		lock_.AssertAcquired();
 
@@ -437,7 +424,7 @@ namespace base::trace_event {
 		//strncpy(provider_name_for_debugging, mdpinfo->name, sizeof(provider_name_for_debugging) - 1);
 		strncpy_s(provider_name_for_debugging, 16, mdpinfo->name, sizeof(provider_name_for_debugging) - 1);
 		provider_name_for_debugging[sizeof(provider_name_for_debugging) - 1] = '\0';
-		base::debug::Alias(provider_name_for_debugging);
+		debug::Alias(provider_name_for_debugging);
 
 		ANNOTATE_BENIGN_RACE(&mdpinfo->disabled, "best-effort race detection");
 		CHECK(!is_thread_bound ||

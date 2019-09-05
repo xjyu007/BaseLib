@@ -205,38 +205,8 @@ namespace base {
 
 		MessageLoopCurrentForUI* operator->() { return this; }
 
-#if defined(USE_OZONE) && !defined(OS_FUCHSIA) && !defined(OS_WIN)
-		static_assert(
-			std::is_base_of<WatchableIOMessagePumpPosix, MessagePumpForUI>::value,
-			"MessageLoopCurrentForUI::WatchFileDescriptor is supported only"
-			"by MessagePumpLibevent and MessagePumpGlib implementations.");
-		bool WatchFileDescriptor(int fd,
-		                       bool persistent,
-		                       MessagePumpForUI::Mode mode,
-		                       MessagePumpForUI::FdWatchController* controller,
-		                       MessagePumpForUI::FdWatcher* delegate);
-#endif
-
-#if defined(OS_IOS)
-		// Forwards to MessageLoopForUI::Attach().
-		// TODO(https://crbug.com/825327): Plumb the actual MessageLoopForUI* to
-		// callers and remove ability to access this method from
-		// MessageLoopCurrentForUI.
-		void Attach();
-#endif
-
-#if defined(OS_ANDROID)
-		// Forwards to MessageLoopForUI::Abort().
-		// TODO(https://crbug.com/825327): Plumb the actual MessageLoopForUI* to
-		// callers and remove ability to access this method from
-		// MessageLoopCurrentForUI.
-		void Abort();
-#endif
-
-#if defined(OS_WIN)
 		void AddMessagePumpObserver(MessagePumpForUI::Observer* observer) const;
 		void RemoveMessagePumpObserver(MessagePumpForUI::Observer* observer) const;
-#endif
 
 	private:
   explicit MessageLoopCurrentForUI(
@@ -262,36 +232,10 @@ namespace base {
 
 #if !defined(OS_NACL_SFI)
 
-#if defined(OS_WIN)
 		// Please see MessagePumpWin for definitions of these methods.
 		HRESULT RegisterIOHandler(HANDLE file, MessagePumpForIO::IOHandler* handler) const;
 		bool RegisterJobObject(HANDLE job, MessagePumpForIO::IOHandler* handler) const;
 		bool WaitForIOCompletion(DWORD timeout, MessagePumpForIO::IOHandler* filter) const;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// Please see WatchableIOMessagePumpPosix for definition.
-		// Prefer base::FileDescriptorWatcher for non-critical IO.
-		bool WatchFileDescriptor(int fd,
-		                       bool persistent,
-		                       MessagePumpForIO::Mode mode,
-		                       MessagePumpForIO::FdWatchController* controller,
-		                       MessagePumpForIO::FdWatcher* delegate);
-#endif  // defined(OS_WIN)
-
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-		bool WatchMachReceivePort(
-		  mach_port_t port,
-		  MessagePumpForIO::MachPortWatchController* controller,
-		  MessagePumpForIO::MachPortWatcher* delegate);
-#endif
-
-#if defined(OS_FUCHSIA)
-		// Additional watch API for native platform resources.
-		bool WatchZxHandle(zx_handle_t handle,
-		                 bool persistent,
-		                 zx_signals_t signals,
-		                 MessagePumpForIO::ZxHandleWatchController* controller,
-		                 MessagePumpForIO::ZxHandleWatcher* delegate);
-#endif  // defined(OS_FUCHSIA)
 
 #endif  // !defined(OS_NACL_SFI)
 

@@ -6,26 +6,7 @@
 
 #include "base_export.h"
 #include "macros.h"
-#include "build_config.h"
-#if defined (OS_WIN)
 #include "win/scoped_handle.h"
-#elif defined(OS_MACOSX)
-#include <mach/mach.h>
-
-#include <list>
-#include <memory>
-
-#include "callback_forward.h"
-#include "mac/scoped_mach_port.h"
-#include "memory/ref_counted.h"
-#include "synchronization/lock.h"
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <list>
-#include <utility>
-
-#include "memory/ref_counted.h"
-#include "synchronization/lock.h"
-#endif
 
 namespace base {
 
@@ -62,12 +43,10 @@ namespace base {
 		WaitableEvent(ResetPolicy reset_policy = ResetPolicy::MANUAL,
 			InitialState initial_state = InitialState::NOT_SIGNALED);
 
-#if defined(OS_WIN)
 		// Create a WaitableEvent from an Event HANDLE which has already been
 		// created. This objects takes ownership of the HANDLE and will close it when
 		// deleted.
 		explicit WaitableEvent(win::ScopedHandle event_handle);
-#endif
 
 		~WaitableEvent();
 
@@ -99,9 +78,7 @@ namespace base {
 		// TimedWait can synchronise its own destruction like |Wait|.
 		bool TimedWait(const TimeDelta& wait_delta);
 
-#if defined(OS_WIN)
 		[[nodiscard]] HANDLE handle() const { return handle_.Get(); }
-#endif
 
 		// Declares that this WaitableEvent will only ever be used by a thread that is
 		// idle at the bottom of its stack and waiting for work (in particular, it is
@@ -160,119 +137,7 @@ namespace base {
 	private:
 		friend class WaitableEventWatcher;
 
-#if defined(OS_WIN)
 		win::ScopedHandle handle_;
-#elif defined(OS_MACOSX)
-		// Prior to macOS 10.12, a TYPE_MACH_RECV dispatch source may not be invoked
-		// immediately. If a WaitableEventWatcher is used on a manual-reset event,
-		// and another thread that is Wait()ing on the event calls Reset()
-		// immediately after waking up, the watcher may not receive the callback.
-		// On macOS 10.12 and higher, dispatch delivery is reliable. But for OSes
-		// prior, a lock-protected list of callbacks is used for manual-reset event
-		// watchers. Automatic-reset events are not prone to this issue, since the
-		// first thread to wake will claim the event.
-		static bool UseSlowWatchList(ResetPolicy policy);
-
-		// Peeks the message queue named by |port| and returns true if a message
-		// is present and false if not. If |dequeue| is true, the messsage will be
-		// drained from the queue. If |dequeue| is false, the queue will only be
-		// peeked. |port| must be a receive right.
-		static bool PeekPort(mach_port_t port, bool dequeue);
-
-		// The Mach receive right is waited on by both WaitableEvent and
-		// WaitableEventWatcher. It is valid to signal and then delete an event, and
-		// a watcher should still be notified. If the right were to be destroyed
-		// immediately, the watcher would not receive the signal. Because Mach
-		// receive rights cannot have a user refcount greater than one, the right
-		// must be reference-counted manually.
-		class ReceiveRight : public RefCountedThreadSafe<ReceiveRight> {
-		public:
-			ReceiveRight(mach_port_t name, bool create_slow_watch_list);
-
-			mach_port_t Name() const { return right_.get(); }
-
-			// This structure is used iff UseSlowWatchList() is true. See the comment
-			// in Signal() for details.
-			struct WatchList {
-				WatchList();
-				~WatchList();
-
-				// The lock protects a list of closures to be run when the event is
-				// Signal()ed. The closures are invoked on the signaling thread, so they
-				// must be safe to be called from any thread.
-				Lock lock;
-				std::list<OnceClosure> list;
-			};
-
-			WatchList* SlowWatchList() const { return slow_watch_list_.get(); }
-
-		private:
-			friend class RefCountedThreadSafe<ReceiveRight>;
-			~ReceiveRight();
-
-			mac::ScopedMachReceiveRight right_;
-
-			// This is allocated iff UseSlowWatchList() is true. It is created on the
-			// heap to avoid performing initialization when not using the slow path.
-			std::unique_ptr<WatchList> slow_watch_list_;
-
-			DISALLOW_COPY_AND_ASSIGN(ReceiveRight);
-		};
-
-		const ResetPolicy policy_;
-
-		// The receive right for the event.
-		scoped_refptr<ReceiveRight> receive_right_;
-
-		// The send right used to signal the event. This can be disposed of with
-		// the event, unlike the receive right, since a deleted event cannot be
-		// signaled.
-		mac::ScopedMachSendRight send_right_;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// On Windows, you must not close a HANDLE which is currently being waited on.
-		// The MSDN documentation says that the resulting behaviour is 'undefined'.
-		// To solve that issue each WaitableEventWatcher duplicates the given event
-		// handle.
-
-		// However, if we were to include the following members
-		// directly then, on POSIX, one couldn't use WaitableEventWatcher to watch an
-		// event which gets deleted. This mismatch has bitten us several times now,
-		// so we have a kernel of the WaitableEvent, which is reference counted.
-		// WaitableEventWatchers may then take a reference and thus match the Windows
-		// behaviour.
-		struct WaitableEventKernel :
-		  public RefCountedThreadSafe<WaitableEventKernel> {
-		public:
-			WaitableEventKernel(ResetPolicy reset_policy, InitialState initial_state);
-
-			bool Dequeue(Waiter* waiter, void* tag);
-
-			base::Lock lock_;
-			const bool manual_reset_;
-			bool signaled_;
-			std::list<Waiter*> waiters_;
-
-		private:
-			friend class RefCountedThreadSafe<WaitableEventKernel>;
-			~WaitableEventKernel();
-		};
-
-		typedef std::pair<WaitableEvent*, size_t> WaiterAndIndex;
-
-		// When dealing with arrays of WaitableEvent*, we want to sort by the address
-		// of the WaitableEvent in order to have a globally consistent locking order.
-		// In that case we keep them, in sorted order, in an array of pairs where the
-		// second element is the index of the WaitableEvent in the original,
-		// unsorted, array.
-		static size_t EnqueueMany(WaiterAndIndex* waitables,
-		                        size_t count, Waiter* waiter);
-
-		bool SignalAll();
-		bool SignalOne();
-		void Enqueue(Waiter* waiter);
-
-		scoped_refptr<WaitableEventKernel> kernel_;
-#endif
 
 		// Whether a thread invoking Wait() on this WaitableEvent should be considered
 		// blocked as opposed to idle (and potentially replaced if part of a pool).

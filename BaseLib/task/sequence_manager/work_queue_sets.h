@@ -110,6 +110,8 @@ namespace base {
 					void ClearHeapHandle() {
 						value->set_heap_handle(base::internal::HeapHandle());
 					}
+
+    				HeapHandle GetHeapHandle() const { return value->heap_handle(); }
 				};
 
 				const char* const name_;

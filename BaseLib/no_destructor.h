@@ -1,14 +1,13 @@
-#pragma once
-
 // Copyright 2018 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include <new>
 #include <utility>
 
-namespace base
-{
+namespace base {
 
 	// A wrapper that makes it easy to create an object of type T with static
 	// storage duration that:
@@ -45,14 +44,12 @@ namespace base
 	// as a stack or member variable. Furthermore, a NoDestructor<T> should never
 	// have global scope as that may require a static initializer.
 	template <typename T>
-	class NoDestructor
-	{
+	class NoDestructor {
 	public:
 		// Not constexpr; just write static constexpr T x = ...; if the value should
 		// be a constexpr.
 		template <typename... Args>
-		explicit NoDestructor(Args&& ... args)
-		{
+		explicit NoDestructor(Args&& ... args) {
 			new (storage_) T(std::forward<Args>(args)...);
 		}
 

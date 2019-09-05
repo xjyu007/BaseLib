@@ -10,7 +10,6 @@
 #include "lazy_instance.h"
 #include "logging.h"
 #include "threading/thread_local.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -21,11 +20,6 @@ namespace base {
 
 	namespace {
 
-#if defined(OS_NACL) || defined(OS_ANDROID)
-		// NaCL doesn't support stack sampling and Android is slow at stack
-		// sampling and this causes timeouts (crbug.com/959139).
-		using ThreadLocalBooleanWithStacks = ThreadLocalBoolean;
-#else
 		class ThreadLocalBooleanWithStacks {
 		public:
 			ThreadLocalBooleanWithStacks() = default;
@@ -54,7 +48,6 @@ namespace base {
 
 			DISALLOW_COPY_AND_ASSIGN(ThreadLocalBooleanWithStacks);
 		};
-#endif  // defined(OS_NACL)
 
 		LazyInstance<ThreadLocalBooleanWithStacks>::Leaky g_blocking_disallowed =
 			LAZY_INSTANCE_INITIALIZER;

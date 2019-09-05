@@ -67,18 +67,10 @@ namespace base {
 		// Whether Lock mitigates priority inversion when used from different thread
 		// priorities.
 		static bool HandlesMultipleThreadPriorities() {
-#if defined(OS_WIN)
 			// Windows mitigates priority inversion by randomly boosting the priority of
 			// ready threads.
 			// https://msdn.microsoft.com/library/windows/desktop/ms684831.aspx
 			return true;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-			// POSIX mitigates priority inversion by setting the priority of a thread
-			// holding a Lock to the maximum priority of any other thread waiting on it.
-			return internal::LockImpl::PriorityInheritanceAvailable();
-#else
-#error Unsupported platform
-#endif
 		}
 
 		// Both Windows and POSIX implementations of ConditionVariable need to be

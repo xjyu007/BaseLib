@@ -26,11 +26,9 @@
 #include "threading/platform_thread.h"
 #include "time/time.h"
 
-#if defined(OS_WIN)
 #include <Windows.h>
 
 #include "win/scoped_com_initializer.h"
-#endif  // defined(OS_WIN)
 
 namespace base::internal {
 
@@ -108,7 +106,7 @@ namespace base::internal {
 				PlatformThread::SetName(thread_name_);
 			}
 
-			RunIntentWithRegisteredTaskSource GetWork(WorkerThread* worker) override {
+			RegisteredTaskSource GetWork(WorkerThread* worker) override {
 				CheckedAutoLock auto_lock(lock_);
 				DCHECK(worker_awake_);
 				auto task_source = GetWorkLockRequired(worker);
@@ -117,9 +115,9 @@ namespace base::internal {
 					worker_awake_ = false;
 					return nullptr;
 				}
-				auto run_intent = task_source->WillRunTask();
-				DCHECK(run_intent);
-				return { std::move(task_source), std::move(run_intent) };
+			    auto run_status = task_source.WillRunTask();
+			    DCHECK_NE(run_status, TaskSource::RunStatus::kDisallowed);
+			    return task_source;
 			}
 
 			void DidProcessTask(RegisteredTaskSource task_source) override {
@@ -139,7 +137,7 @@ namespace base::internal {
 				const auto sequence_should_be_queued = transaction.WillPushTask();
 				RegisteredTaskSource task_source;
 				if (sequence_should_be_queued) {
-					task_source = task_tracker_->WillQueueTaskSource(sequence);
+					task_source = task_tracker_->RegisterTaskSource(sequence);
 					// We shouldn't push |task| if we're not allowed to queue |task_source|.
 					if (!task_source)
 						return false;
@@ -234,8 +232,6 @@ namespace base::internal {
 			DISALLOW_COPY_AND_ASSIGN(WorkerThreadDelegate);
 		};
 
-#if defined(OS_WIN)
-
 		class WorkerThreadCOMDelegate : public WorkerThreadDelegate {
 		public:
 			WorkerThreadCOMDelegate(const std::string& thread_name,
@@ -254,7 +250,7 @@ namespace base::internal {
 				scoped_com_initializer_ = std::make_unique<win::ScopedCOMInitializer>();
 			}
 
-			RunIntentWithRegisteredTaskSource GetWork(WorkerThread* worker) override {
+			RegisteredTaskSource GetWork(WorkerThread* worker) override {
 				// This scheme below allows us to cover the following scenarios:
 				// * Only WorkerThreadDelegate::GetWork() has work:
 				//   Always return the task source from GetWork().
@@ -311,9 +307,9 @@ namespace base::internal {
 					worker_awake_ = false;
 					return nullptr;
 				}
-				auto run_intent = task_source->WillRunTask();
-				DCHECK(run_intent);
-				return { std::move(task_source), std::move(run_intent) };
+			    auto run_status = task_source.WillRunTask();
+			    DCHECK_NE(run_status, TaskSource::RunStatus::kDisallowed);
+			    return task_source;
 			}
 
 			void OnMainExit(WorkerThread* /* worker */) override {
@@ -349,8 +345,8 @@ namespace base::internal {
 						DCHECK(sequence_should_be_queued)
 							<< "GetWorkFromWindowsMessageQueue() does not expect "
 							"queueing of pump tasks.";
-						auto registered_task_source =
-							task_tracker_->WillQueueTaskSource(message_pump_sequence_);
+						auto registered_task_source = task_tracker_->RegisterTaskSource(
+							std::move(message_pump_sequence_));
 						if (!registered_task_source)
 							return nullptr;
 						transaction.PushTask(std::move(pump_message_task));
@@ -369,8 +365,6 @@ namespace base::internal {
 
 			DISALLOW_COPY_AND_ASSIGN(WorkerThreadCOMDelegate);
 		};
-
-#endif  // defined(OS_WIN)
 
 	}  // namespace
 
@@ -479,7 +473,6 @@ namespace base::internal {
 		delayed_task_manager_(delayed_task_manager) {
 		DCHECK(task_tracker_);
 		DCHECK(delayed_task_manager_);
-#if defined(OS_WIN)
 		static_assert(std::extent<decltype(shared_com_worker_threads_)>() ==
 			std::extent<decltype(shared_worker_threads_)>(),
 			"The size of |shared_com_worker_threads_| must match "
@@ -491,7 +484,6 @@ namespace base::internal {
 			std::remove_reference<decltype(shared_worker_threads_[0])>>(),
 			"The size of |shared_com_worker_threads_| must match "
 			"|shared_worker_threads_|");
-#endif  // defined(OS_WIN)
 		DCHECK(!g_manager_is_alive);
 		g_manager_is_alive = true;
 	}
@@ -548,14 +540,12 @@ namespace base::internal {
 		return CreateTaskRunnerImpl<WorkerThreadDelegate>(traits, thread_mode);
 	}
 
-#if defined(OS_WIN)
 	scoped_refptr<SingleThreadTaskRunner>
 		PooledSingleThreadTaskRunnerManager::CreateCOMSTATaskRunner(
 			const TaskTraits& traits,
 			SingleThreadTaskRunnerThreadMode thread_mode) {
 		return CreateTaskRunnerImpl<WorkerThreadCOMDelegate>(traits, thread_mode);
 	}
-#endif  // defined(OS_WIN)
 
 	// static
 	PooledSingleThreadTaskRunnerManager::ContinueOnShutdown
@@ -655,7 +645,6 @@ namespace base::internal {
 			task_tracker_);
 	}
 
-#if defined(OS_WIN)
 	template <>
 	std::unique_ptr<WorkerThreadDelegate>
 		PooledSingleThreadTaskRunnerManager::CreateWorkerThreadDelegate<
@@ -669,7 +658,6 @@ namespace base::internal {
 			: WorkerThread::ThreadLabel::SHARED_COM,
 			task_tracker_);
 	}
-#endif  // defined(OS_WIN)
 
 	template <typename DelegateType>
 	WorkerThread*
@@ -696,7 +684,6 @@ namespace base::internal {
 			[TraitsToContinueOnShutdown(traits)];
 	}
 
-#if defined(OS_WIN)
 	template <>
 	WorkerThread*&
 		PooledSingleThreadTaskRunnerManager::GetSharedWorkerThreadForTraits<
@@ -704,7 +691,6 @@ namespace base::internal {
 		return shared_com_worker_threads_[GetEnvironmentIndexForTraits(traits)]
 			[TraitsToContinueOnShutdown(traits)];
 	}
-#endif  // defined(OS_WIN)
 
 	void PooledSingleThreadTaskRunnerManager::UnregisterWorkerThread(
 			WorkerThread* worker) {
@@ -727,20 +713,16 @@ namespace base::internal {
 
 	void PooledSingleThreadTaskRunnerManager::ReleaseSharedWorkerThreads() {
 		decltype(shared_worker_threads_) local_shared_worker_threads;
-#if defined(OS_WIN)
 		decltype(shared_com_worker_threads_) local_shared_com_worker_threads;
-#endif
 		{
 			CheckedAutoLock auto_lock(lock_);
 			for (size_t i = 0; i < size(shared_worker_threads_); ++i) {
 				for (size_t j = 0; j < size(shared_worker_threads_[i]); ++j) {
 					local_shared_worker_threads[i][j] = shared_worker_threads_[i][j];
 					shared_worker_threads_[i][j] = nullptr;
-#if defined(OS_WIN)
 					local_shared_com_worker_threads[i][j] =
 						shared_com_worker_threads_[i][j];
 					shared_com_worker_threads_[i][j] = nullptr;
-#endif
 				}
 			}
 		}
@@ -749,10 +731,8 @@ namespace base::internal {
 			for (size_t j = 0; j < size(local_shared_worker_threads[i]); ++j) {
 				if (local_shared_worker_threads[i][j])
 					UnregisterWorkerThread(local_shared_worker_threads[i][j]);
-#if defined(OS_WIN)
 				if (local_shared_com_worker_threads[i][j])
 					UnregisterWorkerThread(local_shared_com_worker_threads[i][j]);
-#endif
 			}
 		}
 	}

@@ -16,6 +16,7 @@
 #include "feature_list.h"
 #include "message_loop/message_pump_type.h"
 #include "strings/string_util.h"
+#include "task/scoped_set_task_priority_for_current_thread.h"
 #include "task/task_features.h"
 #include "task/thread_pool/pooled_parallel_task_runner.h"
 #include "task/thread_pool/pooled_sequenced_task_runner.h"
@@ -24,16 +25,9 @@
 #include "task/thread_pool/task_source.h"
 #include "task/thread_pool/thread_group_impl.h"
 #include "threading/platform_thread.h"
-#include "time/default_tick_clock.h"
 #include "time/time.h"
 
-#if defined(OS_WIN)
 #include "task/thread_pool/thread_group_native_win.h"
-#endif
-
-#if defined(OS_MACOSX)
-#include "task/thread_pool/thread_group_native_mac.h"
-#endif
 
 namespace base::internal {
 
@@ -136,19 +130,9 @@ namespace base::internal {
 		// FileDescriptorWatcher in the scope in which tasks run.
 		ServiceThread::Options service_thread_options;
 		service_thread_options.message_pump_type =
-#if defined(OS_POSIX) && !defined(OS_NACL_SFI)
-			MessagePumpType::IO;
-#else
 			MessagePumpType::DEFAULT;
-#endif
 		service_thread_options.timer_slack = TIMER_SLACK_MAXIMUM;
 		CHECK(service_thread_->StartWithOptions(service_thread_options));
-
-#if defined(OS_POSIX) && !defined(OS_NACL_SFI)
-		// Needs to happen after starting the service thread to get its
-		// task_runner().
-		task_tracker_->set_io_thread_task_runner(service_thread_->task_runner());
-#endif  // defined(OS_POSIX) && !defined(OS_NACL_SFI)
 
 		// Needs to happen after starting the service thread to get its task_runner().
 		const scoped_refptr<TaskRunner> service_thread_task_runner =
@@ -162,7 +146,6 @@ namespace base::internal {
 		case InitParams::CommonThreadPoolEnvironment::DEFAULT:
 			worker_environment = ThreadGroup::WorkerEnvironment::NONE;
 			break;
-#if defined(OS_WIN)
 		case InitParams::CommonThreadPoolEnvironment::COM_MTA:
 			worker_environment = ThreadGroup::WorkerEnvironment::COM_MTA;
 			break;
@@ -170,7 +153,6 @@ namespace base::internal {
 			DEPRECATED_COM_STA_IN_FOREGROUND_GROUP:
 				worker_environment = ThreadGroup::WorkerEnvironment::COM_STA;
 				break;
-#endif
 		}
 
 		const auto suggested_reclaim_time =
@@ -200,13 +182,11 @@ namespace base::internal {
 			background_thread_group_->Start(
 				max_best_effort_tasks, max_best_effort_tasks, suggested_reclaim_time,
 				service_thread_task_runner, worker_thread_observer,
-#if defined(OS_WIN)
 				// COM STA is a backward-compatibility feature for the foreground thread
 				// group only.
 				worker_environment == ThreadGroup::WorkerEnvironment::COM_STA
 				? ThreadGroup::WorkerEnvironment::NONE
 				:
-#endif
 				worker_environment);
 		}
 
@@ -245,14 +225,12 @@ namespace base::internal {
 			SetUserBlockingPriorityIfNeeded(traits), thread_mode);
 	}
 
-#if defined(OS_WIN)
 	scoped_refptr<SingleThreadTaskRunner> ThreadPoolImpl::CreateCOMSTATaskRunner(
 		const TaskTraits& traits,
 		SingleThreadTaskRunnerThreadMode thread_mode) {
 		return single_thread_task_runner_manager_.CreateCOMSTATaskRunner(
 			SetUserBlockingPriorityIfNeeded(traits), thread_mode);
 	}
-#endif  // defined(OS_WIN)
 
 	scoped_refptr<UpdateableSequencedTaskRunner>
 		ThreadPoolImpl::CreateUpdateableSequencedTaskRunner(const TaskTraits& traits) {
@@ -346,7 +324,7 @@ namespace base::internal {
 		const auto sequence_should_be_queued = transaction.WillPushTask();
 		RegisteredTaskSource task_source;
 		if (sequence_should_be_queued) {
-			task_source = task_tracker_->WillQueueTaskSource(sequence);
+			task_source = task_tracker_->RegisterTaskSource(sequence);
 			// We shouldn't push |task| if we're not allowed to queue |task_source|.
 			if (!task_source)
 				return false;
@@ -393,10 +371,23 @@ namespace base::internal {
 		return true;
 	}
 
+	bool ThreadPoolImpl::ShouldYield(const TaskSource* task_source) const {
+		const TaskPriority priority = task_source->priority_racy();
+		auto* const thread_group = GetThreadGroupForTraits(
+			{ThreadPool(), priority, task_source->thread_policy()});
+		// A task whose priority changed and is now running in the wrong thread group
+		// should yield so it's rescheduled in the right one.
+		if (!thread_group->IsBoundToCurrentThread())
+			return true;
+		return GetThreadGroupForTraits(
+				{ThreadPool(), priority, task_source->thread_policy()})
+			->ShouldYield(priority);
+	}
+
 	bool ThreadPoolImpl::EnqueueJobTaskSource(
 		scoped_refptr<JobTaskSource> task_source) {
 		auto registered_task_source =
-			task_tracker_->WillQueueTaskSource(std::move(task_source));
+			task_tracker_->RegisterTaskSource(std::move(task_source));
 		if (!registered_task_source)
 			return false;
 		auto transaction = registered_task_source->BeginTransaction();
@@ -433,8 +424,7 @@ namespace base::internal {
 		if (new_thread_group == current_thread_group) {
 			// |task_source|'s position needs to be updated within its current thread
 			// group.
-			current_thread_group->UpdateSortKey(
-				{ std::move(task_source), std::move(transaction) });
+    		current_thread_group->UpdateSortKey(std::move(transaction));
 		} else {
 			// |task_source| is changing thread groups; remove it from its current
 			// thread group and reenqueue it.

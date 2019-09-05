@@ -9,7 +9,6 @@
 #include "single_thread_task_runner.h"
 #include "task/sequence_manager/lazy_now.h"
 #include "time/time.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -85,13 +84,6 @@ namespace base {
 
 				// Returns true if the current run loop should quit when idle.
 				virtual bool ShouldQuitRunLoopWhenIdle() = 0;
-
-#if defined(OS_IOS) || defined(OS_ANDROID)
-				// On iOS, the main message loop cannot be Run().  Instead call
-				// AttachToMessagePump(), which connects this ThreadController to the
-				// UI thread's CFRunLoop and allows PostTask() to work.
-				virtual void AttachToMessagePump() = 0;
-#endif
 
 				// TODO(altimin): Get rid of the methods below.
 				// These methods exist due to current integration of SequenceManager

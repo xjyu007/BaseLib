@@ -11,9 +11,10 @@
 #include "logging.h"
 #include "stl_util.h"
 #include "strings/string_util.h"
-#include "win/object_watcher.h"
+#include "threading/thread_restrictions.h"
 #include "win/shlwapi.h"
 #include "win/windows_version.h"
+#include "object_watcher.h"
 
 namespace base::win {
 
@@ -399,7 +400,7 @@ namespace base::win {
 		return WriteValue(
 			name, in_value,
 			static_cast<DWORD>(sizeof(*in_value) *
-			(std::char_traits<wchar_t>::length(in_value) + 1)),
+								(std::char_traits<wchar_t>::length(in_value) + 1)),
 			REG_SZ);
 	}
 
@@ -468,27 +469,27 @@ namespace base::win {
 		RegCloseKey(target_key);
 
 		// Try again to delete the key.
-		return RegDeleteKeyEx(root_key, name, access, 0);
+		return RegDeleteKeyEx(root_key, as_wcstr(name), access, 0);
 	}
 
 	// RegistryValueIterator ------------------------------------------------------
 
 	RegistryValueIterator::RegistryValueIterator(HKEY root_key,
-		const wchar_t* folder_key,
-		REGSAM wow64access)
+												 const wchar_t* folder_key,
+												 REGSAM wow64access)
 		: name_(MAX_PATH, '\0'), value_(MAX_PATH, '\0') {
 		Initialize(root_key, folder_key, wow64access);
 	}
 
 	RegistryValueIterator::RegistryValueIterator(HKEY root_key,
-		const wchar_t* folder_key)
+												 const wchar_t* folder_key)
 		: name_(MAX_PATH, '\0'), value_(MAX_PATH, '\0') {
 		Initialize(root_key, folder_key, 0);
 	}
 
 	void RegistryValueIterator::Initialize(HKEY root_key,
-		const wchar_t* folder_key,
-		REGSAM wow64access) {
+										   const wchar_t* folder_key,
+										   REGSAM wow64access) {
 		DCHECK_EQ(wow64access & ~kWow64AccessMask, static_cast<REGSAM>(0));
 		auto result = RegOpenKeyEx(root_key, as_wcstr(folder_key), 0,
 			KEY_READ | wow64access, &key_);
@@ -538,6 +539,7 @@ namespace base::win {
 		if (Valid()) {
 			const auto capacity = static_cast<DWORD>(name_.capacity());
 			auto name_size = capacity;
+		    // |value_size_| is in bytes. Reserve the last character for a NUL.
 			value_size_ = static_cast<DWORD>((value_.size() - 1) * sizeof(wchar_t));
 			auto result = ::RegEnumValue(
 				key_, index_, as_writable_wcstr(WriteInto(&name_, name_size)),
@@ -578,13 +580,13 @@ namespace base::win {
 	// RegistryKeyIterator --------------------------------------------------------
 
 	RegistryKeyIterator::RegistryKeyIterator(HKEY root_key,
-		const wchar_t* folder_key) {
+											 const wchar_t* folder_key) {
 		Initialize(root_key, folder_key, 0);
 	}
 
 	RegistryKeyIterator::RegistryKeyIterator(HKEY root_key,
-		const wchar_t* folder_key,
-		REGSAM wow64access) {
+											 const wchar_t* folder_key,
+											 REGSAM wow64access) {
 		Initialize(root_key, folder_key, wow64access);
 	}
 

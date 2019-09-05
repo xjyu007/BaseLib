@@ -61,28 +61,7 @@
 #include "logging.h"
 #include "numerics/safe_math.h"
 
-#if defined(OS_FUCHSIA)
-#include <zircon/types.h>
-#endif
-
-#if defined(OS_MACOSX)
-#include <CoreFoundation/CoreFoundation.h>
-// Avoid Mac system header macro leak.
-#undef TYPE_BOOL
-#endif
-
-#if defined(OS_ANDROID)
-#include <jni.h>
-#endif
-
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <unistd.h>
-#include <sys/time.h>
-#endif
-
-#if defined(OS_WIN)
 #include "win/windows_types.h"
-#endif
 
 namespace ABI {
 	namespace Windows {
@@ -129,18 +108,11 @@ namespace base {
 		static constexpr TimeDelta FromMillisecondsD(double ms);
 		static constexpr TimeDelta FromMicrosecondsD(double us);
 		static constexpr TimeDelta FromNanosecondsD(double ns);
-#if defined(OS_WIN)
 		static TimeDelta FromQPCValue(LONGLONG qpc_value);
 		// TODO(crbug.com/989694): Avoid base::TimeDelta factory functions
 		// based on absolute time
 		static TimeDelta FromFileTime(FILETIME ft);
 		static TimeDelta FromWinrtDateTime(ABI::Windows::Foundation::DateTime dt);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		static TimeDelta FromTimeSpec(const timespec& ts);
-#endif
-#if defined(OS_FUCHSIA)
-		static TimeDelta FromZxDuration(zx_duration_t nanos);
-#endif
 
 		// Converts an integer value representing TimeDelta to a class. This is used
 		// when deserializing a |TimeDelta| structure, using a value known to be
@@ -191,15 +163,7 @@ namespace base {
 			return delta_ == std::numeric_limits<int64_t>::min();
 		}
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-		struct timespec ToTimeSpec() const;
-#endif
-#if defined(OS_FUCHSIA)
-		zx_duration_t ToZxDuration() const;
-#endif
-#if defined(OS_WIN)
 		[[nodiscard]] ABI::Windows::Foundation::DateTime ToWinrtDateTime() const;
-#endif
 
 		// Returns the time delta in some unit. The InXYZF versions return a floating
 		// point value. The InXYZ versions return a truncated value (aka rounded
@@ -472,39 +436,18 @@ namespace base {
 		static constexpr int64_t kTimeTToMicrosecondsOffset =
 			INT64_C(11644473600000000);
 
-#if defined(OS_WIN)
 		// To avoid overflow in QPC to Microseconds calculations, since we multiply
 		// by kMicrosecondsPerSecond, then the QPC value should not exceed
 		// (2^63 - 1) / 1E6. If it exceeds that threshold, we divide then multiply.
 		static constexpr int64_t kQPCOverflowThreshold = INT64_C(0x8637BD05AF7);
-#endif
 
 		// kExplodedMinYear and kExplodedMaxYear define the platform-specific limits
 		// for values passed to FromUTCExploded() and FromLocalExploded(). Those
 		// functions will return false if passed values outside these limits. The limits
 		// are inclusive, meaning that the API should support all dates within a given
 		// limit year.
-#if defined(OS_WIN)
 		static constexpr int kExplodedMinYear = 1601;
 		static constexpr int kExplodedMaxYear = 30827;
-#elif defined(OS_IOS)
-		static constexpr int kExplodedMinYear = std::numeric_limits<int>::min();
-		static constexpr int kExplodedMaxYear = std::numeric_limits<int>::max();
-#elif defined(OS_MACOSX)
-		static constexpr int kExplodedMinYear = 1902;
-		static constexpr int kExplodedMaxYear = std::numeric_limits<int>::max();
-#elif defined(OS_ANDROID)
-		// Though we use 64-bit time APIs on both 32 and 64 bit Android, some OS
-		// versions like KitKat (ARM but not x86 emulator) can't handle some early
-		// dates (e.g. before 1170). So we set min conservatively here.
-		static constexpr int kExplodedMinYear = 1902;
-		static constexpr int kExplodedMaxYear = std::numeric_limits<int>::max();
-#else
-		static constexpr int kExplodedMinYear =
-			(sizeof(time_t) == 4 ? 1902 : std::numeric_limits<int>::min());
-		static constexpr int kExplodedMaxYear =
-			(sizeof(time_t) == 4 ? 2037 : std::numeric_limits<int>::max());
-#endif
 
 		// Represents an exploded time that can be formatted nicely. This is kind of
 		// like the Win32 SYSTEMTIME structure or the Unix "struct tm" with a few
@@ -569,14 +512,6 @@ namespace base {
 		static Time FromDoubleT(double dt);
 		[[nodiscard]] double ToDoubleT() const;
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// Converts the timespec structure to time. MacOS X 10.8.3 (and tentatively,
-		// earlier versions) will have the |ts|'s tv_nsec component zeroed out,
-		// having a 1 second resolution, which agrees with
-		// https://developer.apple.com/legacy/library/#technotes/tn/tn1150.html#HFSPlusDates.
-		static Time FromTimeSpec(const timespec& ts);
-#endif
-
 		// Converts to/from the Javascript convention for times, a number of
 		// milliseconds since the epoch:
 		// https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Date/getTime.
@@ -589,22 +524,6 @@ namespace base {
 		static Time FromJavaTime(int64_t ms_since_epoch);
 		[[nodiscard]] int64_t ToJavaTime() const;
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-		static Time FromTimeVal(struct timeval t);
-		struct timeval ToTimeVal() const;
-#endif
-
-#if defined(OS_FUCHSIA)
-		static Time FromZxTime(zx_time_t time);
-		zx_time_t ToZxTime() const;
-#endif
-
-#if defined(OS_MACOSX)
-		static Time FromCFAbsoluteTime(CFAbsoluteTime t);
-		CFAbsoluteTime ToCFAbsoluteTime() const;
-#endif
-
-#if defined(OS_WIN)
 		static Time FromFileTime(FILETIME ft);
 		[[nodiscard]] FILETIME ToFileTime() const;
 
@@ -641,7 +560,6 @@ namespace base {
 		// undefined.
 		static void ResetHighResolutionTimerUsage();
 		static double GetHighResolutionTimerUsage();
-#endif  // defined(OS_WIN)
 
 		// Converts an exploded structure representing either the local time or UTC
 		// into a Time class. Returns false on a failure when, for example, a day of
@@ -855,30 +773,10 @@ namespace base {
 		// considered to have an ambiguous ordering.)
 		static bool IsConsistentAcrossProcesses() WARN_UNUSED_RESULT;
 
-#if defined(OS_FUCHSIA)
-		// Converts between TimeTicks and an ZX_CLOCK_MONOTONIC zx_time_t value.
-		static TimeTicks FromZxTime(zx_time_t nanos_since_boot);
-		zx_time_t ToZxTime() const;
-#endif
-
-#if defined(OS_WIN)
 		// Translates an absolute QPC timestamp into a TimeTicks value. The returned
 		// value has the same origin as Now(). Do NOT attempt to use this if
 		// IsHighResolution() returns false.
 		static TimeTicks FromQPCValue(LONGLONG qpc_value);
-#endif
-
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-		static TimeTicks FromMachAbsoluteTime(uint64_t mach_absolute_time);
-#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
-
-#if defined(OS_ANDROID) || defined(OS_CHROMEOS)
-		// Converts to TimeTicks the value obtained from SystemClock.uptimeMillis().
-		// Note: this convertion may be non-monotonic in relation to previously
-		// obtained TimeTicks::Now() values because of the truncation (to
-		// milliseconds) performed by uptimeMillis().
-		static TimeTicks FromUptimeMillis(int64_t uptime_millis_value);
-#endif
 
 		// Get an estimate of the TimeTick value at the time of the UnixEpoch. Because
 		// Time and TimeTicks respond differently to user-set time and NTP
@@ -912,10 +810,8 @@ namespace base {
 		}
 
 	protected:
-#if defined(OS_WIN)
 		typedef DWORD(*TickFunctionType)();
 		static TickFunctionType SetMockTickFunction(TickFunctionType ticker);
-#endif
 
 	private:
 		friend class time_internal::TimeBase<TimeTicks>;
@@ -938,23 +834,13 @@ namespace base {
 
 		// Returns true if ThreadTicks::Now() is supported on this system.
 		static bool IsSupported() WARN_UNUSED_RESULT {
-#if (defined(_POSIX_THREAD_CPUTIME) && (_POSIX_THREAD_CPUTIME >= 0)) || \
-    (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_ANDROID) ||  \
-    defined(OS_FUCHSIA)
-    		return true;
-#elif defined(OS_WIN)
 			return IsSupportedWin();
-#else
-    		return false;
-#endif
 		}
 
 		// Waits until the initialization is completed. Needs to be guarded with a
 		// call to IsSupported().
 		static void WaitUntilInitialized() {
-#if defined(OS_WIN)
 			WaitUntilInitializedWin();
-#endif
 		}
 
 		// Returns thread-specific CPU-time on systems that support this feature.
@@ -966,12 +852,10 @@ namespace base {
 		// absolutely needed, call WaitUntilInitialized() before this method.
 		static ThreadTicks Now();
 
-#if defined(OS_WIN)
 		// Similar to Now() above except this returns thread-specific CPU time for an
 		// arbitrary thread. All comments for Now() method above apply apply to this
 		// method as well.
 		static ThreadTicks GetForThread(const PlatformThreadHandle& thread_handle);
-#endif
 
 		// Converts an integer value representing ThreadTicks to a class. This may be
 		// used when deserializing a |ThreadTicks| structure, using a value known to
@@ -991,7 +875,6 @@ namespace base {
 		// internal use and testing.
 		constexpr explicit ThreadTicks(int64_t us) : TimeBase(us) {}
 
-#if defined(OS_WIN)
   		//FRIEND_TEST_ALL_PREFIXES(TimeTicks, TSCTicksPerSecond);
 
 #if defined(ARCH_CPU_ARM64)
@@ -1008,7 +891,6 @@ namespace base {
 
 		static bool IsSupportedWin() WARN_UNUSED_RESULT;
 		static void WaitUntilInitializedWin();
-#endif
 	};
 
 	// For logging use only.

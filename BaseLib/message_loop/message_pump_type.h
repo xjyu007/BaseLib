@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "build_config.h"
-
 namespace base {
 
 	// A MessagePump has a particular type, which indicates the set of
@@ -25,25 +23,9 @@ namespace base {
 		// This type of pump also supports asynchronous IO.
 		IO,
 
-#if defined(OS_ANDROID)
-		// This type of pump is backed by a Java message handler which is
-		// responsible for running the tasks added to the ML. This is only for use
-		// on Android. TYPE_JAVA behaves in essence like TYPE_UI, except during
-		// construction where it does not use the main thread specific pump factory.
-		JAVA,
-#endif  // defined(OS_ANDROID)
-
-#if defined(OS_MACOSX)
-		// This type of pump is backed by a NSRunLoop. This is only for use on
-		// OSX and IOS.
-		NS_RUNLOOP,
-#endif  // defined(OS_MACOSX)
-
-#if defined(OS_WIN)
 		// This type of pump supports WM_QUIT messages in addition to other native
 		// UI events. This is only for use on windows.
 		UI_WITH_WM_QUIT_SUPPORT,
-#endif  // defined(OS_WIN)
 	};
 
 }  // namespace base

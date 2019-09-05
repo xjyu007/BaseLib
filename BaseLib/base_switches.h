@@ -6,8 +6,6 @@
 
 // Defines all the "base" command-line switches.
 
-#include "build_config.h"
-
 namespace switches {
 	extern const char kDisableBestEffortTasks[];
 	extern const char kDisableBreakpad[];
@@ -31,27 +29,8 @@ namespace switches {
 	extern const char kVModule[];
 	extern const char kWaitForDebugger[];
 
-#if defined(OS_WIN)
 	extern const char kDisableHighResTimer[];
 	extern const char kDisableUsbKeyboardDetect[];
-#endif
-
-#if defined(OS_LINUX) && !defined(OS_CHROMEOS)
-	extern const char kDisableDevShmUsage[];
-#endif
-
-#if defined(OS_POSIX)
-	extern const char kEnableCrashReporterForTesting[];
-#endif
-
-#if defined(OS_ANDROID)
-	extern const char kEnableReachedCodeProfiler[];
-	extern const char kOrderfileMemoryOptimization[];
-#endif
-
-#if defined(OS_LINUX)
-	extern const char kEnableThreadInstructionCount[];
-#endif
 
 }  // namespace switches
 

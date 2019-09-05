@@ -9,9 +9,12 @@
 #include "bind.h"
 #include "bind_helpers.h"
 #include "logging.h"
+#include "memory/ptr_util.h"
 #include "task/task_features.h"
-#include "task/thread_pool/thread_pool_clock.h"
+#include "task/thread_pool/pooled_task_runner_delegate.h"
+#include "threading/thread_restrictions.h"
 #include "time/time.h"
+#include "time/time_override.h"
 
 namespace base::internal {
 
@@ -19,7 +22,8 @@ namespace base::internal {
 		const Location& from_here,
 		const TaskTraits& traits,
 	    RepeatingCallback<void(experimental::JobDelegate*)> worker_task,
-	    RepeatingCallback<size_t()> max_concurrency_callback)
+	    RepeatingCallback<size_t()> max_concurrency_callback,
+	    PooledTaskRunnerDelegate* delegate)
 		: TaskSource(traits, nullptr, TaskSourceExecutionMode::kJob),
 		  from_here_(from_here),
 	      max_concurrency_callback_(std::move(max_concurrency_callback)),
@@ -28,19 +32,20 @@ namespace base::internal {
 	             const RepeatingCallback<void(experimental::JobDelegate*)>&
 	                 worker_task) {
 	            // Each worker task has its own delegate with associated state.
-	            // TODO(crbug.com/839091): Implement assertions on max concurrency
-	            // increase in the delegate.
-	            experimental::JobDelegate job_delegate{self};
+				experimental::JobDelegate job_delegate{self, self->delegate_};
 	            worker_task.Run(&job_delegate);
 	          },
 	          base::Unretained(this),
 	          std::move(worker_task))),
-		queue_time_(TimeTicks::Now()) {}
+		queue_time_(TimeTicks::Now()),
+		delegate_(delegate) {
+		DCHECK(delegate_);
+	}
 
 	JobTaskSource::~JobTaskSource() {
 #if DCHECK_IS_ON()
 		const auto worker_count = worker_count_.load(std::memory_order_relaxed);
-		// Make sure there's no outstanding run intent left.
+		// Make sure there's no outstanding active run operation left.
 		DCHECK(worker_count == 0U || worker_count == kInvalidWorkerCount)
 			<< worker_count;
 #endif
@@ -50,7 +55,7 @@ namespace base::internal {
 		return { SequenceToken::Create(), nullptr };
 	}
 
-	TaskSource::RunIntent JobTaskSource::WillRunTask() {
+	TaskSource::RunStatus JobTaskSource::WillRunTask() {
 		// When this call is caused by an increase of max concurrency followed by an
 		// associated NotifyConcurrencyIncrease(), the priority queue lock guarantees
 		// an happens-after relation with NotifyConcurrencyIncrease(). The memory
@@ -77,15 +82,14 @@ namespace base::internal {
 		//   B) |max_concurrency| was lowered below or to |worker_count_|.
 		//   C) |worker_count_| was invalidated.
 		if (worker_count_before_add >= max_concurrency) {
-			// The caller receives an invalid RunIntent and should skip this
-			// TaskSource.
-			return RunIntent();
+			// The caller is prevented from running a task from this TaskSource.
+			return RunStatus::kDisallowed;
 		}
 
 		DCHECK_LT(worker_count_before_add, max_concurrency);
-		return MakeRunIntent(max_concurrency == worker_count_before_add + 1
-			? Saturated::kYes
-			: Saturated::kNo);
+		return max_concurrency == worker_count_before_add + 1
+		         ? RunStatus::kAllowedSaturated
+		         : RunStatus::kAllowedNotSaturated;
 	}
 
 	size_t JobTaskSource::GetRemainingConcurrency() const {
@@ -100,20 +104,58 @@ namespace base::internal {
 	}
 
 	void JobTaskSource::NotifyConcurrencyIncrease() {
-		// TODO(839091): Implement this.
+#if DCHECK_IS_ON()
+		{
+			AutoLock auto_lock(version_lock_);
+			++increase_version_;
+			version_condition_.Broadcast();
+		}
+#endif  // DCHECK_IS_ON()
+		// Make sure the task source is in the queue if not already.
+		// Caveat: it's possible but unlikely that the task source has already reached
+		// its intended concurrency and doesn't need to be enqueued if there
+		// previously were too many worker. For simplicity, the task source is always
+		// enqueued and will get discarded if already saturated when it is popped from
+		// the priority queue.
+		delegate_->EnqueueJobTaskSource(this);
 	}
 
 	size_t JobTaskSource::GetMaxConcurrency() const {
 		return max_concurrency_callback_.Run();
 	}
 
-	std::optional<Task> JobTaskSource::TakeTask() {
+#if DCHECK_IS_ON()
+
+	size_t JobTaskSource::GetConcurrencyIncreaseVersion() const {
+		AutoLock auto_lock(version_lock_);
+		return increase_version_;
+	}
+
+	bool JobTaskSource::WaitForConcurrencyIncreaseUpdate(size_t recorded_version) {
+		AutoLock auto_lock(version_lock_);
+		constexpr TimeDelta timeout = TimeDelta::FromSeconds(1);
+		const base::TimeTicks start_time = subtle::TimeTicksNowIgnoringOverride();
+		do {
+			DCHECK_LE(recorded_version, increase_version_);
+			if (recorded_version != increase_version_)
+				return true;
+			// Waiting is acceptable because it is in DCHECK-only code.
+			ScopedAllowBaseSyncPrimitivesOutsideBlockingScope
+			allow_base_sync_primitives;
+			version_condition_.TimedWait(timeout);
+		} while (subtle::TimeTicksNowIgnoringOverride() - start_time < timeout);
+		return false;
+	}
+
+#endif  // DCHECK_IS_ON()
+
+	std::optional<Task> JobTaskSource::TakeTask(TaskSource::Transaction* transaction) {
 		DCHECK_GT(worker_count_.load(std::memory_order_relaxed), 0U);
 		DCHECK(worker_task_);
 		return std::make_optional<Task>(from_here_, worker_task_, TimeDelta());
 	}
 
-	bool JobTaskSource::DidProcessTask() {
+	bool JobTaskSource::DidProcessTask(TaskSource::Transaction* transaction) {
 		size_t worker_count_before_sub =
 			worker_count_.load(std::memory_order_relaxed);
 
@@ -143,6 +185,7 @@ namespace base::internal {
 			return false;
 
 		DCHECK_GT(worker_count_before_sub, 0U);
+
 		// Re-enqueue the TaskSource if the task ran and the worker count is below the
 		// max concurrency.
 		return worker_count_before_sub <= GetMaxConcurrency();
@@ -152,17 +195,16 @@ namespace base::internal {
 		return SequenceSortKey(traits_.priority(), queue_time_);
 	}
 
-	std::optional<Task> JobTaskSource::Clear() {
+	std::optional<Task> JobTaskSource::Clear(TaskSource::Transaction* transaction) {
 		// Invalidate |worker_count_| so that further calls to WillRunTask() never
 		// succeed. std::memory_order_relaxed is sufficient because this task source
 		// never needs to be re-enqueued after Clear().
 		const auto worker_count_before_store =
 			worker_count_.exchange(kInvalidWorkerCount, std::memory_order_relaxed);
 		DCHECK_GT(worker_count_before_store, 0U);
-		// Nothing is cleared since outstanding RunIntents might still racily run
-		// tasks. For simplicity, the destructor will take care of it once all
-		// references are released.
+		// Nothing is cleared since other workers might still racily run tasks. For
+		// simplicity, the destructor will take care of it once all references are
+		// released.
 		return std::make_optional<Task>(from_here_, DoNothing(), TimeDelta());
-
 	}
 } // namespace base

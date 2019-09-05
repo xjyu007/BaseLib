@@ -1,10 +1,8 @@
-#pragma once
-
 // Copyright 2014 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
+#pragma once
 
 #include <limits>
 #include <ostream>
@@ -12,12 +10,7 @@
 
 #include "numerics/safe_conversions_impl.h"
 
-#if !defined(__native_client__) && (defined(__ARMEL__) || defined(__arch64__))
-#include "numerics/safe_conversions_arm_impl.h"
-#define BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS (1)
-#else
 #define BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS (0)
-#endif
 
 #if !BASE_NUMERICS_DISABLE_OSTREAM_OPERATORS
 #include <ostream>
@@ -32,7 +25,7 @@ namespace base {
 			static const bool is_supported = false;
 			static constexpr Dst Do(Src) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<Dst>();
+				return CheckOnFailure::HandleFailure<Dst>();
 			}
 		};
 #endif  // BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS
@@ -45,7 +38,7 @@ namespace base {
 			static const bool is_supported = false;
 			static constexpr bool Do(Src value) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<bool>();
+				return CheckOnFailure::HandleFailure<bool>();
 			}
 		};
 
@@ -146,7 +139,7 @@ namespace base {
 			static const bool is_supported = false;
 			static constexpr Dst Do(Src value) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<Dst>();
+				return CheckOnFailure::HandleFailure<Dst>();
 			}
 		};
 

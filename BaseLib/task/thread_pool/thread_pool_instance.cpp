@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "task/thread_pool/thread_pool.h"
+#include "task/thread_pool/thread_pool_instance.h"
 
 #include <algorithm>
 
@@ -61,9 +61,8 @@ namespace base {
 		// * The system is utilized maximally by foreground threads.
 		// * The main thread is assumed to be busy, cap foreground workers at
 		//   |num_cores - 1|.
-#undef max
-		const auto num_cores = SysInfo::NumberOfProcessors();
-		const auto max_num_foreground_threads = std::max(3, num_cores - 1);
+		const int num_cores = SysInfo::NumberOfProcessors();
+		const int max_num_foreground_threads = std::max(3, num_cores - 1);
 		Start({ max_num_foreground_threads });
 	}
 #endif  // !defined(OS_NACL)

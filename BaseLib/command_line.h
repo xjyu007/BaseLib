@@ -20,7 +20,6 @@
 #include <vector>
 
 #include "base_export.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -28,14 +27,9 @@ namespace base {
 
 	class BASE_EXPORT CommandLine {
 	public:
-#if defined(OS_WIN)
 		// The native command line string type.
 		using StringType = std::wstring;
 		using StringPieceType = std::wstring_view;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		using StringType = std::string;
-		using StringPieceType = std::string_view;
-#endif
 
 		using CharType = StringType::value_type;
 		using StringVector = std::vector<StringType>;
@@ -58,7 +52,6 @@ namespace base {
 
 		~CommandLine();
 
-#if defined(OS_WIN)
 		// By default this class will treat command-line arguments beginning with
 		// slashes as switches on Windows, but not other platforms.
 		//
@@ -74,7 +67,6 @@ namespace base {
 		// argc and argv. Tests who don't want this dependency on shell32 and need
 		// to honor the arguments passed in should use this function.
 		static void InitUsingArgvForTesting(int argc, const char* const* argv);
-#endif
 
 		// Initialize the current process CommandLine singleton. On Windows, ignores
 		// its arguments (we instead parse GetCommandLineW() directly) because we
@@ -99,9 +91,7 @@ namespace base {
 		// Returns true if the CommandLine has been initialized for the given process.
 		static bool InitializedForCurrentProcess();
 
-#if defined(OS_WIN)
 		static CommandLine FromString(std::wstring_view command_line);
-#endif
 
 		// Initialize from an argv vector.
 		void InitFromArgv(int argc, const CharType* const* argv);
@@ -114,7 +104,6 @@ namespace base {
 			return GetCommandLineStringInternal(false);
 		}
 
-#if defined(OS_WIN)
 		// Constructs and returns the represented command line string. Assumes the
 		// command line contains placeholders (eg, %1) and quotes any program or
 		// argument with a '%' in it. This should be avoided unless the placeholder is
@@ -125,7 +114,6 @@ namespace base {
 		[[nodiscard]] StringType GetCommandLineStringWithPlaceholders() const {
 			return GetCommandLineStringInternal(true);
 		}
-#endif
 
 		// Constructs and returns the represented arguments string.
 		// CAUTION! This should be avoided on POSIX because quoting behavior is
@@ -134,7 +122,6 @@ namespace base {
 			return GetArgumentsStringInternal(false);
 		}
 
-#if defined(OS_WIN)
 		// Constructs and returns the represented arguments string. Assumes the
 		// command line contains placeholders (eg, %1) and quotes any argument with a
 		// '%' in it. This should be avoided unless the placeholder is required by an
@@ -144,7 +131,6 @@ namespace base {
 		[[nodiscard]] StringType GetArgumentsStringWithPlaceholders() const {
 			return GetArgumentsStringInternal(true);
 		}
-#endif
 
 		// Returns the original command line string as a vector of strings.
 		[[nodiscard]] const StringVector& argv() const { return argv_; }
@@ -210,11 +196,9 @@ namespace base {
 		// Common for debuggers, like "gdb --args".
 		void PrependWrapper(const StringType& wrapper);
 
-#if defined(OS_WIN)
 		// Initialize by parsing the given command line string.
 		// The program name is assumed to be the first item in the string.
 		void ParseFromString(std::wstring_view command_line);
-#endif
 
 	private:
 		// Disallow default constructor; a program name must be explicitly specified.

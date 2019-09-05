@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright 2015 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <functional>
 #include <map>
@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "base_export.h"
-#include "gtest_prod_util.h"
+#include "logging.h"
 #include "macros.h"
 #include "metrics/persistent_memory_allocator.h"
 #include "synchronization/lock.h"
@@ -243,7 +243,7 @@ namespace base {
 			// An optional associated field trial, which will be activated when the
 			// state of the feature is queried for the first time. Weak pointer to the
 			// FieldTrial object that is owned by the FieldTrialList singleton.
-			base::FieldTrial* field_trial;
+			FieldTrial* field_trial;
 
 			// Specifies whether the feature's state is overridden by |field_trial|.
 			// If it's not, and |field_trial| is not null, it means it is simply an
@@ -273,7 +273,7 @@ namespace base {
 		// invoked by the public FeatureList::GetFieldTrial() static function on the
 		// global singleton. Requires the FeatureList to have already been fully
 		// initialized.
-		base::FieldTrial* GetAssociatedFieldTrial(const Feature& feature);
+		FieldTrial* GetAssociatedFieldTrial(const Feature& feature);
 
 		// For each feature name in comma-separated list of strings |feature_list|,
 		// registers an override with the specified |overridden_state|. Also, will
@@ -321,7 +321,7 @@ namespace base {
 		// the scenario where multiple FieldTrialList are used with the same
 		// FeatureList - which can lead to overrides pointing to invalid FieldTrial
 		// objects.
-		base::FieldTrialList* field_trial_list_ = nullptr;
+		FieldTrialList* field_trial_list_ = nullptr;
 
 		// Whether this object has been fully initialized. This gets set to true as a
 		// result of FinalizeInitialization().

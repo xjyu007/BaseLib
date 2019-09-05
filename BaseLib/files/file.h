@@ -16,18 +16,8 @@
 #include "time/time.h"
 #include "build_config.h"
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <sys/stat.h>
-#endif
-
 namespace base {
 
-#if defined(OS_BSD) || defined(OS_MACOSX) || defined(OS_NACL) || \
-  defined(OS_FUCHSIA) || (defined(OS_ANDROID) && __ANDROID_API__ < 21)
-	typedef struct stat stat_wrapper_t;
-#elif defined(OS_POSIX)
-	typedef struct stat64 stat_wrapper_t;
-#endif
 	// Thin wrapper around an OS-level file.
 	// Note that this class does not provide any support for asynchronous IO, other
 	// than the ability to create asynchronous handles on Windows.
@@ -115,10 +105,6 @@ namespace base {
 		struct BASE_EXPORT Info {
 			Info();
 			~Info();
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-			// Fills this struct with values from |stat_info|.
-			void FromStat(const stat_wrapper_t& stat_info);
-#endif
 
 			// The size of the file in bytes.  Undefined when is_directory is true.
 			int64_t size;
@@ -256,7 +242,6 @@ namespace base {
 		// Returns some basic information for the given file.
 		bool GetInfo(Info* info) const;
 
-#if !defined(OS_FUCHSIA)  // Fuchsia's POSIX API does not support file locking.
 		enum class LockMode {
 			kShared,
 			kExclusive,
@@ -287,8 +272,6 @@ namespace base {
 		// Unlock a file previously locked.
 		[[nodiscard]] Error Unlock() const;
 
-#endif  // !defined(OS_FUCHSIA)
-
 		// Returns a new object referencing this file for use within the current
 		// process. Handling of FLAG_DELETE_ON_CLOSE varies by OS. On POSIX, the File
 		// object that was created or initialized with this flag will have unlinked
@@ -298,7 +281,6 @@ namespace base {
 
 		[[nodiscard]] bool async() const { return async_; }
 
-#if defined(OS_WIN)
 		// Sets or clears the DeleteFile disposition on the file. Returns true if
 		// the disposition was set or cleared, as indicated by |delete_on_close|.
 		//
@@ -331,13 +313,8 @@ namespace base {
 		//   deleted in the event of untimely process termination, and then clearing
 		//   this state once the file is suitable for persistence.
 		[[nodiscard]] bool DeleteOnClose(bool delete_on_close) const;
-#endif
 
-#if defined(OS_WIN)
 		static Error OSErrorToFileError(DWORD last_error);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		static Error OSErrorToFileError(int saved_errno);
-#endif
 
 		// Gets the last global error (errno or GetLastError()) and converts it to the
 		// closest base::File::Error equivalent via OSErrorToFileError(). The returned

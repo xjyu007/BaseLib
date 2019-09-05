@@ -9,55 +9,11 @@
 #include "memory/shared_memory_handle.h"
 #include "unguessable_token.h"
 #include "build_config.h"
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-#include <mach/mach.h>
-#include "mac/scoped_mach_port.h"
-#elif defined(OS_FUCHSIA)
-#include <lib/zx/vmo.h>
-#elif defined(OS_WIN)
 #include "win/scoped_handle.h"
 #include "win/windows_types.h"
-#elif defined(OS_POSIX)
-#include <sys/types.h>
-#include "file_descriptor_posix.h"
-#include "files/scoped_file.h"
-#endif
-
-#if defined(OS_LINUX)
-namespace content {
-class SandboxIPCHandler;
-}
-#endif
 
 namespace base {
 	namespace subtle {
-
-#if defined(OS_POSIX) && (!defined(OS_MACOSX) || defined(OS_IOS)) && \
-    !defined(OS_ANDROID)
-		// Helper structs to keep two descriptors on POSIX. It's needed to support
-		// ConvertToReadOnly().
-		struct BASE_EXPORT FDPair {
-			// The main shared memory descriptor that is used for mapping. May be either
-			// writable or read-only, depending on region's mode.
-			int fd;
-			// The read-only descriptor, valid only in kWritable mode. Replaces |fd| when
-			// a region is converted to read-only.
-			int readonly_fd;
-		};
-
-		struct BASE_EXPORT ScopedFDPair {
-			ScopedFDPair();
-			ScopedFDPair(ScopedFD in_fd, ScopedFD in_readonly_fd);
-			ScopedFDPair(ScopedFDPair&&);
-			ScopedFDPair& operator=(ScopedFDPair&&);
-			~ScopedFDPair();
-
-			FDPair get() const;
-
-			ScopedFD fd;
-			ScopedFD readonly_fd;
-		};
-#endif
 
 		// Implementation class for shared memory regions.
 		//
@@ -117,43 +73,9 @@ namespace base {
 			    kMaxValue = GET_SHMEM_TEMP_DIR_FAILURE
 			};
 
-#if defined(OS_LINUX)
-			// Structure to limit access to executable region creation.
-			struct ExecutableRegion {
-			private:
-				// Creates a new shared memory region the unsafe mode (writable and not and
-				// convertible to read-only), and in addition marked executable. A ScopedFD
-				// to this region is returned. Any any mapping will have to be done
-				// manually, including setting executable permissions if necessary
-				//
-				// This is only used to support sandbox_ipc_linux.cc, and should not be used
-				// anywhere else in chrome. This is restricted via AllowCreateExecutable.
-				// TODO(crbug.com/982879): remove this when NaCl is unshipped.
-				//
-				// Returns an invalid ScopedFD if the call fails.
-				static ScopedFD CreateFD(size_t size);
-
-				friend class content::SandboxIPCHandler;
-			};
-#endif
-
 			// Platform-specific shared memory type used by this class.
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-			using PlatformHandle = mach_port_t;
-			using ScopedPlatformHandle = mac::ScopedMachSendRight;
-#elif defined(OS_FUCHSIA)
-			using PlatformHandle = zx::unowned_vmo;
-			using ScopedPlatformHandle = zx::vmo;
-#elif defined(OS_WIN)
 			using PlatformHandle = HANDLE;
 			using ScopedPlatformHandle = win::ScopedHandle;
-#elif defined(OS_ANDROID)
-			using PlatformHandle = int;
-			using ScopedPlatformHandle = ScopedFD;
-#else
-			using PlatformHandle = FDPair;
-			using ScopedPlatformHandle = ScopedFDPair;
-#endif
 
 			// The minimum alignment in bytes that any mapped address produced by Map()
 			// and MapAt() is guaranteed to have.
@@ -175,16 +97,6 @@ namespace base {
 			                                       Mode mode,
 			                                       size_t size,
 			                                       const UnguessableToken& guid);
-#if defined(OS_POSIX) && !defined(OS_ANDROID) && \
-    !(defined(OS_MACOSX) && !defined(OS_IOS))
-			// Specialized version of Take() for POSIX that takes only one file descriptor
-			// instead of pair. Cannot be used with kWritable |mode|.
-			static PlatformSharedMemoryRegion Take(ScopedFD handle,
-			                                     Mode mode,
-			                                     size_t size,
-			                                     const UnguessableToken& guid);
-#endif
-
 			// As Take, above, but from a SharedMemoryHandle. This takes ownership of the
 			// handle. |mode| must be kUnsafe or kReadOnly; the latter must be used with a
 			// handle created with SharedMemoryHandle::GetReadOnlyHandle().
@@ -231,13 +143,6 @@ namespace base {
 			// kWritable mode, all other modes will CHECK-fail. The object will have
 			// kReadOnly mode after this call on success.
 			bool ConvertToReadOnly();
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-			// Same as above, but |mapped_addr| is used as a hint to avoid additional
-			// mapping of the memory object.
-			// |mapped_addr| must be mapped location of |memory_object_|. If the location
-			// is unknown, |mapped_addr| should be |nullptr|.
-			bool ConvertToReadOnly(void* mapped_addr);
-#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 
 			// Converts the region to unsafe. Returns whether the operation succeeded.
 			// Makes the current instance invalid on failure. Can be called only in
@@ -269,10 +174,6 @@ namespace base {
 			//FRIEND_TEST_ALL_PREFIXES(PlatformSharedMemoryRegionTest, CheckPlatformHandlePermissionsCorrespondToMode);
 			static PlatformSharedMemoryRegion Create(Mode mode,
 			                                       size_t size
-#if defined(OS_LINUX)
-			                                       ,
-			                                       bool executable = false
-#endif
 			);
 
 			static bool CheckPlatformHandlePermissionsCorrespondToMode(

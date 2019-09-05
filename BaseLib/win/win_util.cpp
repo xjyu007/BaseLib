@@ -158,14 +158,15 @@ namespace base::win {
 			static bool state = []() {
 				// Mitigate the issues caused by loading DLLs on a background thread
 				// (http://crbug/973868).
-				base::ScopedThreadMayLoadLibraryOnBackgroundThread priority_boost(
-					FROM_HERE);
+				base::ScopedThreadMayLoadLibraryOnBackgroundThread priority_boost(FROM_HERE);
 
-				const ScopedNativeLibrary library(FilePath(FILE_PATH_LITERAL("MDMRegistration.dll")));
+				const ScopedNativeLibrary library(
+					FilePath(FILE_PATH_LITERAL("MDMRegistration.dll")));
 				if (!library.is_valid())
 					return false;
 
-				using IsDeviceRegisteredWithManagementFunction = decltype(&::IsDeviceRegisteredWithManagement);
+				using IsDeviceRegisteredWithManagementFunction = 
+					decltype(&::IsDeviceRegisteredWithManagement);
 				const auto is_device_registered_with_management_function =
 					reinterpret_cast<IsDeviceRegisteredWithManagementFunction>(
 						library.GetFunctionPointer("IsDeviceRegisteredWithManagement"));
@@ -298,8 +299,8 @@ namespace base::win {
 				// the current configuration, then we can assume that this is a desktop
 				// or a traditional laptop.
 				if (reason) {
-					*reason += (auto_rotation_state & AR_NOSENSOR) ? "AR_NOSENSOR\n" :
-						"AR_NOT_SUPPORTED\n";
+					*reason += (auto_rotation_state & AR_NOSENSOR) ? "AR_NOSENSOR\n" 
+																   : "AR_NOT_SUPPORTED\n";
 					result = true;
 				}
 				else {
@@ -331,7 +332,8 @@ namespace base::win {
 
 			// Get the device ID.
 			wchar_t device_id[MAX_DEVICE_ID_LEN];
-			const auto status = CM_Get_Device_ID(device_info_data.DevInst, as_writable_wcstr(device_id), MAX_DEVICE_ID_LEN, 0);
+			const auto status = CM_Get_Device_ID(device_info_data.DevInst, as_writable_wcstr(device_id), 
+												 MAX_DEVICE_ID_LEN, 0);
 			if (status == CR_SUCCESS) {
 				// To reduce the scope of the hack we only look for ACPI and HID\\VID
 				// prefixes in the keyboard device ids.
@@ -388,7 +390,7 @@ namespace base::win {
 		if (!::ConvertSidToStringSid(user->User.Sid, &sid_string))
 			return false;
 
-		*user_sid = sid_string;
+		*user_sid = as_u16cstr(sid_string);
 
 		::LocalFree(sid_string);
 
@@ -411,46 +413,64 @@ namespace base::win {
 		return (uac_enabled != 0);
 	}
 
-	bool SetBooleanValueForPropertyStore(IPropertyStore* property_store, const PROPERTYKEY& property_key, bool property_bool_value) {
+	bool SetBooleanValueForPropertyStore(IPropertyStore* property_store, 
+										 const PROPERTYKEY& property_key, 
+										 bool property_bool_value) {
 		ScopedPropVariant property_value;
-		if (FAILED(InitPropVariantFromBoolean(property_bool_value, property_value.Receive()))) {
+		if (FAILED(InitPropVariantFromBoolean(property_bool_value, 
+											  property_value.Receive()))) {
 			return false;
 		}
 
-		return SetPropVariantValueForPropertyStore(property_store, property_key, property_value);
+		return SetPropVariantValueForPropertyStore(property_store, 
+												   property_key, 
+												   property_value);
 	}
 
-	bool SetStringValueForPropertyStore(IPropertyStore* property_store, const PROPERTYKEY& property_key, const wchar_t* property_string_value) {
+	bool SetStringValueForPropertyStore(IPropertyStore* property_store, 
+										const PROPERTYKEY& property_key, 
+										const wchar_t* property_string_value) {
 		ScopedPropVariant property_value;
-		if (FAILED(InitPropVariantFromString(as_wcstr(property_string_value), property_value.Receive()))) {
+		if (FAILED(InitPropVariantFromString(as_wcstr(property_string_value), 
+											 property_value.Receive()))) {
 			return false;
 		}
 
-		return SetPropVariantValueForPropertyStore(property_store, property_key, property_value);
+		return SetPropVariantValueForPropertyStore(property_store, 
+												   property_key, 
+												   property_value);
 	}
 
-	bool SetClsidForPropertyStore(IPropertyStore* property_store, const PROPERTYKEY& property_key, const CLSID& property_clsid_value) {
+	bool SetClsidForPropertyStore(IPropertyStore* property_store, 
+								  const PROPERTYKEY& property_key, 
+								  const CLSID& property_clsid_value) {
 		ScopedPropVariant property_value;
-		if (FAILED(InitPropVariantFromCLSID(property_clsid_value, property_value.Receive()))) {
+		if (FAILED(InitPropVariantFromCLSID(property_clsid_value, 
+											property_value.Receive()))) {
 			return false;
 		}
 
-		return SetPropVariantValueForPropertyStore(property_store, property_key, property_value);
+		return SetPropVariantValueForPropertyStore(property_store, property_key, 
+												   property_value);
 	}
 
-	bool SetAppIdForPropertyStore(IPropertyStore* property_store, const wchar_t* app_id) {
+	bool SetAppIdForPropertyStore(IPropertyStore* property_store, 
+								  const wchar_t* app_id) {
 		// App id should be less than 64 chars and contain no space. And recommended
 		// format is CompanyName.ProductName[.SubProduct.ProductNumber].
 		// See http://msdn.microsoft.com/en-us/library/dd378459%28VS.85%29.aspx
 		DCHECK_LT(lstrlen(as_wcstr(app_id)), 64);
 		DCHECK_EQ(wcschr(as_wcstr(app_id), L' '), nullptr);
 
-		return SetStringValueForPropertyStore(property_store, PKEY_AppUserModel_ID, app_id);
+		return SetStringValueForPropertyStore(property_store, 
+											  PKEY_AppUserModel_ID, 
+											  app_id);
 	}
 
 	static const wchar_t kAutoRunKeyPath[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 
-	bool AddCommandToAutoRun(HKEY root_key, const std::wstring& name, const std::wstring& command) {
+	bool AddCommandToAutoRun(HKEY root_key, const std::wstring& name, 
+							 const std::wstring& command) {
 		const RegKey autorun_key(root_key, kAutoRunKeyPath, KEY_SET_VALUE);
 		return (autorun_key.WriteValue(name.c_str(), command.c_str()) == ERROR_SUCCESS);
 	}
@@ -460,7 +480,9 @@ namespace base::win {
 		return (autorun_key.DeleteValue(name.c_str()) == ERROR_SUCCESS);
 	}
 
-	bool ReadCommandFromAutoRun(HKEY root_key, const std::wstring& name, std::wstring* command) {
+	bool ReadCommandFromAutoRun(HKEY root_key, 
+								const std::wstring& name, 
+								std::wstring* command) {
 		const RegKey autorun_key(root_key, kAutoRunKeyPath, KEY_QUERY_VALUE);
 		return (autorun_key.ReadValue(name.c_str(), command) == ERROR_SUCCESS);
 	}
@@ -692,10 +714,11 @@ namespace base::win {
 		if (EnablePerMonitorV2())
 			return;
 
-		// Fall back to per-monitor DPI for older versions of Win10 instead of Win8.1
-		// since Win8.1 does not have EnableChildWindowDpiMessage, necessary for
-		// correct non-client area scaling across monitors.
-		const auto process_dpi_awareness = GetVersion() >= Version::WIN10 ? PROCESS_PER_MONITOR_DPI_AWARE
+		// Fall back to per-monitor DPI for older versions of Win10 instead of
+		// Win8.1 since Win8.1 does not have EnableChildWindowDpiMessage,
+		// necessary for correct non-client area scaling across monitors.
+		const auto process_dpi_awareness = 
+			GetVersion() >= Version::WIN10 ? PROCESS_PER_MONITOR_DPI_AWARE
 			: PROCESS_SYSTEM_DPI_AWARE;
 		if (!SetProcessDpiAwarenessWrapper(process_dpi_awareness)) {
 			// For windows versions where SetProcessDpiAwareness is not available or
@@ -708,7 +731,8 @@ namespace base::win {
 	std::wstring String16FromGUID(REFGUID rguid) {
 		// This constant counts the number of characters in the formatted string,
 		// including the null termination character.
-		constexpr int kGuidStringCharacters = 1 + 8 + 1 + 4 + 1 + 4 + 1 + 4 + 1 + 12 + 1 + 1;
+		constexpr int kGuidStringCharacters = 
+			1 + 8 + 1 + 4 + 1 + 4 + 1 + 4 + 1 + 12 + 1 + 1;
 		wchar_t guid_string[kGuidStringCharacters];
 		CHECK(SUCCEEDED(StringCchPrintfW(
 			guid_string, kGuidStringCharacters,
@@ -723,7 +747,8 @@ namespace base::win {
 		return PinUser32Internal(error) != nullptr;
 	}
 
-	void* GetUser32FunctionPointer(const char* function_name, NativeLibraryLoadError* error) {
+	void* GetUser32FunctionPointer(const char* function_name, 
+								   NativeLibraryLoadError* error) {
 		const auto user32_module = PinUser32Internal(error);
 		if (user32_module)
 			return GetFunctionPointerFromNativeLibrary(user32_module, function_name);

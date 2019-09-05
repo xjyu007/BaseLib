@@ -12,10 +12,6 @@
 
 #include "stl_util.h"
 
-#if defined(ARCH_CPU_ARM_FAMILY) && (defined(OS_ANDROID) || defined(OS_LINUX))
-#include "files/file_util.h"
-#endif
-
 #if defined(ARCH_CPU_X86_FAMILY)
 #if defined(COMPILER_MSVC)
 #include <intrin.h>
@@ -91,80 +87,14 @@ namespace base {
 	namespace {
 
 #if defined(ARCH_CPU_X86_FAMILY)
-#if !defined(COMPILER_MSVC)
-
-#if defined(__pic__) && defined(__i386__)
-
-		void __cpuid(int cpu_info[4], int info_type) {
-			__asm__ volatile(
-				"mov %%ebx, %%edi\n"
-				"cpuid\n"
-				"xchg %%edi, %%ebx\n"
-				: "=a"(cpu_info[0]), "=D"(cpu_info[1]), "=c"(cpu_info[2]),
-				"=d"(cpu_info[3])
-				: "a"(info_type), "c"(0));
-		}
-
-#else
-
-		void __cpuid(int cpu_info[4], int info_type) {
-			__asm__ volatile("cpuid\n"
-				: "=a"(cpu_info[0]), "=b"(cpu_info[1]), "=c"(cpu_info[2]),
-				"=d"(cpu_info[3])
-				: "a"(info_type), "c"(0));
-		}
-
-#endif
-#endif  // !defined(COMPILER_MSVC)
 
 		// xgetbv returns the value of an Intel Extended Control Register (XCR).
 		// Currently only XCR0 is defined by Intel so |xcr| should always be zero.
 		uint64_t xgetbv(uint32_t xcr) {
-#if defined(COMPILER_MSVC)
 			return _xgetbv(xcr);
-#else
-			uint32_t eax, edx;
-
-			__asm__ volatile (
-				"xgetbv" : "=a"(eax), "=d"(edx) : "c"(xcr));
-			return (static_cast<uint64_t>(edx) << 32) | eax;
-#endif  // defined(COMPILER_MSVC)
 		}
 
 #endif  // ARCH_CPU_X86_FAMILY
-
-#if defined(ARCH_CPU_ARM_FAMILY) && (defined(OS_ANDROID) || defined(OS_LINUX))
-		std::string* CpuInfoBrand() {
-			static std::string* brand = []() {
-				// This function finds the value from /proc/cpuinfo under the key "model
-				// name" or "Processor". "model name" is used in Linux 3.8 and later (3.7
-				// and later for arm64) and is shown once per CPU. "Processor" is used in
-				// earler versions and is shown only once at the top of /proc/cpuinfo
-				// regardless of the number CPUs.
-				const char kModelNamePrefix[] = "model name\t: ";
-				const char kProcessorPrefix[] = "Processor\t: ";
-
-				std::string contents;
-				ReadFileToString(FilePath("/proc/cpuinfo"), &contents);
-				DCHECK(!contents.empty());
-
-				std::istringstream iss(contents);
-				std::string line;
-				while (std::getline(iss, line)) {
-					if (line.compare(0, strlen(kModelNamePrefix), kModelNamePrefix) == 0)
-						return new std::string(line.substr(strlen(kModelNamePrefix)));
-					if (line.compare(0, strlen(kProcessorPrefix), kProcessorPrefix) == 0)
-						return new std::string(line.substr(strlen(kProcessorPrefix)));
-				}
-
-				return new std::string();
-			}();
-
-			return brand;
-		}
-#endif  // defined(ARCH_CPU_ARM_FAMILY) && (defined(OS_ANDROID) ||
-		// defined(OS_LINUX))
-
 	}  // namespace
 
 	void CPU::Initialize() {
@@ -284,14 +214,6 @@ namespace base {
 				has_non_stop_time_stamp_counter_ = true;
 			}
 		}
-#elif defined(ARCH_CPU_ARM_FAMILY)
-#if (defined(OS_ANDROID) || defined(OS_LINUX))
-		cpu_brand_ = *CpuInfoBrand();
-#elif defined(OS_WIN)
-		// Windows makes high-resolution thread timing information available in
-		// user-space.
-		has_non_stop_time_stamp_counter_ = true;
-#endif
 #endif
 	}
 

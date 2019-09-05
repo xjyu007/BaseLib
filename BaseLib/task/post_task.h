@@ -21,7 +21,6 @@
 #include "task_runner.h"
 #include "time/time.h"
 #include "updateable_sequenced_task_runner.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -227,7 +226,6 @@ namespace base {
 		SingleThreadTaskRunnerThreadMode thread_mode = 
 			SingleThreadTaskRunnerThreadMode::SHARED);
 
-#if defined(OS_WIN)
 	// Returns a SingleThreadTaskRunner whose PostTask invocations result in
 	// scheduling tasks using |traits| in a COM Single-Threaded Apartment on a
 	// thread determined by |thread_mode|. See
@@ -244,7 +242,6 @@ namespace base {
 		const TaskTraits& traits,
 		SingleThreadTaskRunnerThreadMode thread_mode = 
 			SingleThreadTaskRunnerThreadMode::SHARED);
-#endif  // defined(OS_WIN)
 
 	// Temporary wrappers for the task posting APIs while we remove the "WithTraits"
 	// suffix.
@@ -271,11 +268,9 @@ namespace base {
 		const TaskTraits& traits,
 		SingleThreadTaskRunnerThreadMode thread_mode = 
 			SingleThreadTaskRunnerThreadMode::SHARED);
-#if defined(OS_WIN)
 	BASE_EXPORT scoped_refptr<SingleThreadTaskRunner> 
 	CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits,
 									 SingleThreadTaskRunnerThreadMode thread_mode = 
 									 	SingleThreadTaskRunnerThreadMode::SHARED);
-#endif  // defined(OS_WIN)
 
 }  // namespace base

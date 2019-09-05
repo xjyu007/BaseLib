@@ -4,8 +4,7 @@
 
 #include "i18n/rtl.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstdint>
 
 #include <algorithm>
 
@@ -17,17 +16,10 @@
 #include "strings/string_split.h"
 #include "strings/string_util.h"
 #include "strings/sys_string_conversions.h"
-#include "strings/utf_string_conversions.h"
 #include "build_config.h"
 #include "unicode/locid.h"
 #include "unicode/uchar.h"
-#include "unicode/uscript.h"
 #include "unicode/coll.h"
-
-#if defined(OS_IOS)
-#include "base/debug/crash_logging.h"
-#include "base/ios/ios_util.h"
-#endif
 
 namespace {
 
@@ -130,12 +122,6 @@ namespace base::i18n
 		}
 
 		void SetICUDefaultLocale(const std::string& locale_string) {
-#if defined(OS_IOS)
-			static base::debug::CrashKeyString* crash_key_locale =
-				base::debug::AllocateCrashKeyString("icu_locale_input",
-					base::debug::CrashKeySize::Size256);
-			base::debug::SetCrashKeyString(crash_key_locale, locale_string);
-#endif
 			icu::Locale locale(ICULocaleName(locale_string).c_str());
 			UErrorCode error_code = U_ZERO_ERROR;
 			const char* lang = locale.getLanguage();
@@ -169,12 +155,7 @@ namespace base::i18n
 
 		TextDirection GetForcedTextDirection() {
 			// On iOS, check for RTL forcing.
-#if defined(OS_IOS)
-			if (base::ios::IsInForcedRTL())
-				return base::i18n::RIGHT_TO_LEFT;
-#endif
-
-			base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+			auto command_line = CommandLine::ForCurrentProcess();
 			if (command_line->HasSwitch(switches::kForceUIDirection)) {
 				std::string force_flag =
 					command_line->GetSwitchValueASCII(switches::kForceUIDirection);
@@ -186,7 +167,7 @@ namespace base::i18n
 					return base::i18n::RIGHT_TO_LEFT;
 			}
 
-			return base::i18n::UNKNOWN_DIRECTION;
+			return UNKNOWN_DIRECTION;
 		}
 
 		TextDirection GetTextDirectionForLocaleInStartUp(const char* locale_name) {
@@ -279,7 +260,6 @@ namespace base::i18n
 			return result;
 		}
 
-#if defined(OS_WIN)
 		bool AdjustStringForLocaleDirection(std::wstring* text) {
 			if (!IsRTL() || text->empty())
 				return false;
@@ -302,89 +282,6 @@ namespace base::i18n
 			*text = StripWrappingBidiControlCharacters(*text);
 			return true;
 		}
-#else
-		bool AdjustStringForLocaleDirection(std::wstring* text) {
-			// On OS X & GTK the directionality of a label is determined by the first
-			// strongly directional character.
-			// However, we want to make sure that in an LTR-language-UI all strings are
-			// left aligned and vice versa.
-			// A problem can arise if we display a string which starts with user input.
-			// User input may be of the opposite directionality to the UI. So the whole
-			// string will be displayed in the opposite directionality, e.g. if we want to
-			// display in an LTR UI [such as US English]:
-			//
-			// EMAN_NOISNETXE is now installed.
-			//
-			// Since EXTENSION_NAME begins with a strong RTL char, the label's
-			// directionality will be set to RTL and the string will be displayed visually
-			// as:
-			//
-			// .is now installed EMAN_NOISNETXE
-			//
-			// In order to solve this issue, we prepend an LRM to the string. An LRM is a
-			// strongly directional LTR char.
-			// We also append an LRM at the end, which ensures that we're in an LTR
-			// context.
-
-			// Unlike Windows, Linux and OS X can correctly display RTL glyphs out of the
-			// box so there is no issue with displaying zero-width bidi control characters
-			// on any system.  Thus no need for the !IsRTL() check here.
-			if (text->empty())
-				return false;
-
-			bool ui_direction_is_rtl = IsRTL();
-
-			bool has_rtl_chars = StringContainsStrongRTLChars(*text);
-			if (!ui_direction_is_rtl && has_rtl_chars) {
-				WrapStringWithRTLFormatting(text);
-				text->insert(static_cast<size_t>(0), static_cast<size_t>(1),
-					kLeftToRightMark);
-				text->push_back(kLeftToRightMark);
-			}
-			else if (ui_direction_is_rtl && has_rtl_chars) {
-				WrapStringWithRTLFormatting(text);
-				text->insert(static_cast<size_t>(0), static_cast<size_t>(1),
-					kRightToLeftMark);
-				text->push_back(kRightToLeftMark);
-			}
-			else if (ui_direction_is_rtl) {
-				WrapStringWithLTRFormatting(text);
-				text->insert(static_cast<size_t>(0), static_cast<size_t>(1),
-					kRightToLeftMark);
-				text->push_back(kRightToLeftMark);
-			}
-			else {
-				return false;
-			}
-
-			return true;
-		}
-
-		bool UnadjustStringForLocaleDirection(std::wstring* text) {
-			if (text->empty())
-				return false;
-
-			size_t begin_index = 0;
-			wchar_t begin = text->at(begin_index);
-			if (begin == kLeftToRightMark ||
-				begin == kRightToLeftMark) {
-				++begin_index;
-			}
-
-			size_t end_index = text->length() - 1;
-			wchar_t end = text->at(end_index);
-			if (end == kLeftToRightMark ||
-				end == kRightToLeftMark) {
-				--end_index;
-			}
-
-			std::wstring unmarked_text =
-				text->substr(begin_index, end_index - begin_index + 1);
-			*text = StripWrappingBidiControlCharacters(unmarked_text);
-			return true;
-		}
-
-#endif  // !OS_WIN
 
 		void EnsureTerminatedDirectionalFormatting(std::wstring* text) {
 			int count = 0;
@@ -457,14 +354,7 @@ namespace base::i18n
 			// string as a Left-To-Right string.
 			// Inserting an LRE (Left-To-Right Embedding) mark as the first character.
 			rtl_safe_path->push_back(kLeftToRightEmbeddingMark);
-#if defined(OS_MACOSX)
-			rtl_safe_path->append(UTF8ToUTF16(path.value()));
-#elif defined(OS_WIN)
 			rtl_safe_path->append(path.value());
-#else  // defined(OS_POSIX) && !defined(OS_MACOSX)
-			std::wstring wide_path = base::SysNativeMBToWide(path.value());
-			rtl_safe_path->append(WideToUTF16(wide_path));
-#endif
 			// Inserting a PDF (Pop Directional Formatting) mark as the last character.
 			rtl_safe_path->push_back(kPopDirectionalFormatting);
 		}

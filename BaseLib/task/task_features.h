@@ -6,7 +6,6 @@
 
 #include "base_export.h"
 #include "metrics/field_trial_params.h"
-#include "build_config.h"
 
 namespace base {
 	struct Feature;
@@ -22,11 +21,7 @@ namespace base {
 	// instead of waiting for a threshold.
 	extern const BASE_EXPORT Feature kMayBlockWithoutDelay;
 
-#if defined(OS_WIN) || defined(OS_MACOSX)
 #define HAS_NATIVE_THREAD_POOL() 1
-#else
-#define HAS_NATIVE_THREAD_POOL() 0
-#endif
 
 #if HAS_NATIVE_THREAD_POOL()
 	// Under this feature, ThreadPoolImpl will use a ThreadGroup backed by a

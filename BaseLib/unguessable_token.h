@@ -4,18 +4,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 #include <iosfwd>
-#include <tuple>
 
 #include "base_export.h"
 #include "hash/hash.h"
 #include "logging.h"
 #include "token.h"
 
-namespace base
-{
+namespace base {
 
 	struct UnguessableTokenHash;
 
@@ -40,8 +38,7 @@ namespace base
 	// sending/receiving empty tokens should be treated as a security issue.
 	// If there is a valid scenario for sending "no token" across processes,
 	// base::Optional should be used instead of an empty token.
-	class BASE_EXPORT UnguessableToken
-	{
+	class BASE_EXPORT UnguessableToken {
 	public:
 		// Create a unique UnguessableToken.
 		static UnguessableToken Create();
@@ -64,38 +61,33 @@ namespace base
 		constexpr UnguessableToken() = default;
 
 		// NOTE: Serializing an empty UnguessableToken is an illegal operation.
-		uint64_t GetHighForSerialization() const
-		{
+		[[nodiscard]] uint64_t GetHighForSerialization() const {
 			DCHECK(!is_empty());
 			return token_.high();
 		}
 
 		// NOTE: Serializing an empty UnguessableToken is an illegal operation.
-		uint64_t GetLowForSerialization() const
-		{
+		[[nodiscard]] uint64_t GetLowForSerialization() const {
 			DCHECK(!is_empty());
 			return token_.low();
 		}
 
-		bool is_empty() const { return token_.is_zero(); }
+		[[nodiscard]] bool is_empty() const { return token_.is_zero(); }
 
 		// Hex representation of the unguessable token.
-		std::string ToString() const { return token_.ToString(); }
+		[[nodiscard]] std::string ToString() const { return token_.ToString(); }
 
 		explicit operator bool() const { return !is_empty(); }
 
-		bool operator<(const UnguessableToken& other) const
-		{
+		bool operator<(const UnguessableToken& other) const {
 			return token_ < other.token_;
 		}
 
-		bool operator==(const UnguessableToken& other) const
-		{
+		bool operator==(const UnguessableToken& other) const {
 			return token_ == other.token_;
 		}
 
-		bool operator!=(const UnguessableToken& other) const
-		{
+		bool operator!=(const UnguessableToken& other) const {
 			return !(*this == other);
 		}
 
@@ -110,10 +102,8 @@ namespace base
 		const UnguessableToken& token);
 
 	// For use in std::unordered_map.
-	struct UnguessableTokenHash
-	{
-		size_t operator()(const base::UnguessableToken& token) const
-		{
+	struct UnguessableTokenHash {
+		size_t operator()(const base::UnguessableToken& token) const {
 			DCHECK(token);
 			return TokenHash()(token.token_);
 		}

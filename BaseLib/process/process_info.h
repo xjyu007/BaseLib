@@ -9,7 +9,6 @@
 
 namespace base {
 
-#if defined(OS_WIN)
 	enum IntegrityLevel {
 		INTEGRITY_UNKNOWN,
 		UNTRUSTED_INTEGRITY,
@@ -24,8 +23,6 @@ namespace base {
 
 	// Determines whether the current process is elevated.
 	BASE_EXPORT bool IsCurrentProcessElevated();
-
-#endif  // defined(OS_WIN)
 
 }  // namespace base
 

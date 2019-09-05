@@ -90,7 +90,7 @@ namespace base {
 			}
 
 			std::string histogram_name = "Windows.PostOperationState.";
-			histogram_name.append(operation.data(), operation.size());
+			histogram_name.append(operation.data());
 			UmaHistogramEnumeration(histogram_name, metric, PostOperationState::kCount);
 		}
 
@@ -98,7 +98,7 @@ namespace base {
 		// "Windows.FilesystemError.|operation|".
 		void RecordFilesystemError(std::string_view operation, DWORD error) {
 			std::string histogram_name = "Windows.FilesystemError.";
-			histogram_name.append(operation.data(), operation.size());
+			histogram_name.append(operation.data());
 			UmaHistogramSparse(histogram_name, error);
 		}
 
@@ -108,21 +108,31 @@ namespace base {
 		// to delete an item in the filesystem).
 		DWORD ReturnLastErrorOrSuccessOnNotFound() {
 			const auto error_code = ::GetLastError();
-			return (error_code == ERROR_FILE_NOT_FOUND || error_code == ERROR_PATH_NOT_FOUND) ? ERROR_SUCCESS : error_code;
+			return (error_code == ERROR_FILE_NOT_FOUND || 
+					error_code == ERROR_PATH_NOT_FOUND) 
+						? ERROR_SUCCESS 
+						: error_code;
 		}
 
 		// Deletes all files and directories in a path.
 		// Returns ERROR_SUCCESS on success or the Windows error code corresponding to
 		// the first error encountered. ERROR_FILE_NOT_FOUND and ERROR_PATH_NOT_FOUND
 		// are considered success conditions, and are therefore never returned.
-		DWORD DeleteFileRecursive(const FilePath& path, const FilePath::StringType& pattern, bool recursive) {
-			FileEnumerator traversal(path, false, FileEnumerator::FILES | FileEnumerator::DIRECTORIES, pattern);
+		DWORD DeleteFileRecursive(const FilePath& path, 
+								  const FilePath::StringType& pattern, 
+								  bool recursive) {
+			FileEnumerator traversal(path, false, 
+									 FileEnumerator::FILES | FileEnumerator::DIRECTORIES, 
+									 pattern);
 			DWORD result = ERROR_SUCCESS;
 			for (auto current = traversal.Next(); !current.empty(); current = traversal.Next()) {
 				// Try to clear the read-only bit if we find it.
 				FileEnumerator::FileInfo info = traversal.GetInfo();
-				if ((info.find_data().dwFileAttributes & FILE_ATTRIBUTE_READONLY) && (recursive || !info.IsDirectory())) {
-					::SetFileAttributes(as_wcstr(current.value()), info.find_data().dwFileAttributes & ~FILE_ATTRIBUTE_READONLY);
+				if ((info.find_data().dwFileAttributes & FILE_ATTRIBUTE_READONLY) && 
+					(recursive || !info.IsDirectory())) {
+					::SetFileAttributes(
+						as_wcstr(current.value()), 
+						info.find_data().dwFileAttributes & ~FILE_ATTRIBUTE_READONLY);
 				}
 
 				DWORD this_result = ERROR_SUCCESS;
@@ -131,7 +141,8 @@ namespace base {
 						this_result = DeleteFileRecursive(current, pattern, true);
 						DCHECK_NE(static_cast<LONG>(this_result), ERROR_FILE_NOT_FOUND);
 						DCHECK_NE(static_cast<LONG>(this_result), ERROR_PATH_NOT_FOUND);
-						if (this_result == ERROR_SUCCESS && !::RemoveDirectory(as_wcstr(current.value()))) {
+						if (this_result == ERROR_SUCCESS && 
+							!::RemoveDirectory(as_wcstr(current.value()))) {
 							this_result = ReturnLastErrorOrSuccessOnNotFound();
 						}
 					}
@@ -152,7 +163,9 @@ namespace base {
 			mode->insert(comma_pos == std::wstring::npos ? mode->length() : comma_pos, 1, mode_char);
 		}
 
-		bool DoCopyFile(const FilePath& from_path, const FilePath& to_path, bool fail_if_exists) {
+		bool DoCopyFile(const FilePath& from_path, 
+						const FilePath& to_path, 
+						bool fail_if_exists) {
 			ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 			if (from_path.ReferencesParent() || to_path.ReferencesParent())
 				return false;
@@ -187,7 +200,10 @@ namespace base {
 			return true;
 		}
 
-		bool DoCopyDirectory(const FilePath& from_path, const FilePath& to_path, bool recursive, bool fail_if_exists) {
+		bool DoCopyDirectory(const FilePath& from_path, 
+							 const FilePath& to_path, 
+							 bool recursive, 
+							 bool fail_if_exists) {
 			// NOTE(maruel): Previous version of this function used to call
 			// SHFileOperation().  This used to copy the file attributes and extended
 			// attributes, OLE structured storage, NTFS file system alternate data

@@ -11,31 +11,13 @@
 #include "base_export.h"
 #include "macros.h"
 #include "time/time.h"
-#include "build_config.h"
 
-#if defined(OS_WIN)
 #include "win/windows_types.h"
-#elif defined(OS_FUCHSIA)
-#include <zircon/types.h>
-#elif defined(OS_MACOSX)
-#include <mach/mach_types.h>
-#elif defined(OS_POSIX)
-#include <pthread.h>
-#include <unistd.h>
-#endif
 
 namespace base {
 
 	// Used for logging. Always an integer value.
-#if defined(OS_WIN)
 	typedef DWORD PlatformThreadId;
-#elif defined(OS_FUCHSIA)
-	typedef zx_handle_t PlatformThreadId;
-#elif defined(OS_MACOSX)
-	typedef mach_port_t PlatformThreadId;
-#elif defined(OS_POSIX)
-	typedef pid_t PlatformThreadId;
-#endif
 
 	// Used for thread checking and debugging.
 	// Meant to be as fast as possible.
@@ -47,11 +29,7 @@ namespace base {
 	// to distinguish a new thread from an old, dead thread.
 	class PlatformThreadRef {
 	public:
-#if defined(OS_WIN)
 		typedef DWORD RefType;
-#else  //  OS_POSIX
-  		typedef pthread_t RefType;
-#endif
 		constexpr PlatformThreadRef() : id_(0) {}
 
 		explicit constexpr PlatformThreadRef(RefType id) : id_(id) {}
@@ -72,11 +50,7 @@ namespace base {
 	// Used to operate on threads.
 	class PlatformThreadHandle {
 	public:
-#if defined(OS_WIN)
 		typedef void* Handle;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		typedef pthread_t Handle;
-#endif
 
 		constexpr PlatformThreadHandle() : handle_(0) {}
 
@@ -217,20 +191,6 @@ namespace base {
 		static void SetCurrentThreadPriority(ThreadPriority priority);
 
 		static ThreadPriority GetCurrentThreadPriority();
-
-#if defined(OS_LINUX)
-		// Toggles a specific thread's priority at runtime. This can be used to
-		// change the priority of a thread in a different process and will fail
-		// if the calling process does not have proper permissions. The
-		// SetCurrentThreadPriority() function above is preferred in favor of
-		// security but on platforms where sandboxed processes are not allowed to
-		// change priority this function exists to allow a non-sandboxed process
-		// to change the priority of sandboxed threads for improved performance.
-		// Warning: Don't use this for a main thread because that will change the
-		// whole thread group's (i.e. process) priority.
-		static void SetThreadPriority(PlatformThreadId thread_id,
-									  ThreadPriority priority);
-#endif
 
 		// Returns the default thread stack size set by chrome. If we do not
 		// explicitly set default size then returns 0.

@@ -4,16 +4,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
+#include <cerrno>
 
 #include "base_export.h"
 #include "macros.h"
-#include "build_config.h"
 
-namespace base
-{
-	namespace internal
-	{
+namespace base {
+	namespace internal {
 
 		// ScopedClearLastError stores and resets the value of thread local error codes
 		// (errno, GetLastError()), and restores them in the destructor. This is useful
@@ -22,8 +19,7 @@ namespace base
 
 		// Common implementation of ScopedClearLastError for all platforms. Use
 		// ScopedClearLastError instead.
-		class BASE_EXPORT ScopedClearLastErrorBase
-		{
+		class BASE_EXPORT ScopedClearLastErrorBase {
 		public:
 			ScopedClearLastErrorBase() : last_errno_(errno) { errno = 0; }
 			~ScopedClearLastErrorBase() { errno = last_errno_; }
@@ -34,11 +30,8 @@ namespace base
 			DISALLOW_COPY_AND_ASSIGN(ScopedClearLastErrorBase);
 		};
 
-#if defined(OS_WIN)
-
 		// Windows specific implementation of ScopedClearLastError.
-		class BASE_EXPORT ScopedClearLastError : public ScopedClearLastErrorBase
-		{
+		class BASE_EXPORT ScopedClearLastError : public ScopedClearLastErrorBase {
 		public:
 			ScopedClearLastError();
 			~ScopedClearLastError();
@@ -48,12 +41,6 @@ namespace base
 
 			DISALLOW_COPY_AND_ASSIGN(ScopedClearLastError);
 		};
-
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-
-		using ScopedClearLastError = ScopedClearLastErrorBase;
-
-#endif  // defined(OS_WIN)
 
 	}  // namespace internal
 } // namespace base

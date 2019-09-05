@@ -4,53 +4,26 @@
 
 #include "debug_/task_trace.h"
 
-#if defined(OS_ANDROID)
-#include <android/log.h>
-#endif  // OS_ANDROID
-
 #include <algorithm>
 #include <iostream>
 #include <sstream>
-
-#if defined(OS_ANDROID)
-#include "no_destructor.h"
-#endif
 
 #include "pending_task.h"
 #include "task/common/task_annotator.h"
 
 namespace base::debug {
 	namespace {
-#if defined(OS_ANDROID)
-		// Android sends stdout and stderr to /dev/null; logging should be done through
-		// the __android_log_write() function. Here we create an override of
-		// std::stringbuf that writes to the Android log.
-		class AndroidErrBuffer : public std::stringbuf {
-		 protected:
-		  int sync() override {
-		    __android_log_write(ANDROID_LOG_ERROR, "chromium", str().c_str());
-		    return 0;
-		  }
-		};
-
-		std::ostream& DefaultOutputStream() {
-		  static NoDestructor<AndroidErrBuffer> buf;
-		  static NoDestructor<std::ostream> out(buf.get());
-		  return *out;
-		}
-#else
 		// Use stderr by default.
 		std::ostream& DefaultOutputStream() {
 		  return std::cerr;
 		}
-#endif  // OS_ANDROID
 	}  // namespace
 
 	TaskTrace::TaskTrace() {
-		const PendingTask* current_task = TaskAnnotator::CurrentTaskForThread();
+		const auto current_task = TaskAnnotator::CurrentTaskForThread();
 		if (!current_task)
 			return;
-		std::array<const void*, PendingTask::kTaskBacktraceLength + 1> task_trace;
+		std::array<const void*, PendingTask::kTaskBacktraceLength + 1> task_trace{};
 		task_trace[0] = current_task->posted_from.program_counter();
 		std::copy(current_task->task_backtrace.begin(),
 			current_task->task_backtrace.end(), task_trace.begin() + 1);
@@ -91,11 +64,11 @@ namespace base::debug {
 		return stream.str();
 	}
 
-	base::span<const void* const> TaskTrace::AddressesForTesting() const {
+	span<const void* const> TaskTrace::AddressesForTesting() const {
 		if (empty())
 			return {};
 		size_t count = 0;
-		const void* const* addresses = stack_trace_->Addresses(&count);
+		const auto addresses = stack_trace_->Addresses(&count);
 		return { addresses, count };
 	}
 

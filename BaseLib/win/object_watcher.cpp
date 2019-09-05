@@ -8,113 +8,113 @@
 #include "logging.h"
 #include "threading/sequenced_task_runner_handle.h"
 
-#include <windows.h>
+#include <Windows.h>
 
-namespace base::win
-{
+namespace base::win {
 
-		//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
 
-		ObjectWatcher::ObjectWatcher() : weak_factory_(this) {}
+	ObjectWatcher::ObjectWatcher() = default;
 
-		ObjectWatcher::~ObjectWatcher() {
-			StopWatching();
+	ObjectWatcher::~ObjectWatcher() {
+		StopWatching();
+	}
+
+	bool ObjectWatcher::StartWatchingOnce(HANDLE object, Delegate* delegate) {
+		return StartWatchingInternal(object, delegate, true);
+	}
+
+	bool ObjectWatcher::StartWatchingMultipleTimes(HANDLE object,
+		Delegate* delegate) {
+		return StartWatchingInternal(object, delegate, false);
+	}
+
+	bool ObjectWatcher::StopWatching() {
+		if (!wait_object_)
+			return false;
+
+		// Make sure ObjectWatcher is used in a sequenced fashion.
+		DCHECK(task_runner_->RunsTasksInCurrentSequence());
+
+		// Blocking call to cancel the wait. Any callbacks already in progress will
+		// finish before we return from this call.
+		if (!UnregisterWaitEx(wait_object_, INVALID_HANDLE_VALUE)) {
+			DPLOG(FATAL) << "UnregisterWaitEx failed";
+			return false;
 		}
 
-		bool ObjectWatcher::StartWatchingOnce(HANDLE object, Delegate* delegate) {
-			return StartWatchingInternal(object, delegate, true);
-		}
+		Reset();
+		return true;
+	}
 
-		bool ObjectWatcher::StartWatchingMultipleTimes(HANDLE object,
-			Delegate* delegate) {
-			return StartWatchingInternal(object, delegate, false);
-		}
+	bool ObjectWatcher::IsWatching() const {
+		return object_ != nullptr;
+	}
 
-		bool ObjectWatcher::StopWatching() {
-			if (!wait_object_)
-				return false;
+	HANDLE ObjectWatcher::GetWatchedObject() const {
+		return object_;
+	}
 
-			// Make sure ObjectWatcher is used in a sequenced fashion.
-			DCHECK(task_runner_->RunsTasksInCurrentSequence());
+	// static
+	void CALLBACK ObjectWatcher::DoneWaiting(void* param, BOOLEAN timed_out) {
+		DCHECK(!timed_out);
 
-			// Blocking call to cancel the wait. Any callbacks already in progress will
-			// finish before we return from this call.
-			if (!UnregisterWaitEx(wait_object_, INVALID_HANDLE_VALUE)) {
-				DPLOG(FATAL) << "UnregisterWaitEx failed";
-				return false;
-			}
+		// The destructor blocks on any callbacks that are in flight, so we know that
+		// that is always a pointer to a valid ObjectWater.
+		auto that = static_cast<ObjectWatcher*>(param);
+		that->task_runner_->PostTask(FROM_HERE, that->callback_);
+		if (that->run_once_)
+			that->callback_.Reset();
+	}
 
+	bool ObjectWatcher::StartWatchingInternal(HANDLE object, Delegate* delegate, 
+											  bool execute_only_once) {
+		DCHECK(delegate);
+		DCHECK(!wait_object_) << "Already watching an object";
+		DCHECK(SequencedTaskRunnerHandle::IsSet());
+
+		task_runner_ = SequencedTaskRunnerHandle::Get();
+
+		run_once_ = execute_only_once;
+
+		// Since our job is to just notice when an object is signaled and report the
+		// result back to this sequence, we can just run on a Windows wait thread.
+		DWORD wait_flags = WT_EXECUTEINWAITTHREAD;
+		if (run_once_)
+			wait_flags |= WT_EXECUTEONLYONCE;
+
+		// DoneWaiting can be synchronously called from RegisterWaitForSingleObject,
+		// so set up all state now.
+		callback_ = BindRepeating(&ObjectWatcher::Signal, weak_factory_.GetWeakPtr(),
+			delegate);
+		object_ = object;
+
+		if (!RegisterWaitForSingleObject(&wait_object_, object, DoneWaiting,
+			this, INFINITE, wait_flags)) {
+			DPLOG(FATAL) << "RegisterWaitForSingleObject failed";
 			Reset();
-			return true;
+			return false;
 		}
 
-		bool ObjectWatcher::IsWatching() const {
-			return object_ != nullptr;
-		}
+		return true;
+	}
 
-		HANDLE ObjectWatcher::GetWatchedObject() const {
-			return object_;
-		}
+	void ObjectWatcher::Signal(Delegate* delegate) {
+		// Signaling the delegate may result in our destruction or a nested call to
+		// StartWatching(). As a result, we save any state we need and clear previous
+		// watcher state before signaling the delegate.
+		const auto object = object_;
+		if (run_once_)
+			StopWatching();
+		delegate->OnObjectSignaled(object);
+	}
 
-		// static
-		void CALLBACK ObjectWatcher::DoneWaiting(void* param, BOOLEAN timed_out) {
-			DCHECK(!timed_out);
-
-			// The destructor blocks on any callbacks that are in flight, so we know that
-			// that is always a pointer to a valid ObjectWater.
-			ObjectWatcher* that = static_cast<ObjectWatcher*>(param);
-			that->task_runner_->PostTask(FROM_HERE, that->callback_);
-			if (that->run_once_)
-				that->callback_.Reset();
-		}
-
-		bool ObjectWatcher::StartWatchingInternal(HANDLE object, Delegate* delegate, bool execute_only_once) {
-			DCHECK(delegate);
-			DCHECK(!wait_object_) << "Already watching an object";
-			DCHECK(SequencedTaskRunnerHandle::IsSet());
-
-			task_runner_ = SequencedTaskRunnerHandle::Get();
-
-			run_once_ = execute_only_once;
-
-			// Since our job is to just notice when an object is signaled and report the
-			// result back to this sequence, we can just run on a Windows wait thread.
-			DWORD wait_flags = WT_EXECUTEINWAITTHREAD;
-			if (run_once_)
-				wait_flags |= WT_EXECUTEONLYONCE;
-
-			// DoneWaiting can be synchronously called from RegisterWaitForSingleObject,
-			// so set up all state now.
-			callback_ = BindRepeating(&ObjectWatcher::Signal, weak_factory_.GetWeakPtr(),
-				delegate);
-			object_ = object;
-
-			if (!RegisterWaitForSingleObject(&wait_object_, object, DoneWaiting,
-				this, INFINITE, wait_flags)) {
-				DPLOG(FATAL) << "RegisterWaitForSingleObject failed";
-				Reset();
-				return false;
-			}
-
-			return true;
-		}
-
-		void ObjectWatcher::Signal(Delegate* delegate) {
-			// Signaling the delegate may result in our destruction or a nested call to
-			// StartWatching(). As a result, we save any state we need and clear previous
-			// watcher state before signaling the delegate.
-			HANDLE object = object_;
-			if (run_once_)
-				StopWatching();
-			delegate->OnObjectSignaled(object);
-		}
-
-		void ObjectWatcher::Reset() {
-			callback_.Reset();
-			object_ = nullptr;
-			wait_object_ = nullptr;
-			task_runner_ = nullptr;
-			run_once_ = true;
-			weak_factory_.InvalidateWeakPtrs();
-		}
-} // namespace base
+	void ObjectWatcher::Reset() {
+		callback_.Reset();
+		object_ = nullptr;
+		wait_object_ = nullptr;
+		task_runner_ = nullptr;
+		run_once_ = true;
+		weak_factory_.InvalidateWeakPtrs();
+	}
+} // namespace base::win

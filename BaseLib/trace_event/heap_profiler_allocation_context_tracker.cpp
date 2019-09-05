@@ -14,16 +14,11 @@
 #include "threading/platform_thread.h"
 #include "threading/thread_local_storage.h"
 #include "trace_event/heap_profiler_allocation_context.h"
-#include "build_config.h"
-
-#if defined(OS_LINUX) || defined(OS_ANDROID)
-#include <sys/prctl.h>
-#endif
 
 namespace base::trace_event {
 
 	subtle::Atomic32 AllocationContextTracker::capture_mode_ =
-		static_cast<int32_t>(AllocationContextTracker::CaptureMode::DISABLED);
+		static_cast<int32_t>(CaptureMode::DISABLED);
 
 	namespace {
 
@@ -51,15 +46,6 @@ namespace base::trace_event {
 		// are used to tag allocations even after the thread dies.
 		const char* GetAndLeakThreadName() {
 			char name[16];
-#if defined(OS_LINUX) || defined(OS_ANDROID)
-			// If the thread name is not set, try to get it from prctl. Thread name might
-			// not be set in cases where the thread started before heap profiling was
-			// enabled.
-			int err = prctl(PR_GET_NAME, name);
-			if (!err) {
-				return strdup(name);
-			}
-#endif  // defined(OS_LINUX) || defined(OS_ANDROID)
 
 			// Use tid if we don't have a thread name.
 			snprintf(name, sizeof(name), "%lu",
@@ -210,7 +196,6 @@ namespace base::trace_event {
 			// from this point and up until main(). We intentionally request
 			// kMaxFrameCount + 1 frames, so that we know if there are more frames
 			// than our backtrace capacity.
-#if !defined(OS_NACL)  // We don't build base/debug/stack_trace.cc for NaCl.
 /*#if defined(OS_ANDROID) && BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE)
 	const void* frames[Backtrace::kMaxFrameCount + 1];
 	static_assert(base::size(frames) >= Backtrace::kMaxFrameCount,
@@ -244,7 +229,6 @@ namespace base::trace_event {
 				const auto frame = frames[i];
 				*backtrace++ = StackFrame::FromProgramCounter(frame);
 			}
-#endif  // !defined(OS_NACL)
 			break;
 		}
 		}

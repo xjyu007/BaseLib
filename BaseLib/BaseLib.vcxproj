@@ -204,6 +204,7 @@
     <ClInclude Include="containers\flat_set.h" />
     <ClInclude Include="containers\flat_tree.h" />
     <ClInclude Include="containers\id_map.h" />
+    <ClInclude Include="containers\intrusive_heap.h" />
     <ClInclude Include="containers\linked_list.h" />
     <ClInclude Include="containers\mru_cache.h" />
     <ClInclude Include="containers\queue.h" />
@@ -268,6 +269,7 @@
     <ClInclude Include="logging.h" />
     <ClInclude Include="logging_win.h" />
     <ClInclude Include="macros.h" />
+    <ClInclude Include="memory\free_deleter.h" />
     <ClInclude Include="memory\platform_shared_memory_region.h" />
     <ClInclude Include="memory\ptr_util.h" />
     <ClInclude Include="memory\raw_scoped_refptr_mismatch_checker.h" />
@@ -355,6 +357,7 @@
     <ClInclude Include="scoped_clear_last_error.h" />
     <ClInclude Include="scoped_generic.h" />
     <ClInclude Include="scoped_native_library.h" />
+    <ClInclude Include="scoped_observer.h" />
     <ClInclude Include="sequenced_task_runner.h" />
     <ClInclude Include="sequenced_task_runner_helpers.h" />
     <ClInclude Include="sequence_checker.h" />
@@ -382,6 +385,7 @@
     <ClInclude Include="synchronization\spin_wait.h" />
     <ClInclude Include="synchronization\waitable_event.h" />
     <ClInclude Include="synchronization\waitable_event_watcher.h" />
+    <ClInclude Include="syslog_logging.h" />
     <ClInclude Include="system\system_monitor.h" />
     <ClInclude Include="system\sys_info.h" />
     <ClInclude Include="system\sys_info_internal.h" />
@@ -400,6 +404,8 @@
     <ClInclude Include="task\promise\helpers.h" />
     <ClInclude Include="task\promise\no_op_promise_executor.h" />
     <ClInclude Include="task\promise\promise_executor.h" />
+    <ClInclude Include="task\promise\promise_value.h" />
+    <ClInclude Include="task\promise\then_and_catch_executor.h" />
     <ClInclude Include="task\scoped_set_task_priority_for_current_thread.h" />
     <ClInclude Include="task\sequence_manager\associated_thread_id.h" />
     <ClInclude Include="task\sequence_manager\atomic_flag_set.h" />
@@ -449,9 +455,8 @@
     <ClInclude Include="task\thread_pool\thread_group_impl.h" />
     <ClInclude Include="task\thread_pool\thread_group_native.h" />
     <ClInclude Include="task\thread_pool\thread_group_native_win.h" />
-    <ClInclude Include="task\thread_pool\thread_pool.h" />
-    <ClInclude Include="task\thread_pool\thread_pool_clock.h" />
     <ClInclude Include="task\thread_pool\thread_pool_impl.h" />
+    <ClInclude Include="task\thread_pool\thread_pool_instance.h" />
     <ClInclude Include="task\thread_pool\tracked_ref.h" />
     <ClInclude Include="task\thread_pool\worker_thread.h" />
     <ClInclude Include="task\thread_pool\worker_thread_observer.h" />
@@ -462,6 +467,18 @@
     <ClInclude Include="testing\multiprocess_func_list.h" />
     <ClInclude Include="testing\platform_test.h" />
     <ClInclude Include="third_party\cityhash\city.h" />
+    <ClInclude Include="third_party\double_conversion\bignum-dtoa.h" />
+    <ClInclude Include="third_party\double_conversion\bignum.h" />
+    <ClInclude Include="third_party\double_conversion\cached-powers.h" />
+    <ClInclude Include="third_party\double_conversion\diy-fp.h" />
+    <ClInclude Include="third_party\double_conversion\double-conversion.h" />
+    <ClInclude Include="third_party\double_conversion\double-to-string.h" />
+    <ClInclude Include="third_party\double_conversion\fast-dtoa.h" />
+    <ClInclude Include="third_party\double_conversion\fixed-dtoa.h" />
+    <ClInclude Include="third_party\double_conversion\ieee.h" />
+    <ClInclude Include="third_party\double_conversion\string-to-double.h" />
+    <ClInclude Include="third_party\double_conversion\strtod.h" />
+    <ClInclude Include="third_party\double_conversion\utils.h" />
     <ClInclude Include="third_party\dynamic_annotations\dynamic_annotations.h" />
     <ClInclude Include="third_party\icu\icu_utf.h" />
     <ClInclude Include="third_party\libxml\chromium\libxml_utils.h" />
@@ -530,7 +547,6 @@
     <ClInclude Include="trace_event\trace_event_memory_overhead.h" />
     <ClInclude Include="trace_event\trace_log.h" />
     <ClInclude Include="traits_bag.h" />
-    <ClInclude Include="type_id.h" />
     <ClInclude Include="unguessable_token.h" />
     <ClInclude Include="updateable_sequenced_task_runner.h" />
     <ClInclude Include="values.h" />
@@ -547,6 +563,7 @@
     <ClInclude Include="win\event_trace_consumer.h" />
     <ClInclude Include="win\event_trace_controller.h" />
     <ClInclude Include="win\event_trace_provider.h" />
+    <ClInclude Include="win\file_pre_reader.h" />
     <ClInclude Include="win\hstring_compare.h" />
     <ClInclude Include="win\hstring_reference.h" />
     <ClInclude Include="win\i18n.h" />
@@ -628,6 +645,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="containers\any_internal.cpp" />
+    <ClCompile Include="containers\intrusive_heap.cpp" />
     <ClCompile Include="containers\unique_any.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="debug_\activity_tracker.cpp">
@@ -919,6 +937,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="strings\string_util_constants.cpp" />
     <ClCompile Include="strings\sys_string_conversions.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -949,6 +968,7 @@
     <ClCompile Include="synchronization\waitable_event_win.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="syslog_logging.cpp" />
     <ClCompile Include="system\system_monitor.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -970,6 +990,8 @@
     <ClCompile Include="task\promise\helpers.cpp" />
     <ClCompile Include="task\promise\no_op_promise_executor.cpp" />
     <ClCompile Include="task\promise\promise_executor.cpp" />
+    <ClCompile Include="task\promise\promise_value.cpp" />
+    <ClCompile Include="task\promise\then_and_catch_executor.cpp" />
     <ClCompile Include="task\scoped_set_task_priority_for_current_thread.cpp" />
     <ClCompile Include="task\sequence_manager\associated_thread_id.cpp" />
     <ClCompile Include="task\sequence_manager\atomic_flag_set.cpp" />
@@ -1010,9 +1032,8 @@
     <ClCompile Include="task\thread_pool\thread_group_impl.cpp" />
     <ClCompile Include="task\thread_pool\thread_group_native.cpp" />
     <ClCompile Include="task\thread_pool\thread_group_native_win.cpp" />
-    <ClCompile Include="task\thread_pool\thread_pool.cpp" />
-    <ClCompile Include="task\thread_pool\thread_pool_clock.cpp" />
     <ClCompile Include="task\thread_pool\thread_pool_impl.cpp" />
+    <ClCompile Include="task\thread_pool\thread_pool_instance.cpp" />
     <ClCompile Include="task\thread_pool\worker_thread.cpp" />
     <ClCompile Include="task\thread_pool\worker_thread_stack.cpp" />
     <ClCompile Include="task_runner.cpp">
@@ -1020,6 +1041,14 @@
     </ClCompile>
     <ClCompile Include="testing\multiprocess_func_list.cpp" />
     <ClCompile Include="third_party\cityhash\city.cpp" />
+    <ClCompile Include="third_party\double_conversion\bignum-dtoa.cpp" />
+    <ClCompile Include="third_party\double_conversion\bignum.cpp" />
+    <ClCompile Include="third_party\double_conversion\cached-powers.cpp" />
+    <ClCompile Include="third_party\double_conversion\double-to-string.cpp" />
+    <ClCompile Include="third_party\double_conversion\fast-dtoa.cpp" />
+    <ClCompile Include="third_party\double_conversion\fixed-dtoa.cpp" />
+    <ClCompile Include="third_party\double_conversion\string-to-double.cpp" />
+    <ClCompile Include="third_party\double_conversion\strtod.cpp" />
     <ClCompile Include="third_party\dynamic_annotations\dynamic_annotations.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -1138,7 +1167,6 @@
     <ClCompile Include="trace_event\trace_event_memory_overhead.cpp" />
     <ClCompile Include="trace_event\trace_log.cpp" />
     <ClCompile Include="trace_event\trace_log_constants.cpp" />
-    <ClCompile Include="type_id.cpp" />
     <ClCompile Include="unguessable_token.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -1172,6 +1200,7 @@
     <ClCompile Include="win\event_trace_provider.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="win\file_pre_reader.cpp" />
     <ClCompile Include="win\hstring_compare.cpp" />
     <ClCompile Include="win\hstring_reference.cpp" />
     <ClCompile Include="win\i18n.cpp">

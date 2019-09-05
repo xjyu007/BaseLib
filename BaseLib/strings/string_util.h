@@ -1,10 +1,10 @@
-#pragma once
-
 // Copyright 2013 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
 // This file defines utility functions for working with strings.
+
+#pragma once
 
 #include <cctype>
 #include <cstdarg>   // va_list
@@ -16,7 +16,6 @@
 #include <vector>
 
 #include "base_export.h"
-#include "bit_cast.h"
 #include "compiler_specific.h"
 #include "stl_util.h"
 #include "build_config.h"
@@ -31,13 +30,15 @@ namespace base {
 	// Wrapper for vsnprintf that always null-terminates and always returns the
 	// number of characters that would be in an untruncated formatted
 	// string, even when truncation occurs.
-	int vsnprintf(char* buffer, size_t size, const char* format, va_list arguments) PRINTF_FORMAT(3, 0);
+	int vsnprintf(char* buffer, size_t size, const char* format, va_list arguments)
+		PRINTF_FORMAT(3, 0);
 
 	// Some of these implementations need to be inlined.
 
 	// We separate the declaration from the implementation of this inline
 	// function just so the PRINTF_FORMAT works.
-	inline int snprintf(char* buffer, size_t size, const char* format, ...) PRINTF_FORMAT(3, 4);
+	inline int snprintf(char* buffer, size_t size, const char* format, ...) 
+		PRINTF_FORMAT(3, 4);
 	inline int snprintf(char* buffer, size_t size, const char* format, ...) {
 		va_list arguments;
 		va_start(arguments, format);
@@ -136,81 +137,57 @@ namespace base {
 	BASE_EXPORT bool EqualsCaseInsensitiveASCII(std::string_view a, std::string_view b);
 	BASE_EXPORT bool EqualsCaseInsensitiveASCII(std::wstring_view a, std::wstring_view b);
 
-#define WHITESPACE_UNICODE \
-  0x0009, /* CHARACTER TABULATION */      \
-  0x000A, /* LINE FEED (LF) */            \
-  0x000B, /* LINE TABULATION */           \
-  0x000C, /* FORM FEED (FF) */            \
-  0x000D, /* CARRIAGE RETURN (CR) */      \
-  0x0020, /* SPACE */                     \
-  0x0085, /* NEXT LINE (NEL) */           \
-  0x00A0, /* NO-BREAK SPACE */            \
-  0x1680, /* OGHAM SPACE MARK */          \
-  0x2000, /* EN QUAD */                   \
-  0x2001, /* EM QUAD */                   \
-  0x2002, /* EN SPACE */                  \
-  0x2003, /* EM SPACE */                  \
-  0x2004, /* THREE-PER-EM SPACE */        \
-  0x2005, /* FOUR-PER-EM SPACE */         \
-  0x2006, /* SIX-PER-EM SPACE */          \
-  0x2007, /* FIGURE SPACE */              \
-  0x2008, /* PUNCTUATION SPACE */         \
-  0x2009, /* THIN SPACE */                \
-  0x200A, /* HAIR SPACE */                \
-  0x2028, /* LINE SEPARATOR */            \
-  0x2029, /* PARAGRAPH SEPARATOR */       \
-  0x202F, /* NARROW NO-BREAK SPACE */     \
-  0x205F, /* MEDIUM MATHEMATICAL SPACE */ \
-  0x3000, /* IDEOGRAPHIC SPACE */         \
-  0
+	// These threadsafe functions return references to globally unique empty
+	// strings.
+	//
+	// It is likely faster to construct a new empty string object (just a few
+	// instructions to set the length to 0) than to get the empty string instance
+	// returned by these functions (which requires threadsafe static access).
+	//
+	// Therefore, DO NOT USE THESE AS A GENERAL-PURPOSE SUBSTITUTE FOR DEFAULT
+	// CONSTRUCTORS. There is only one case where you should use these: functions
+	// which need to return a string by reference (e.g. as a class member
+	// accessor), and don't have an empty string to use (e.g. in an error case).
+	// These should not be used as initializers, function arguments, or return
+	// values for functions which return by value or outparam.
+	BASE_EXPORT const std::string& EmptyString();
+	BASE_EXPORT const std::wstring& EmptyWString();
 
 	// Contains the set of characters representing whitespace in the corresponding
 	// encoding. Null-terminated. The ASCII versions are the whitespaces as defined
 	// by HTML5, and don't include control characters.
-	BASE_EXPORT const wchar_t kWhitespaceWide[] = {
-		WHITESPACE_UNICODE
-	};  // Includes Unicode.
-
-	BASE_EXPORT const wchar_t kWhitespaceUTF16[] = {
-		WHITESPACE_UNICODE
-	};  // Includes Unicode.
-
-	BASE_EXPORT const char kWhitespaceASCII[] = {
-		0x09,    // CHARACTER TABULATION
-		0x0A,    // LINE FEED (LF)
-		0x0B,    // LINE TABULATION
-		0x0C,    // FORM FEED (FF)
-		0x0D,    // CARRIAGE RETURN (CR)
-		0x20,    // SPACE
-		0
-	};
-
-	BASE_EXPORT const wchar_t kWhitespaceASCIIAs16[] = {
-		0x09,    // CHARACTER TABULATION
-		0x0A,    // LINE FEED (LF)
-		0x0B,    // LINE TABULATION
-		0x0C,    // FORM FEED (FF)
-		0x0D,    // CARRIAGE RETURN (CR)
-		0x20,    // SPACE
-		0
-	};  // No unicode.
+	BASE_EXPORT extern const wchar_t kWhitespaceWide[];  // Includes Unicode.
+	BASE_EXPORT extern const wchar_t kWhitespaceUTF16[];  // Includes Unicode.
+	BASE_EXPORT extern const wchar_t kWhitespaceNoCrLfUTF16[];  // Unicode w/o CR/LF.
+	BASE_EXPORT extern const char kWhitespaceASCII[];
+	BASE_EXPORT extern const wchar_t kWhitespaceASCIIAs16[];  // No unicode.
 
 	// Null-terminated string representing the UTF-8 byte order mark.
-	BASE_EXPORT const char kUtf8ByteOrderMark[] = "\xEF\xBB\xBF";
+	BASE_EXPORT extern const char kUtf8ByteOrderMark[];
 
 	// Removes characters in |remove_chars| from anywhere in |input|.  Returns true
 	// if any characters were removed.  |remove_chars| must be null-terminated.
 	// NOTE: Safe to use the same variable for both |input| and |output|.
-	BASE_EXPORT bool RemoveChars(const std::wstring& input, std::wstring_view remove_chars, std::wstring* output);
-	BASE_EXPORT bool RemoveChars(const std::string& input, std::string_view remove_chars, std::string* output);
+	BASE_EXPORT bool RemoveChars(const std::wstring& input, 
+								 std::wstring_view remove_chars, 
+								 std::wstring* output);
+	BASE_EXPORT bool RemoveChars(const std::string& input, 
+								 std::string_view remove_chars, 
+								 std::string* output);
 
 	// Replaces characters in |replace_chars| from anywhere in |input| with
 	// |replace_with|.  Each character in |replace_chars| will be replaced with
 	// the |replace_with| string.  Returns true if any characters were replaced.
 	// |replace_chars| must be null-terminated.
 	// NOTE: Safe to use the same variable for both |input| and |output|.
-	BASE_EXPORT bool ReplaceChars(const std::wstring& input, std::wstring_view replace_chars, const std::wstring& replace_with, std::wstring* output);
-	BASE_EXPORT bool ReplaceChars(const std::string& input, std::string_view replace_chars, const std::string& replace_with, std::string* output);
+	BASE_EXPORT bool ReplaceChars(const std::wstring& input, 
+								  std::wstring_view replace_chars, 
+								  const std::wstring& replace_with, 
+								  std::wstring* output);
+	BASE_EXPORT bool ReplaceChars(const std::string& input, 
+								  std::string_view replace_chars, 
+	                              const std::string& replace_with,
+	                              std::string* output);
 
 	enum TrimPositions {
 		TRIM_NONE = 0,
@@ -225,52 +202,70 @@ namespace base {
 	//
 	// It is safe to use the same variable for both |input| and |output| (this is
 	// the normal usage to trim in-place).
-	BASE_EXPORT bool TrimString(const std::wstring& input, std::wstring_view trim_chars, std::wstring* output);
-	BASE_EXPORT bool TrimString(const std::string& input, std::string_view trim_chars, std::string* output);
+	BASE_EXPORT bool TrimString(const std::wstring& input, 
+								std::wstring_view trim_chars, 
+								std::wstring* output);
+	BASE_EXPORT bool TrimString(const std::string& input, 
+								std::string_view trim_chars, 
+								std::string* output);
 
 	// std::string_view versions of the above. The returned pieces refer to the original
 	// buffer.
-	BASE_EXPORT std::wstring_view TrimString(std::wstring_view input, std::wstring_view trim_chars, TrimPositions positions);
-	BASE_EXPORT std::string_view TrimString(std::string_view input, std::string_view trim_chars, TrimPositions positions);
+	BASE_EXPORT std::wstring_view TrimString(std::wstring_view input, 
+											 std::wstring_view trim_chars, 
+											 TrimPositions positions);
+	BASE_EXPORT std::string_view TrimString(std::string_view input, 
+											std::string_view trim_chars, 
+											TrimPositions positions);
 
 	// Truncates a string to the nearest UTF-8 character that will leave
 	// the string less than or equal to the specified byte size.
-	BASE_EXPORT void TruncateUTF8ToByteSize(const std::string& input, size_t byte_size, std::string* output);
+	BASE_EXPORT void TruncateUTF8ToByteSize(const std::string& input, 
+											size_t byte_size, 
+											std::string* output);
 
 #if defined(WCHAR_T_IS_UTF16)
 	// Utility functions to access the underlying string buffer as a wide char
 	// pointer.
+	//
+	// Note: These functions violate strict aliasing when char16 and wchar_t are
+	// unrelated types. We thus pass -fno-strict-aliasing to the compiler on
+	// non-Windows platforms [1], and rely on it being off in Clang's CL mode [2].
+	//
+	// [1] https://crrev.com/b9a0976622/build/config/compiler/BUILD.gn#244
+	// [2]
+	// https://github.com/llvm/llvm-project/blob/1e28a66/clang/lib/Driver/ToolChains/Clang.cpp#L3949
 	inline wchar_t* as_writable_wcstr(wchar_t* str) {
-		return bit_cast<wchar_t*>(str);
+		return reinterpret_cast<wchar_t*>(str);
 	}
 
 	inline wchar_t* as_writable_wcstr(std::wstring& str) {
-		return bit_cast<wchar_t*>(data(str));
+		return reinterpret_cast<wchar_t*>(data(str));
 	}
 
 	inline const wchar_t* as_wcstr(const wchar_t* str) {
-		return bit_cast<const wchar_t*>(str);
+		return reinterpret_cast<const wchar_t*>(str);
 	}
 
 	inline const wchar_t* as_wcstr(std::wstring_view str) {
-		return bit_cast<const wchar_t*>(str.data());
+		return reinterpret_cast<const wchar_t*>(str.data());
 	}
 
 	// Utility functions to access the underlying string buffer as a wchar_t pointer.
 	inline wchar_t* as_writable_u16cstr(wchar_t* str) {
-		return bit_cast<wchar_t*>(str);
+		return reinterpret_cast<wchar_t*>(str);
 	}
 
 	inline wchar_t* as_writable_u16cstr(std::wstring& str) {
-		return bit_cast<wchar_t*>(data(str));
+		return reinterpret_cast<wchar_t*>(data(str));
 	}
 
 	inline const wchar_t* as_u16cstr(const wchar_t* str) {
-		return bit_cast<const wchar_t*>(str);
+		return reinterpret_cast<const wchar_t*>(str);
 	}
 
 	inline const wchar_t* as_u16cstr(std::wstring_view str) {
-		return bit_cast<const wchar_t*>(str.data());
+		return reinterpret_cast<const wchar_t*>(str.data());
 	}
 #endif  // defined(WCHAR_T_IS_UTF16)
 
@@ -281,10 +276,16 @@ namespace base {
 	//
 	// The std::string versions return where whitespace was found.
 	// NOTE: Safe to use the same variable for both input and output.
-	BASE_EXPORT TrimPositions TrimWhitespace(const std::wstring& input, TrimPositions positions, std::wstring* output);
-	BASE_EXPORT std::wstring_view TrimWhitespace(std::wstring_view input, TrimPositions positions);
-	BASE_EXPORT TrimPositions TrimWhitespaceASCII(const std::string& input, TrimPositions positions, std::string* output);
-	BASE_EXPORT std::string_view TrimWhitespaceASCII(std::string_view input, TrimPositions positions);
+	BASE_EXPORT TrimPositions TrimWhitespace(const std::wstring& input, 
+											 TrimPositions positions, 
+											 std::wstring* output);
+	BASE_EXPORT std::wstring_view TrimWhitespace(std::wstring_view input, 
+												 TrimPositions positions);
+	BASE_EXPORT TrimPositions TrimWhitespaceASCII(const std::string& input, 
+												  TrimPositions positions, 
+												  std::string* output);
+	BASE_EXPORT std::string_view TrimWhitespaceASCII(std::string_view input, 
+													 TrimPositions positions);
 
 	// Searches for CR or LF characters.  Removes all contiguous whitespace
 	// strings that contain them.  This is useful when trying to deal with text
@@ -294,13 +295,18 @@ namespace base {
 	// (2) If |trim_sequences_with_line_breaks| is true, any other whitespace
 	//     sequences containing a CR or LF are trimmed.
 	// (3) All other whitespace sequences are converted to single spaces.
-	BASE_EXPORT std::wstring CollapseWhitespace(const std::wstring& text, bool trim_sequences_with_line_breaks);
-	BASE_EXPORT std::string CollapseWhitespaceASCII(const std::string& text, bool trim_sequences_with_line_breaks);
+	BASE_EXPORT std::wstring CollapseWhitespace(
+		const std::wstring& text, 
+		bool trim_sequences_with_line_breaks);
+	BASE_EXPORT std::string CollapseWhitespaceASCII(
+		const std::string& text, 
+		bool trim_sequences_with_line_breaks);
 
 	// Returns true if |input| is empty or contains only characters found in
 	// |characters|.
 	BASE_EXPORT bool ContainsOnlyChars(std::string_view input, std::string_view characters);
-	BASE_EXPORT bool ContainsOnlyChars(std::wstring_view input, std::wstring_view characters);
+	BASE_EXPORT bool ContainsOnlyChars(std::wstring_view input, 
+									   std::wstring_view characters);
 
 	// Returns true if the specified string matches the criteria. How can a wide
 	// string be 8-bit or UTF8? It contains only characters that are < 256 (in the
@@ -325,8 +331,10 @@ namespace base {
 
 	// Compare the lower-case form of the given string against the given
 	// previously-lower-cased ASCII string (typically a constant).
-	BASE_EXPORT bool LowerCaseEqualsASCII(std::string_view str, std::string_view lowecase_ascii);
-	BASE_EXPORT bool LowerCaseEqualsASCII(std::wstring_view str, std::string_view lowecase_ascii);
+	BASE_EXPORT bool LowerCaseEqualsASCII(std::string_view str, 
+										  std::string_view lowercase_ascii);
+	BASE_EXPORT bool LowerCaseEqualsASCII(std::wstring_view str, 
+										  std::string_view lowercase_ascii);
 
 	// Performs a case-sensitive string compare of the given 16-bit string against
 	// the given 8-bit ASCII string (typically a constant). The behavior is
@@ -346,10 +354,18 @@ namespace base {
 		INSENSITIVE_ASCII,
 	};
 
-	BASE_EXPORT bool StartsWith(std::string_view str, std::string_view search_for, CompareCase case_sensitivity);
-	BASE_EXPORT bool StartsWith(std::wstring_view str, std::wstring_view search_for, CompareCase case_sensitivity);
-	BASE_EXPORT bool EndsWith(std::string_view str, std::string_view search_for, CompareCase case_sensitivity);
-	BASE_EXPORT bool EndsWith(std::wstring_view str, std::wstring_view search_for, CompareCase case_sensitivity);
+	BASE_EXPORT bool StartsWith(std::string_view str, 
+								std::string_view search_for, 
+								CompareCase case_sensitivity);
+	BASE_EXPORT bool StartsWith(std::wstring_view str, 
+								std::wstring_view search_for, 
+								CompareCase case_sensitivity);
+	BASE_EXPORT bool EndsWith(std::string_view str, 
+							  std::string_view search_for, 
+							  CompareCase case_sensitivity);
+	BASE_EXPORT bool EndsWith(std::wstring_view str, 
+							  std::wstring_view search_for, 
+							  CompareCase case_sensitivity);
 
 	// Determines the type of ASCII character, independent of locale (the C
 	// library versions will change based on locale).
@@ -372,6 +388,10 @@ namespace base {
 	template <typename Char>
 	inline bool IsAsciiDigit(Char c) {
 		return c >= '0' && c <= '9';
+	}
+	template <typename Char>
+	inline bool IsAsciiPrintable(Char c) {
+	  return c >= ' ' && c <= '~';
 	}
 
 	template <typename Char>
@@ -416,8 +436,16 @@ namespace base {
 	// This does entire substrings; use std::replace in <algorithm> for single
 	// characters, for example:
 	//   std::replace(str.begin(), str.end(), 'a', 'b');
-	BASE_EXPORT void ReplaceSubstringsAfterOffset(std::wstring* str, size_t start_offset, std::wstring_view find_this, std::wstring_view replace_with);
-	BASE_EXPORT void ReplaceSubstringsAfterOffset(std::string* str, size_t start_offset, std::string_view find_this, std::string_view replace_with);
+	BASE_EXPORT void ReplaceSubstringsAfterOffset(
+		std::wstring* str, 
+		size_t start_offset, 
+		std::wstring_view find_this, 
+		std::wstring_view replace_with);
+	BASE_EXPORT void ReplaceSubstringsAfterOffset(
+		std::string* str, 
+		size_t start_offset, 
+		std::string_view find_this, 
+		std::string_view replace_with);
 
 	// Reserves enough memory in |str| to accommodate |length_with_null| characters,
 	// sets the size of |str| to |length_with_null - 1| characters, and returns a
@@ -453,30 +481,40 @@ namespace base {
 	// copies of those strings are created until the final join operation.
 	//
 	// Use StrCat (in base/strings/strcat.h) if you don't need a separator.
-	BASE_EXPORT std::string JoinString(const std::vector<std::string>& parts, std::string_view separator);
-	BASE_EXPORT std::wstring JoinString(const std::vector<std::wstring>& parts, std::wstring_view separator);
-	BASE_EXPORT std::string JoinString(const std::vector<std::string_view>& parts, std::string_view separator);
-	BASE_EXPORT std::wstring JoinString(const std::vector<std::wstring_view>& parts, std::wstring_view separator);
+	BASE_EXPORT std::string JoinString(const std::vector<std::string>& parts, 
+									   std::string_view separator);
+	BASE_EXPORT std::wstring JoinString(const std::vector<std::wstring>& parts, 
+										std::wstring_view separator);
+	BASE_EXPORT std::string JoinString(const std::vector<std::string_view>& parts, 
+									   std::string_view separator);
+	BASE_EXPORT std::wstring JoinString(const std::vector<std::wstring_view>& parts, 
+										std::wstring_view separator);
 	// Explicit initializer_list overloads are required to break ambiguity when used
 	// with a literal initializer list (otherwise the compiler would not be able to
 	// decide between the string and std::string_view overloads).
-	BASE_EXPORT std::string JoinString(std::initializer_list<std::string_view> parts, std::string_view separator);
-	BASE_EXPORT std::wstring JoinString(std::initializer_list<std::wstring_view> parts, std::wstring_view separator);
+	BASE_EXPORT std::string JoinString(std::initializer_list<std::string_view> parts, 
+									   std::string_view separator);
+	BASE_EXPORT std::wstring JoinString(std::initializer_list<std::wstring_view> parts, 
+										std::wstring_view separator);
 
 	// Replace $1-$2-$3..$9 in the format string with values from |subst|.
 	// Additionally, any number of consecutive '$' characters is replaced by that
 	// number less one. Eg $$->$, $$$->$$, etc. The offsets parameter here can be
 	// NULL. This only allows you to use up to nine replacements.
-	BASE_EXPORT std::wstring ReplaceStringPlaceholders(const std::wstring& format_string, const std::vector<std::wstring>& subst,
+	BASE_EXPORT std::wstring ReplaceStringPlaceholders(
+		const std::wstring& format_string, 
+		const std::vector<std::wstring>& subst,
 		std::vector<size_t>* offsets);
 
-	BASE_EXPORT std::string ReplaceStringPlaceholders(std::string_view format_string, const std::vector<std::string>& subst,
+	BASE_EXPORT std::string ReplaceStringPlaceholders(
+		std::string_view format_string, 
+		const std::vector<std::string>& subst,
 		std::vector<size_t>* offsets);
 
 	// Single-string shortcut for ReplaceStringHolders. |offset| may be NULL.
-	BASE_EXPORT std::wstring ReplaceStringPlaceholders(const std::wstring& format_string, const std::wstring& a, size_t* offset);
-
-
+	BASE_EXPORT std::wstring ReplaceStringPlaceholders(const std::wstring& format_string, 
+													   const std::wstring& a, 
+													   size_t* offset);
 	// Hashing ---------------------------------------------------------------------
 
 	// We provide appropriate hash functions so StringPiece and StringPiece16 can
@@ -500,10 +538,4 @@ namespace base {
 	using WStringPieceHash = StringPieceHashImpl<std::wstring_view>;
 }  // namespace base
 
-#if defined(OS_WIN)
 #include "strings/string_util_win.h"
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include "strings/string_util_posix.h"
-#else
-#error Define string operations appropriately for your platform
-#endif

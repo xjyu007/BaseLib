@@ -1,10 +1,10 @@
-#pragma once
-
 // Copyright 2013 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 // This file contains functions for launching subprocesses.
+
+#pragma once
 
 #include <string>
 #include <vector>
@@ -13,66 +13,17 @@
 #include "environment.h"
 #include "process/process.h"
 #include "process/process_handle.h"
-#include "build_config.h"
 #include "files/file_path.h"
-
-#if defined(OS_WIN)
-#include <windows.h>
-#elif defined(OS_FUCHSIA)
-#include <lib/fdio/spawn.h>
-#include <zircon/types.h>
-#endif
-
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include "base/posix/file_descriptor_shuffle.h"
-#endif
-
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-#include "base/mac/mach_port_rendezvous.h"
-#endif
 
 namespace base {
 
 	class CommandLine;
 
-#if defined(OS_WIN)
 	typedef std::vector<HANDLE> HandlesToInheritVector;
-#elif defined(OS_FUCHSIA)
-	struct PathToTransfer {
-		base::FilePath path;
-		zx_handle_t handle;
-	};
-	struct HandleToTransfer {
-		uint32_t id;
-		zx_handle_t handle;
-	};
-	typedef std::vector<HandleToTransfer> HandlesToTransferVector;
-	typedef std::vector<std::pair<int, int>> FileHandleMappingVector;
-#elif defined(OS_POSIX)
-	typedef std::vector<std::pair<int, int>> FileHandleMappingVector;
-#endif  // defined(OS_WIN)
 
 	// Options for launching a subprocess that are passed to LaunchProcess().
 	// The default constructor constructs the object with default options.
 	struct BASE_EXPORT LaunchOptions {
-#if (defined(OS_POSIX) || defined(OS_FUCHSIA)) && !defined(OS_MACOSX)
-		// Delegate to be run in between fork and exec in the subprocess (see
-		// pre_exec_delegate below)
-		class BASE_EXPORT PreExecDelegate {
-		public:
-			PreExecDelegate() = default;
-			virtual ~PreExecDelegate() = default;
-
-			// Since this is to be run between fork and exec, and fork may have happened
-			// while multiple threads were running, this function needs to be async
-			// safe.
-			virtual void RunAsyncSafe() = 0;
-
-		private:
-			DISALLOW_COPY_AND_ASSIGN(PreExecDelegate);
-		};
-#endif  // defined(OS_POSIX)
-
 		LaunchOptions();
 		LaunchOptions(const LaunchOptions&);
 		~LaunchOptions();
@@ -83,7 +34,6 @@ namespace base {
 		// If not empty, change to this directory before executing the new process.
 		base::FilePath current_directory;
 
-#if defined(OS_WIN)
 		bool start_hidden = false;
 
 		// Sets STARTF_FORCEOFFFEEDBACK so that the feedback cursor is forced off
@@ -159,13 +109,7 @@ namespace base {
 		// If set to true, permission to bring windows to the foreground is passed to
 		// the launched process if the current process has such permission.
 		bool grant_foreground_privilege = false;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// Remap file descriptors according to the mapping of src_fd->dest_fd to
-		// propagate FDs into the child process.
-		FileHandleMappingVector fds_to_remap;
-#endif  // defined(OS_WIN)
 
-#if defined(OS_WIN) || defined(OS_POSIX) || defined(OS_FUCHSIA)
 		// Set/unset environment variables. These are applied on top of the parent
 		// process environment.  Empty (the default) means to inherit the same
 		// environment. See internal::AlterEnvironment().
@@ -174,107 +118,7 @@ namespace base {
 		// Clear the environment for the new process before processing changes from
 		// |environment|.
 		bool clear_environment = false;
-#endif  // OS_WIN || OS_POSIX || OS_FUCHSIA
 
-#if defined(OS_LINUX)
-		// If non-zero, start the process using clone(), using flags as provided.
-		// Unlike in clone, clone_flags may not contain a custom termination signal
-		// that is sent to the parent when the child dies. The termination signal will
-		// always be set to SIGCHLD.
-		int clone_flags = 0;
-
-		// By default, child processes will have the PR_SET_NO_NEW_PRIVS bit set. If
-		// true, then this bit will not be set in the new child process.
-		bool allow_new_privs = false;
-
-		// Sets parent process death signal to SIGKILL.
-		bool kill_on_parent_death = false;
-#endif  // defined(OS_LINUX)
-
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-		// Mach ports that will be accessible to the child process. These are not
-		// directly inherited across process creation, but they are stored by a Mach
-		// IPC server that a child process can communicate with to retrieve them.
-		//
-		// After calling LaunchProcess(), any rights that were transferred with MOVE
-		// dispositions will be consumed, even on failure.
-		//
-		// See base/mac/mach_port_rendezvous.h for details.
-		MachPortsForRendezvous mach_ports_for_rendezvous;
-#endif
-
-#if defined(OS_FUCHSIA)
-		// If valid, launches the application in that job object.
-		zx_handle_t job_handle = ZX_HANDLE_INVALID;
-
-		// Specifies additional handles to transfer (not duplicate) to the child
-		// process. Each entry is an <id,handle> pair, with an |id| created using the
-		// PA_HND() macro. The child retrieves the handle
-		// |zx_take_startup_handle(id)|. The supplied handles are consumed by
-		// LaunchProcess() even on failure.
-		// Note that PA_USER1 ids are reserved for use by AddHandleToTransfer(), below
-		// and by convention PA_USER0 is reserved for use by the embedding
-		// application.
-		HandlesToTransferVector handles_to_transfer;
-
-		// Allocates a unique id for |handle| in |handles_to_transfer|, inserts it,
-		// and returns the generated id.
-		static uint32_t AddHandleToTransfer(
-			HandlesToTransferVector* handles_to_transfer,
-			zx_handle_t handle);
-
-		// Specifies which basic capabilities to grant to the child process.
-		// By default the child process will receive the caller's complete namespace,
-		// access to the current base::fuchsia::DefaultJob(), handles for stdio and
-		// access to the dynamic library loader.
-		// Note that the child is always provided access to the loader service.
-		uint32_t spawn_flags = FDIO_SPAWN_CLONE_NAMESPACE | FDIO_SPAWN_CLONE_STDIO |
-			FDIO_SPAWN_CLONE_JOB;
-
-		// Specifies paths to clone from the calling process' namespace into that of
-		// the child process. If |paths_to_clone| is empty then the process will
-		// receive either a full copy of the parent's namespace, or an empty one,
-		// depending on whether FDIO_SPAWN_CLONE_NAMESPACE is set.
-		std::vector<FilePath> paths_to_clone;
-
-		// Specifies handles which will be installed as files or directories in the
-		// child process' namespace. Paths installed by |paths_to_clone| will be
-		// overridden by these entries.
-		std::vector<PathToTransfer> paths_to_transfer;
-#endif  // defined(OS_FUCHSIA)
-
-#if defined(OS_POSIX)
-		// If not empty, launch the specified executable instead of
-		// cmdline.GetProgram(). This is useful when it is necessary to pass a custom
-		// argv[0].
-		base::FilePath real_path;
-
-#if !defined(OS_MACOSX)
-		// If non-null, a delegate to be run immediately prior to executing the new
-		// program in the child process.
-		//
-		// WARNING: If LaunchProcess is called in the presence of multiple threads,
-		// code running in this delegate essentially needs to be async-signal safe
-		// (see man 7 signal for a list of allowed functions).
-		PreExecDelegate* pre_exec_delegate = nullptr;
-#endif  // !defined(OS_MACOSX)
-
-		// Each element is an RLIMIT_* constant that should be raised to its
-		// rlim_max.  This pointer is owned by the caller and must live through
-		// the call to LaunchProcess().
-		const std::vector<int>* maximize_rlimits = nullptr;
-
-		// If true, start the process in a new process group, instead of
-		// inheriting the parent's process group.  The pgid of the child process
-		// will be the same as its pid.
-		bool new_process_group = false;
-#endif  // defined(OS_POSIX)
-
-#if defined(OS_CHROMEOS)
-		// If non-negative, the specified file descriptor will be set as the launched
-		// process' controlling terminal.
-		int ctrl_terminal_fd = -1;
-#endif  // defined(OS_CHROMEOS)
 	};
 
 	// Launch a process via the command line |cmdline|.
@@ -293,7 +137,6 @@ namespace base {
 	BASE_EXPORT Process LaunchProcess(const CommandLine& cmdline,
 		const LaunchOptions& options);
 
-#if defined(OS_WIN)
 	// Windows-specific LaunchProcess that takes the command line as a
 	// string.  Useful for situations where you need to control the
 	// command line arguments directly, but prefer the CommandLine version
@@ -305,7 +148,7 @@ namespace base {
 	// Example (including literal quotes)
 	//  cmdline = "c:\windows\explorer.exe" -foo "c:\bar\"
 	BASE_EXPORT Process LaunchProcess(const std::wstring& cmdline,
-		const LaunchOptions& options);
+									  const LaunchOptions& options);
 
 	// Launches a process with elevated privileges.  This does not behave exactly
 	// like LaunchProcess as it uses ShellExecuteEx instead of CreateProcess to
@@ -315,23 +158,6 @@ namespace base {
 	BASE_EXPORT Process LaunchElevatedProcess(const CommandLine& cmdline,
 		const LaunchOptions& options);
 
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-	// A POSIX-specific version of LaunchProcess that takes an argv array
-	// instead of a CommandLine.  Useful for situations where you need to
-	// control the command line arguments directly, but prefer the
-	// CommandLine version if launching Chrome itself.
-	BASE_EXPORT Process LaunchProcess(const std::vector<std::string> & argv,
-		const LaunchOptions & options);
-
-#if !defined(OS_MACOSX)
-	// Close all file descriptors, except those which are a destination in the
-	// given multimap. Only call this function in a child process where you know
-	// that there aren't any other threads.
-	BASE_EXPORT void CloseSuperfluousFds(const InjectiveMultimap& saved_map);
-#endif  // defined(OS_MACOSX)
-#endif  // defined(OS_WIN)
-
-#if defined(OS_WIN)
 	// Set |job_object|'s JOBOBJECT_EXTENDED_LIMIT_INFORMATION
 	// BasicLimitInformation.LimitFlags to |limit_flags|.
 	BASE_EXPORT bool SetJobObjectLimitFlags(HANDLE job_object, DWORD limit_flags);
@@ -339,7 +165,6 @@ namespace base {
 	// Output multi-process printf, cout, cerr, etc to the cmd.exe console that ran
 	// chrome. This is not thread-safe: only call from main thread.
 	BASE_EXPORT void RouteStdioToConsole(bool create_console_if_not_found);
-#endif  // defined(OS_WIN)
 
 	// Executes the application specified by |cl| and wait for it to exit. Stores
 	// the output (stdout) in |output|. Redirects stderr to /dev/null. Returns true
@@ -358,23 +183,10 @@ namespace base {
 	BASE_EXPORT bool GetAppOutputWithExitCode(const CommandLine& cl,
 		std::string* output, int* exit_code);
 
-#if defined(OS_WIN)
 	// A Windows-specific version of GetAppOutput that takes a command line string
 	// instead of a CommandLine object. Useful for situations where you need to
 	// control the command line arguments directly.
 	BASE_EXPORT bool GetAppOutput(const std::wstring_view& cl, std::string* output);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-	// A POSIX-specific version of GetAppOutput that takes an argv array
-	// instead of a CommandLine.  Useful for situations where you need to
-	// control the command line arguments directly.
-	BASE_EXPORT bool GetAppOutput(const std::vector<std::string> & argv,
-		std::string * output);
-
-	// Like the above POSIX-specific version of GetAppOutput, but also includes
-	// stderr.
-	BASE_EXPORT bool GetAppOutputAndError(const std::vector<std::string>& argv,
-		std::string* output);
-#endif  // defined(OS_WIN)
 
 	// If supported on the platform, and the user has sufficent rights, increase
 	// the current process's scheduling priority to a high priority.
@@ -383,25 +195,5 @@ namespace base {
 	// Creates a LaunchOptions object suitable for launching processes in a test
 	// binary. This should not be called in production/released code.
 	BASE_EXPORT LaunchOptions LaunchOptionsForTest();
-
-#if defined(OS_LINUX) || defined(OS_NACL_NONSFI)
-	// A wrapper for clone with fork-like behavior, meaning that it returns the
-	// child's pid in the parent and 0 in the child. |flags|, |ptid|, and |ctid| are
-	// as in the clone system call (the CLONE_VM flag is not supported).
-	//
-	// This function uses the libc clone wrapper (which updates libc's pid cache)
-	// internally, so callers may expect things like getpid() to work correctly
-	// after in both the child and parent.
-	//
-	// As with fork(), callers should be extremely careful when calling this while
-	// multiple threads are running, since at the time the fork happened, the
-	// threads could have been in any state (potentially holding locks, etc.).
-	// Callers should most likely call execve() in the child soon after calling
-	// this.
-	//
-	// It is unsafe to use any pthread APIs after ForkWithFlags().
-	// However, performing an exec() will lift this restriction.
-	BASE_EXPORT pid_t ForkWithFlags(unsigned long flags, pid_t * ptid, pid_t * ctid);
-#endif
 
 }  // namespace base

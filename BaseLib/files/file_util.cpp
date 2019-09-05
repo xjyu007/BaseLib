@@ -4,9 +4,7 @@
 
 #include "files/file_util.h"
 
-#if defined(OS_WIN)
 #include <io.h>
-#endif
 #include <cstdio>
 
 #include <fstream>
@@ -23,17 +21,6 @@
 namespace base {
 
 #if !defined(OS_NACL_NONSFI)
-	namespace {
-
-		// The maximum number of 'uniquified' files we will try to create.
-		// This is used when the filename we're trying to download is already in use,
-		// so we create a new unique filename by appending " (nnn)" before the
-		// extension, where 1 <= nnn <= kMaxUniqueFiles.
-		// Also used by code that cleans up said files.
-		static const int kMaxUniqueFiles = 100;
-
-	}  // namespace
-
 	int64_t ComputeDirectorySize(const FilePath& root_path) {
 		int64_t running_size = 0;
 		FileEnumerator file_iter(root_path, true, FileEnumerator::FILES);
@@ -52,15 +39,10 @@ namespace base {
 		// We open the file in binary format even if they are text files because
 		// we are just comparing that bytes are exactly same in both files and not
 		// doing anything smart with text formatting.
-#if defined(OS_WIN)
 		std::ifstream file1(as_wcstr(filename1.value()),
 		                    std::ios::in | std::ios::binary);
 		std::ifstream file2(as_wcstr(filename2.value()),
 		                    std::ios::in | std::ios::binary);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		std::ifstream file1(filename1.value(), std::ios::in | std::ios::binary);
-		std::ifstream file2(filename2.value(), std::ios::in | std::ios::binary);
-#endif  // OS_WIN
 
 		// Even if both files aren't openable (and thus, in some sense, "equal"),
 		// any unusable file yields a result of "false".
@@ -75,7 +57,7 @@ namespace base {
 
 			if ((file1.eof() != file2.eof()) ||
 				(file1.gcount() != file2.gcount()) ||
-				(memcmp(buffer1, buffer2, static_cast<size_t>(file1.gcount())) != 0)) {
+				(memcmp(buffer1, buffer2, static_cast<size_t>(file1.gcount())))) {
 				file1.close();
 				file2.close();
 				return false;
@@ -88,13 +70,8 @@ namespace base {
 	}
 
 	bool TextContentsEqual(const FilePath& filename1, const FilePath& filename2) {
-#if defined(OS_WIN)
 		std::ifstream file1(as_wcstr(filename1.value()), std::ios::in);
 		std::ifstream file2(as_wcstr(filename2.value()), std::ios::in);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		std::ifstream file1(filename1.value(), std::ios::in);
-		std::ifstream file2(filename2.value(), std::ios::in);
-#endif  // OS_WIN
 
 		// Even if both files aren't openable (and thus, in some sense, "equal"),
 		// any unusable file yields a result of "false".
@@ -163,11 +140,11 @@ namespace base {
 		size_t bytes_read_so_far = 0;
 		bool read_status = true;
 		std::string local_contents;
-		local_contents.resize(static_cast<size_t>(chunk_size));
+		local_contents.resize(chunk_size);
 
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 		while ((bytes_read_this_pass = fread(&local_contents[bytes_read_so_far], 1,
-			static_cast<size_t>(chunk_size), file)) > 0) {
+											 chunk_size, file)) > 0) {
 			if ((max_size - bytes_read_so_far) < bytes_read_this_pass) {
 				// Read more than max_size bytes, bail out.
 				bytes_read_so_far = max_size;
@@ -236,15 +213,9 @@ namespace base {
 				   const Time& last_modified) {
 		auto flags = File::FLAG_OPEN | File::FLAG_WRITE_ATTRIBUTES;
 
-#if defined(OS_WIN)
 		// On Windows, FILE_FLAG_BACKUP_SEMANTICS is needed to open a directory.
 		if (DirectoryExists(path))
 			flags |= File::FLAG_BACKUP_SEMANTICS;
-#elif defined(OS_FUCHSIA)
-		// On Fuchsia, we need O_RDONLY for directories, or O_WRONLY for files.
-		// TODO(https://crbug.com/947802): Find a cleaner workaround for this.
-		flags |= (DirectoryExists(path) ? File::FLAG_READ : File::FLAG_WRITE);
-#endif
 
 		const File file(path, flags);
 		if (!file.IsValid())
@@ -267,43 +238,21 @@ namespace base {
 		const auto current_offset = ftell(file);
 		if (current_offset == -1)
 			return false;
-#if defined(OS_WIN)
 		const auto fd = _fileno(file);
-		return _chsize(fd, current_offset) == 0;
-#else
-		int fd = fileno(file);
-		return ftruncate(fd, current_offset) == 0;
-#endif
+		if (_chsize(fd, current_offset) != 0)
+			return false;
+		return true;
 	}
 
-	int GetUniquePathNumber(const FilePath& path,
-							FilePath::StringPieceType suffix) {
-		// Storage for use by is_unique to reduce heap churn when looping.
-		FilePath::StringType path_with_suffix;
-
-		// A function that returns true if |candidate| is unique with and without an
-		// optional suffix.
-		const auto is_unique = [suffix,
-								&path_with_suffix](const base::FilePath& candidate) {
-			if (!PathExists(candidate)) {
-				if (suffix.empty())
-					return true;
-			path_with_suffix = candidate.value();
-			path_with_suffix += suffix;
-			//suffix.AppendToString(&path_with_suffix);
-			if (!PathExists(FilePath(path_with_suffix)))
-				return true;
-			}
-			return false;
-		};
-
-		if (is_unique(path))
+	int GetUniquePathNumber(const FilePath& path) {
+		DCHECK(!path.empty());
+		if (!PathExists(path))
 			return 0;
 
 		std::string number;
 		for (auto count = 1; count <= kMaxUniqueFiles; ++count) {
 			StringAppendF(&number, " (%d)", count);
-			if (is_unique(path.InsertBeforeExtensionASCII(number)))
+			if (!PathExists(path.InsertBeforeExtensionASCII(number)))
 				return count;
 			number.clear();
 		}
@@ -312,13 +261,11 @@ namespace base {
 	}
 
 	FilePath GetUniquePath(const FilePath& path) {
-		auto unique_path = path;
-		const auto uniquifier = GetUniquePathNumber(path);
-		if (uniquifier > 0) {
-			unique_path = unique_path.InsertBeforeExtensionASCII(
-				StringPrintf(" (%d)", uniquifier));
-		}
-		return unique_path;
+		DCHECK(!path.empty());
+		const int uniquifier = GetUniquePathNumber(path);
+		if (uniquifier > 0)
+			return path.InsertBeforeExtensionASCII(StringPrintf(" (%d)", uniquifier));
+		return uniquifier == 0 ? path : base::FilePath();
 	}
 #endif  // !defined(OS_NACL_NONSFI)
 

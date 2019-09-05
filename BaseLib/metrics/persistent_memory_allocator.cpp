@@ -4,16 +4,12 @@
 
 #include "metrics/persistent_memory_allocator.h"
 
-#include <assert.h>
+#include <cassert>
 #include <algorithm>
 #include <optional>
 
-#if defined(OS_WIN)
-#include <windows.h>
-#include "winbase.h"
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <sys/mman.h>
-#endif
+#include <Windows.h>
+#include "WinBase.h"
 
 #include "debug_/alias.h"
 #include "files/memory_mapped_file.h"
@@ -966,25 +962,12 @@ namespace base {
 		LocalPersistentMemoryAllocator::AllocateLocalMemory(size_t size) {
 		void* address;
 
-#if defined(OS_WIN)
 		address =
 			::VirtualAlloc(nullptr, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 		if (address)
 			return Memory(address, MEM_VIRTUAL);
 		UmaHistogramSparse("UMA.LocalPersistentMemoryAllocator.Failures.Win",
 			::GetLastError());
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// MAP_ANON is deprecated on Linux but MAP_ANONYMOUS is not universal on Mac.
-		// MAP_SHARED is not available on Linux <2.4 but required on Mac.
-		address = ::mmap(nullptr, size, PROT_READ | PROT_WRITE,
-			MAP_ANON | MAP_SHARED, -1, 0);
-		if (address != MAP_FAILED)
-			return Memory(address, MEM_VIRTUAL);
-		UmaHistogramSparse("UMA.LocalPersistentMemoryAllocator.Failures.Posix",
-			errno);
-#else
-#error This architecture is not (yet) supported.
-#endif
 
 		// As a last resort, just allocate the memory from the heap. This will
 		// achieve the same basic result but the acquired memory has to be
@@ -1006,22 +989,15 @@ namespace base {
 		}
 
 		DCHECK_EQ(MEM_VIRTUAL, type);
-#if defined(OS_WIN)
 		BOOL success = ::VirtualFree(memory, 0, MEM_DECOMMIT);
 		DCHECK(success);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		int result = ::munmap(memory, size);
-		DCHECK_EQ(0, result);
-#else
-#error This architecture is not (yet) supported.
-#endif
 	}
 
 	//----- WritableSharedPersistentMemoryAllocator --------------------------------
 
 	WritableSharedPersistentMemoryAllocator::
 		WritableSharedPersistentMemoryAllocator(
-			base::WritableSharedMemoryMapping memory,
+			WritableSharedMemoryMapping memory,
 			uint64_t id,
 			std::string_view name)
 		: PersistentMemoryAllocator(Memory(memory.memory(), MEM_SHARED),
@@ -1038,7 +1014,7 @@ namespace base {
 
 	// static
 	bool WritableSharedPersistentMemoryAllocator::IsSharedMemoryAcceptable(
-		const base::WritableSharedMemoryMapping& memory) {
+		const WritableSharedMemoryMapping& memory) {
 		return IsMemoryAcceptable(memory.memory(), memory.size(), 0, false);
 	}
 
@@ -1046,7 +1022,7 @@ namespace base {
 
 	ReadOnlySharedPersistentMemoryAllocator::
 		ReadOnlySharedPersistentMemoryAllocator(
-			base::ReadOnlySharedMemoryMapping memory,
+			ReadOnlySharedMemoryMapping memory,
 			uint64_t id,
 			std::string_view name)
 		: PersistentMemoryAllocator(
@@ -1064,11 +1040,10 @@ namespace base {
 
 	// static
 	bool ReadOnlySharedPersistentMemoryAllocator::IsSharedMemoryAcceptable(
-		const base::ReadOnlySharedMemoryMapping& memory) {
+		const ReadOnlySharedMemoryMapping& memory) {
 		return IsMemoryAcceptable(memory.memory(), memory.size(), 0, true);
 	}
 
-#if !defined(OS_NACL)
 	//----- FilePersistentMemoryAllocator ------------------------------------------
 
 	FilePersistentMemoryAllocator::FilePersistentMemoryAllocator(
@@ -1131,28 +1106,11 @@ namespace base {
 		if (sync)
 			scoped_blocking_call.emplace(FROM_HERE, base::BlockingType::MAY_BLOCK);
 
-#if defined(OS_WIN)
 		// Windows doesn't support asynchronous flush.
 		scoped_blocking_call.emplace(FROM_HERE, base::BlockingType::MAY_BLOCK);
 		BOOL success = ::FlushViewOfFile(data(), length);
 		DPCHECK(success);
-#elif defined(OS_MACOSX)
-		// On OSX, "invalidate" removes all cached pages, forcing a re-read from
-		// disk. That's not applicable to "flush" so omit it.
-		int result =
-			::msync(const_cast<void*>(data()), length, sync ? MS_SYNC : MS_ASYNC);
-		DCHECK_NE(EINVAL, result);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// On POSIX, "invalidate" forces _other_ processes to recognize what has
-		// been written to disk and so is applicable to "flush".
-		int result = ::msync(const_cast<void*>(data()), length,
-			MS_INVALIDATE | (sync ? MS_SYNC : MS_ASYNC));
-		DCHECK_NE(EINVAL, result);
-#else
-#error Unsupported OS.
-#endif
 	}
-#endif  // !defined(OS_NACL)
 
 	//----- DelayedPersistentAllocation --------------------------------------------
 

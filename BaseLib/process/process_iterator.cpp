@@ -3,18 +3,11 @@
 // found in the LICENSE file.
 
 #include "process/process_iterator.h"
-#include "build_config.h"
 
 namespace base {
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-	ProcessEntry::ProcessEntry() : pid_(0), ppid_(0), gid_(0) {}
-	ProcessEntry::ProcessEntry(const ProcessEntry& other) = default;
-	ProcessEntry::~ProcessEntry() = default;
-#endif
-
 	const ProcessEntry* ProcessIterator::NextProcessEntry() {
-		bool result = false;
+		bool result;
 		do {
 			result = CheckForNextProcess();
 		} while (result && !IncludeEntry());
@@ -39,17 +32,6 @@ namespace base {
 		const FilePath::StringType& executable_name,
 		const ProcessFilter* filter) : ProcessIterator(filter),
 		executable_name_(executable_name) {
-#if defined(OS_ANDROID)
-		// On Android, the process name contains only the last 15 characters, which
-		// is in file /proc/<pid>/stat, the string between open parenthesis and close
-		// parenthesis. Please See ProcessIterator::CheckForNextProcess for details.
-		// Now if the length of input process name is greater than 15, only save the
-		// last 15 characters.
-		if (executable_name_.size() > 15) {
-			executable_name_ = FilePath::StringType(executable_name_,
-				executable_name_.size() - 15, 15);
-		}
-#endif
 	}
 
 	NamedProcessIterator::~NamedProcessIterator() = default;

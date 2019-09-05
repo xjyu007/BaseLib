@@ -12,7 +12,6 @@
 #include "logging.h"
 #include "trace_event/builtin_categories.h"
 #include "trace_event/trace_category.h"
-#include "build_config.h"
 
 namespace base {
 	namespace trace_event {
@@ -65,7 +64,7 @@ namespace base {
 			// compile-time. The return value is an undefinitely lived pointer to the
 			// TraceCategory owned by the registry.
 			static constexpr TraceCategory* GetBuiltinCategoryByName(const char* category_group) {
-#if defined(OS_WIN) && defined(COMPONENT_BUILD)
+#if defined(COMPONENT_BUILD)
 				// The address cannot be evaluated at compile-time in Windows compoment
 				// builds.
 				return nullptr;

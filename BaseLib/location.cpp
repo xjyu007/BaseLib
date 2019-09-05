@@ -7,7 +7,6 @@
 #include "compiler_specific.h"
 #include "strings/string_number_conversions.h"
 #include "strings/stringprintf.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -38,14 +37,7 @@ namespace base {
 		return StringPrintf("pc:%p", program_counter_);
 	}
 
-#if defined(COMPILER_MSVC)
 #define RETURN_ADDRESS() _ReturnAddress()
-#elif defined(COMPILER_GCC) && !defined(OS_NACL)
-#define RETURN_ADDRESS() \
-  __builtin_extract_return_addr(__builtin_return_address(0))
-#else
-#define RETURN_ADDRESS() nullptr
-#endif
 
 	// static
 	NOINLINE Location Location::CreateFromHere(const char* file_name) {

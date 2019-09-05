@@ -10,7 +10,6 @@
 #include "logging.h"
 #include "task/post_task.h"
 #include "task/thread_pool/task.h"
-#include "task/thread_pool/thread_pool_clock.h"
 #include "task_runner.h"
 
 namespace base::internal {
@@ -35,7 +34,10 @@ namespace base::internal {
 
 	bool DelayedTaskManager::DelayedTask::operator<=(
 		const DelayedTask& other) const {
-		return task.delayed_run_time <= other.task.delayed_run_time;
+		if (task.delayed_run_time == other.task.delayed_run_time) {
+			return task.sequence_num <= other.task.sequence_num;
+		}
+		return task.delayed_run_time < other.task.delayed_run_time;
 	}
 
 	bool DelayedTaskManager::DelayedTask::IsScheduled() const {

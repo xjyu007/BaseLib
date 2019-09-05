@@ -17,10 +17,6 @@
 #include "time/time_override.h"
 #include "trace_event/trace_event.h"
 
-#if defined(OS_MACOSX)
-#include "mac/scoped_nsautorelease_pool.h"
-#endif
-
 namespace base::internal {
 
 	void WorkerThread::Delegate::WaitForWork(WaitableEvent* wake_up_event) {
@@ -76,7 +72,7 @@ namespace base::internal {
 		return true;
 	}
 
-	void WorkerThread::WakeUp() const {
+	void WorkerThread::WakeUp() {
 		// Signalling an event can deschedule the current thread. Since being
 		// descheduled while holding a lock is undesirable (https://crbug.com/890978),
 		// assert that no lock is held by the current thread.
@@ -185,14 +181,12 @@ namespace base::internal {
 			case ThreadLabel::DEDICATED:
 				RunBackgroundDedicatedWorker();
 				return;
-#if defined(OS_WIN)
 			case ThreadLabel::SHARED_COM:
 				RunBackgroundSharedCOMWorker();
 				return;
 			case ThreadLabel::DEDICATED_COM:
 				RunBackgroundDedicatedCOMWorker();
 				return;
-#endif  // defined(OS_WIN)
 			}
 		}
 
@@ -206,14 +200,12 @@ namespace base::internal {
 		case ThreadLabel::DEDICATED:
 			RunDedicatedWorker();
 			return;
-#if defined(OS_WIN)
 		case ThreadLabel::SHARED_COM:
 			RunSharedCOMWorker();
 			return;
 		case ThreadLabel::DEDICATED_COM:
 			RunDedicatedCOMWorker();
 			return;
-#endif  // defined(OS_WIN)
 		}
 	}
 
@@ -253,7 +245,6 @@ namespace base::internal {
 		debug::Alias(&line_number);
 	}
 
-#if defined(OS_WIN)
 	NOINLINE void WorkerThread::RunSharedCOMWorker() {
 		const auto line_number = __LINE__;
 		RunWorker();
@@ -277,7 +268,6 @@ namespace base::internal {
 		RunWorker();
 		debug::Alias(&line_number);
 	}
-#endif  // defined(OS_WIN)
 
 	void WorkerThread::RunWorker() {
 		DCHECK_EQ(self_, this);
@@ -298,16 +288,12 @@ namespace base::internal {
 		}
 
 		while (!ShouldExit()) {
-#if defined(OS_MACOSX)
-			mac::ScopedNSAutoreleasePool autorelease_pool;
-#endif
 
 			UpdateThreadPriority(GetDesiredThreadPriority());
 
 			// Get the task source containing the next task to execute.
-			auto run_intent_with_task_source =
-				delegate_->GetWork(this);
-			if (!run_intent_with_task_source) {
+		    RegisteredTaskSource task_source = delegate_->GetWork(this);
+		    if (!task_source) {
 				// Exit immediately if GetWork() resulted in detaching this worker.
 				if (ShouldExit())
 					break;
@@ -318,8 +304,7 @@ namespace base::internal {
 				continue;
 			}
 
-			auto task_source = task_tracker_->RunAndPopNextTask(
-				std::move(run_intent_with_task_source));
+    		task_source = task_tracker_->RunAndPopNextTask(std::move(task_source));
 
 			delegate_->DidProcessTask(std::move(task_source));
 

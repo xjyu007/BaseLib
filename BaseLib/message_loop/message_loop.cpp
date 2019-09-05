@@ -15,11 +15,7 @@
 #include "task/sequence_manager/sequence_manager.h"
 #include "task/sequence_manager/sequence_manager_impl.h"
 #include "task/sequence_manager/task_queue.h"
-#include "build_config.h"
 
-#if defined(OS_MACOSX)
-#include "message_loop/message_pump_mac.h"
-#endif
 
 namespace base {
 
@@ -52,13 +48,11 @@ namespace base {
 
 		// iOS just attaches to the loop, it doesn't Run it.
 		// TODO(stuartmorgan): Consider wiring up a Detach().
-#if !defined(OS_IOS)
 		// There should be no active RunLoops on this thread, unless this MessageLoop
 		// isn't bound to the current thread (see other condition at the top of this
 		// method).
 		DCHECK((!pump_ && !IsBoundToCurrentThread()) || 
 				!RunLoop::IsRunningOnCurrentThread());
-#endif  // !defined(OS_IOS)
 	}
 
 	bool MessageLoop::IsType(MessagePumpType type) const {
@@ -164,38 +158,12 @@ namespace base {
 	//------------------------------------------------------------------------------
 	// MessageLoopForUI
 	MessageLoopForUI::MessageLoopForUI(MessagePumpType type) : MessageLoop(type) {
-#if defined(OS_ANDROID)
-		DCHECK(type == MessagePumpType::UI || type == MessagePumpType::JAVA);
-#else
 		DCHECK_EQ(type, MessagePumpType::UI);
-#endif
 	}
 
-#if defined(OS_IOS)
-	void MessageLoopForUI::Attach() {
-		sequence_manager_->AttachToMessagePump();
-	}
-#endif  // defined(OS_IOS)
-
-#if defined(OS_ANDROID)
-	void MessageLoopForUI::Abort() {
-		static_cast<MessagePumpForUI*>(pump_)->Abort();
-	}
-
-	bool MessageLoopForUI::IsAborted() {
-		return static_cast<MessagePumpForUI*>(pump_)->IsAborted();
-	}
-
-	void MessageLoopForUI::QuitWhenIdle(base::OnceClosure callback) {
-		static_cast<MessagePumpForUI*>(pump_)->QuitWhenIdle(std::move(callback));
-	}
-#endif  // defined(OS_ANDROID)
-
-#if defined(OS_WIN)
 	void MessageLoopForUI::EnableWmQuit() const {
 		dynamic_cast<MessagePumpForUI*>(pump_)->EnableWmQuit();
 	}
-#endif  // defined(OS_WIN)
 
 #endif  // !defined(OS_NACL)
 

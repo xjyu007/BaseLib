@@ -27,10 +27,11 @@
 #include "strings/utf_string_conversions.h"
 #include "threading/platform_thread.h"
 #include "build_config.h"
+#include <Windows.h>
 
 namespace base::debug {
 	namespace {
-
+#undef max
 		// The minimum depth a stack should support.
 		const int kMinStackDepth = 2;
 
@@ -106,17 +107,10 @@ namespace base::debug {
 
 	union ThreadRef {
 		int64_t as_id;
-#if defined(OS_WIN)
 		// On Windows, the handle itself is often a pseudo-handle with a common
 		// value meaning "this thread" and so the thread-id is used. The former
 		// can be converted to a thread-id with a system call.
 		PlatformThreadId as_tid;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		// On Posix and Fuchsia, the handle is always a unique identifier so no
-		// conversion needs to be done. However, its value is officially opaque so
-		// there is no one correct way to convert it to a numerical identifier.
-		PlatformThreadHandle::Handle as_handle;
-#endif
 	};
 
 	OwningProcess::OwningProcess() = default;
@@ -155,11 +149,7 @@ namespace base::debug {
 	ActivityData ActivityData::ForThread(const PlatformThreadHandle& handle) {
 		ThreadRef thread_ref;
 		thread_ref.as_id = 0;  // Zero the union in case other is smaller.
-#if defined(OS_WIN)
 		thread_ref.as_tid = ::GetThreadId(handle.platform_handle());
-#elif defined(OS_POSIX)
-		thread_ref.as_handle = handle.platform_handle();
-#endif
 		return ForThread(thread_ref.as_id);
 	}
 
@@ -698,11 +688,7 @@ namespace base::debug {
 			DCHECK_EQ(0U, stack_[0].call_stack[0]);
 			DCHECK_EQ(0U, stack_[0].data.task.sequence_id);
 
-#if defined(OS_WIN)
 			header_->thread_ref.as_tid = PlatformThread::CurrentId();
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-			header_->thread_ref.as_handle = PlatformThread::CurrentHandle().platform_handle();
-#endif
 			header_->start_time = base::Time::Now().ToInternalValue();
 			header_->start_ticks = base::TimeTicks::Now().ToInternalValue();
 			header_->stack_slots = stack_slots_;
@@ -1343,8 +1329,8 @@ namespace base::debug {
 		DCHECK_NE(GetProcessId(), pid);
 		DCHECK_NE(0, pid);
 
-		base::AutoLock lock(global_tracker_lock_);
-		if (base::Contains(known_processes_, pid)) {
+		AutoLock lock(global_tracker_lock_);
+		if (Contains(known_processes_, pid)) {
 			// TODO(bcwhite): Measure this in UMA.
 			NOTREACHED() << "Process #" << process_id
 				<< " was previously recorded as \"launched\""
@@ -1353,11 +1339,7 @@ namespace base::debug {
 			known_processes_.erase(pid);
 		}
 
-#if defined(OS_WIN)
 		known_processes_.insert(std::make_pair(pid, WideToUTF8(cmd)));
-#else
-		known_processes_.insert(std::make_pair(pid, cmd));
-#endif
 	}
 
 	void GlobalActivityTracker::RecordProcessLaunch(

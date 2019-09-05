@@ -7,7 +7,6 @@
 #include "debug_/activity_tracker.h"
 #include "debug_/alias.h"
 #include "debug_/crash_logging.h"
-#include "debug_/dump_without_crashing.h"
 #include "logging.h"
 #include "metrics/histogram_macros.h"
 #include "process/memory.h"
@@ -147,7 +146,7 @@ namespace base {
 			}
 
 			if (!thread_handle) {
-				auto last_error = ::GetLastError();
+				const auto last_error = ::GetLastError();
 
 				switch (last_error) {
 				case ERROR_NOT_ENOUGH_MEMORY:
@@ -161,8 +160,6 @@ namespace base {
 						"create_thread_last_error", debug::CrashKeySize::Size32);
 					debug::SetCrashKeyString(last_error_crash_key,
 											 base::NumberToString(last_error));
-					debug::Alias(&last_error);
-					debug::DumpWithoutCrashing();
 				    break;
 				}
 

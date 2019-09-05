@@ -5,14 +5,11 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 
 #include "base_export.h"
 #include "callback.h"
 #include "logging.h"
 #include "macros.h"
-#include "memory/ptr_util.h"
-#include "memory/ref_counted.h"
 #include <optional>
 #include "sequence_checker.h"
 #include "synchronization/atomic_flag.h"
@@ -27,18 +24,11 @@
 #include "task/thread_pool/task_tracker.h"
 #include "task/thread_pool/thread_group.h"
 #include "task/thread_pool/thread_group_impl.h"
-#include "task/thread_pool/thread_pool.h"
-#include "task/thread_pool/thread_pool_clock.h"
+#include "task/thread_pool/thread_pool_instance.h"
 #include "updateable_sequenced_task_runner.h"
 #include "build_config.h"
 
-#if defined(OS_POSIX) && !defined(OS_NACL_SFI)
-#include "task/thread_pool/task_tracker_posix.h"
-#endif
-
-#if defined(OS_WIN)
 #include "win/com_init_check_hook.h"
-#endif
 
 namespace base {
 
@@ -53,17 +43,13 @@ namespace base {
 			public PooledTaskRunnerDelegate {
 		public:
 			using TaskTrackerImpl =
-#if defined(OS_POSIX) && !defined(OS_NACL_SFI)
-				TaskTrackerPosix;
-#else
 				TaskTracker;
-#endif
 
 			// Creates a ThreadPoolImpl with a production TaskTracker.
 			//|histogram_label| is used to label histograms, it must not be empty.
 			explicit ThreadPoolImpl(std::string_view histogram_label);
 
-			// For testing only. Creates a ThreadPoolImpl with a custom TaskTracker and
+			// For testing only. Creates a ThreadPoolImpl with a custom TaskTracker
 			ThreadPoolImpl(std::string_view histogram_label,
                  		   std::unique_ptr<TaskTrackerImpl> task_tracker);
 
@@ -92,16 +78,16 @@ namespace base {
 			scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunner(
 				const TaskTraits& traits,
 				SingleThreadTaskRunnerThreadMode thread_mode) override;
-#if defined(OS_WIN)
 			scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunner(
 				const TaskTraits& traits,
 				SingleThreadTaskRunnerThreadMode thread_mode) override;
-#endif  // defined(OS_WIN)
 			scoped_refptr<UpdateableSequencedTaskRunner>
 				CreateUpdateableSequencedTaskRunner(const TaskTraits& traits);
 
 			// PooledTaskRunnerDelegate:
 			bool EnqueueJobTaskSource(scoped_refptr<JobTaskSource> task_source) override;
+			void UpdatePriority(scoped_refptr<TaskSource> task_source,
+								TaskPriority priority) override;
 
 			// Returns the TimeTicks of the next task scheduled on ThreadPool (Now() if
 			// immediate, nullopt if none). This is thread-safe, i.e., it's safe if tasks
@@ -138,8 +124,7 @@ namespace base {
 			bool PostTaskWithSequence(Task task,
 				scoped_refptr<Sequence> sequence) override;
 			bool IsRunningPoolWithTraits(const TaskTraits& traits) const override;
-			void UpdatePriority(scoped_refptr<TaskSource> task_source,
-				TaskPriority priority) override;
+			bool ShouldYield(const TaskSource* task_source) const override;
 
 			const std::unique_ptr<TaskTrackerImpl> task_tracker_{};
 			std::unique_ptr<Thread> service_thread_{};
@@ -175,9 +160,9 @@ namespace base {
 			AtomicFlag join_for_testing_returned_;
 #endif
 
-#if defined(OS_WIN) && defined(COM_INIT_CHECK_HOOK_ENABLED)
+#if defined(COM_INIT_CHECK_HOOK_ENABLED)
 			// Provides COM initialization verification for supported builds.
-			base::win::ComInitCheckHook com_init_check_hook_;
+			win::ComInitCheckHook com_init_check_hook_;
 #endif
 
 			// Asserts that operations occur in sequence with Start().

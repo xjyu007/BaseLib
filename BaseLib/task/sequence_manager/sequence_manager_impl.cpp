@@ -93,7 +93,7 @@ namespace base::sequence_manager {
 			// early when detected.
 			constexpr unsigned int kMemoryCorruptionSentinelValue = 0xdeadbeef;
 
-			void ReclaimMemoryFromQueue(internal::TaskQueueImpl* queue, 
+			void ReclaimMemoryFromQueue(TaskQueueImpl* queue, 
 										std::map<TimeDomain*, TimeTicks>* time_domain_now) {
 				TimeDomain* time_domain = queue->GetTimeDomain();
 				if (time_domain_now->find(time_domain) == time_domain_now->end())
@@ -171,8 +171,8 @@ namespace base::sequence_manager {
 		}
 
 		SequenceManagerImpl::SequenceManagerImpl(
-			std::unique_ptr<internal::ThreadController> controller,
-			SequenceManager::Settings settings)
+			std::unique_ptr<ThreadController> controller,
+			Settings settings)
 			: associated_thread_(controller->GetAssociatedThread()),
 			controller_(std::move(controller)),
 			settings_(std::move(settings)),
@@ -238,9 +238,9 @@ namespace base::sequence_manager {
 
 		SequenceManagerImpl::MainThreadOnly::MainThreadOnly(
 			const scoped_refptr<AssociatedThreadId>& associated_thread,
-			const SequenceManager::Settings& settings)
+			const Settings& settings)
 			: selector(associated_thread, settings),
-			real_time_domain(new internal::RealTimeDomain()) {
+			real_time_domain(new RealTimeDomain()) {
 			if (settings.randomised_sampling_enabled) {
 				random_generator = std::mt19937_64(RandUint64());
 				uniform_distribution = std::uniform_real_distribution<double>(0.0, 1.0);
@@ -260,7 +260,7 @@ namespace base::sequence_manager {
 
 		// static
 		std::unique_ptr<SequenceManagerImpl> SequenceManagerImpl::CreateOnCurrentThread(
-				SequenceManager::Settings settings) {
+				Settings settings) {
 			std::unique_ptr<SequenceManagerImpl> manager(new SequenceManagerImpl(
 				CreateThreadControllerImplForCurrentThread(settings.clock), 
 					std::move(settings)));
@@ -270,7 +270,7 @@ namespace base::sequence_manager {
 
 		// static
 		std::unique_ptr<SequenceManagerImpl> SequenceManagerImpl::CreateUnbound(
-				SequenceManager::Settings settings) {
+				Settings settings) {
 			return WrapUnique(new SequenceManagerImpl(
 				ThreadControllerWithMessagePumpImpl::CreateUnbound(settings), 
 				std::move(settings)));
@@ -280,7 +280,7 @@ namespace base::sequence_manager {
 		std::unique_ptr<SequenceManagerImpl>
 			SequenceManagerImpl::CreateSequenceFunneled(
 				scoped_refptr<SingleThreadTaskRunner> task_runner,
-				SequenceManager::Settings settings) {
+				Settings settings) {
 			return WrapUnique(
 				new SequenceManagerImpl(ThreadControllerImpl::CreateSequenceFunneled(
 					std::move(task_runner), settings.clock),
@@ -290,14 +290,6 @@ namespace base::sequence_manager {
 		void SequenceManagerImpl::BindToMessagePump(std::unique_ptr<MessagePump> pump) {
 			controller_->BindToCurrentThread(std::move(pump));
 			CompleteInitializationOnBoundThread();
-
-			// On Android attach to the native loop when there is one.
-#if defined(OS_ANDROID)
-			if (settings_.message_loop_type == MessagePumpType::UI ||
-				settings_.message_loop_type == MessagePumpType::JAVA) {
-				controller_->AttachToMessagePump();
-			}
-#endif
 		}
 
 		void SequenceManagerImpl::BindToCurrentThread() {
@@ -334,7 +326,7 @@ namespace base::sequence_manager {
 			return main_thread_only().real_time_domain.get();
 		}
 
-		std::unique_ptr<internal::TaskQueueImpl>
+		std::unique_ptr<TaskQueueImpl>
 		SequenceManagerImpl::CreateTaskQueueImpl(const TaskQueue::Spec& spec) {
 			DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
 			TimeDomain* time_domain = spec.time_domain
@@ -343,7 +335,7 @@ namespace base::sequence_manager {
 			DCHECK(main_thread_only().time_domains.find(time_domain) !=
 				main_thread_only().time_domains.end());
 			auto task_queue =
-				std::make_unique<internal::TaskQueueImpl>(this, time_domain, spec);
+				std::make_unique<TaskQueueImpl>(this, time_domain, spec);
 			main_thread_only().active_queues.insert(task_queue.get());
 			main_thread_only().selector.AddQueue(task_queue.get());
 			return task_queue;
@@ -362,13 +354,13 @@ namespace base::sequence_manager {
 		}
 
 		void SequenceManagerImpl::ShutdownTaskQueueGracefully(
-				std::unique_ptr<internal::TaskQueueImpl> task_queue) {
+				std::unique_ptr<TaskQueueImpl> task_queue) {
 			main_thread_only().queues_to_gracefully_shutdown[task_queue.get()] = 
 				std::move(task_queue);
 		}
 
 		void SequenceManagerImpl::UnregisterTaskQueueImpl(
-				std::unique_ptr<internal::TaskQueueImpl> task_queue) {
+				std::unique_ptr<TaskQueueImpl> task_queue) {
 			//TRACE_EVENT1("sequence_manager", "SequenceManagerImpl::UnregisterTaskQueue", 
 			//			   "queue_name", task_queue->GetName());
 			DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
@@ -433,7 +425,7 @@ namespace base::sequence_manager {
 				// We push them back onto the *front* of their original work queues,
 				// that's why we iterate |non_nestable_task_queue| in FIFO order.
 				while (!main_thread_only().non_nestable_task_queue.empty()) {
-					internal::TaskQueueImpl::DeferredNonNestableTask& non_nestable_task = 
+					TaskQueueImpl::DeferredNonNestableTask& non_nestable_task = 
 						main_thread_only().non_nestable_task_queue.back();
 					non_nestable_task.task_queue->RequeueDeferredNonNestableTask(
 						std::move(non_nestable_task));
@@ -484,7 +476,8 @@ namespace base::sequence_manager {
 			if (!task)
 				return std::nullopt;
 
-			auto& executing_task = *main_thread_only().task_execution_stack.rbegin();
+			auto& executing_task = 
+				*main_thread_only().task_execution_stack.rbegin();
 
 			// It's important that there are no active trace events here which will
 			// terminate before we finish executing the task.
@@ -506,7 +499,7 @@ namespace base::sequence_manager {
 				break;
 
 			case Settings::TaskLogging::kEnabled:
-				DVLOG(1) << "#"
+				LOG(INFO) << "#"
 					<< static_cast<uint64_t>(
 						executing_task.pending_task.enqueue_order())
 					<< " " << executing_task.task_queue_name
@@ -516,8 +509,7 @@ namespace base::sequence_manager {
 					<< executing_task.pending_task.posted_from.ToString();
 				break;
 
-			case Settings::TaskLogging::kEnabledWithBacktrace:
-			{
+			case Settings::TaskLogging::kEnabledWithBacktrace: {
 				std::array<const void*, PendingTask::kTaskBacktraceLength + 1> task_trace;
 				task_trace[0] = executing_task.pending_task.posted_from.program_counter();
 				std::copy(executing_task.pending_task.task_backtrace.begin(),
@@ -528,7 +520,7 @@ namespace base::sequence_manager {
 					++length;
 				if (length == 0)
 					break;
-				DVLOG(1) << "#"
+				LOG(INFO) << "#"
 					<< static_cast<uint64_t>(
 						executing_task.pending_task.enqueue_order())
 					<< " " << executing_task.task_queue_name
@@ -546,7 +538,8 @@ namespace base::sequence_manager {
 			CHECK(Validate());
 
 			DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
-			TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("sequence_manager"), "SequenceManagerImpl::TakeTask");
+			TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("sequence_manager"), 
+				"SequenceManagerImpl::TakeTask");
 
 			ReloadEmptyWorkQueues();
 			LazyNow lazy_now(controller_->GetClock());
@@ -560,7 +553,7 @@ namespace base::sequence_manager {
 			}
 
 			while (true) {
-				internal::WorkQueue* work_queue = 
+				WorkQueue* work_queue = 
 					main_thread_only().selector.SelectWorkQueueToService();
 				//TRACE_EVENT_OBJECT_SNAPSHOT_WITH_ID(TRACE_DISABLED_BY_DEFAULT("sequence_manager.debug"), "SequenceManager", this, AsValueWithSelectorResult(work_queue, /* force_verbose */ false));
 
@@ -577,7 +570,7 @@ namespace base::sequence_manager {
 					// the additional delay should not be a problem.
 					// Note because we don't delete queues while nested, it's perfectly OK to
 					// store the raw pointer for |queue| here.
-					internal::TaskQueueImpl::DeferredNonNestableTask deferred_task{
+					TaskQueueImpl::DeferredNonNestableTask deferred_task{
 						work_queue->TakeTaskFromWorkQueue(), work_queue->task_queue(),
 						work_queue->queue_type() };
 					main_thread_only().non_nestable_task_queue.push_back(
@@ -695,7 +688,7 @@ namespace base::sequence_manager {
 		}
 
 		TaskQueue::TaskTiming SequenceManagerImpl::InitializeTaskTiming(
-				internal::TaskQueueImpl* task_queue) {
+				TaskQueueImpl* task_queue) {
 			const auto records_wall_time = 	
 				ShouldRecordTaskTiming(task_queue) == TimeRecordingPolicy::DoRecord;
 			const auto records_thread_time = records_wall_time && ShouldRecordCPUTimeForTask();
@@ -703,7 +696,7 @@ namespace base::sequence_manager {
 		}
 
 		TimeRecordingPolicy SequenceManagerImpl::ShouldRecordTaskTiming(
-				const internal::TaskQueueImpl* task_queue) {
+				const TaskQueueImpl* task_queue) {
 			if (task_queue->RequiresTaskTiming())
 				return TimeRecordingPolicy::DoRecord;
 			if (main_thread_only().nesting_depth == 0 &&
@@ -851,7 +844,7 @@ namespace base::sequence_manager {
 
 		std::unique_ptr<trace_event::ConvertableToTraceFormat>
 		SequenceManagerImpl::AsValueWithSelectorResult(
-				internal::WorkQueue* selected_work_queue, 
+				WorkQueue* selected_work_queue, 
 				bool force_verbose) const {
 			DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
 			std::unique_ptr<trace_event::TracedValue> state(
@@ -888,7 +881,7 @@ namespace base::sequence_manager {
 			return std::move(state);
 		}
 
-		void SequenceManagerImpl::OnTaskQueueEnabled(internal::TaskQueueImpl* queue) {
+		void SequenceManagerImpl::OnTaskQueueEnabled(TaskQueueImpl* queue) {
 			DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
 			DCHECK(queue->IsQueueEnabled());
 			// Only schedule DoWork if there's something to do.
@@ -1078,7 +1071,7 @@ namespace base::sequence_manager {
 		void SequenceManagerImpl::EnableCrashKeys(const char* async_stack_crash_key) {
 			DCHECK(!main_thread_only().async_stack_crash_key);
 #if !defined(OS_NACL)
-			main_thread_only().async_stack_crash_key = debug::AllocateCrashKeyString(
+			main_thread_only().async_stack_crash_key = AllocateCrashKeyString(
 				async_stack_crash_key, debug::CrashKeySize::Size64);
 			static_assert(sizeof(main_thread_only().async_stack_buffer) ==
 				static_cast<size_t>(debug::CrashKeySize::Size64),

@@ -8,9 +8,7 @@
 
 #include "base_export.h"
 #include "callback.h"
-#include "memory/ref_counted.h"
 #include "task/task_traits.h"
-#include "task_runner.h"
 #include "time/time.h"
 #include "build_config.h"
 
@@ -46,7 +44,6 @@ namespace base {
 			enum class CommonThreadPoolEnvironment {
 				// Use the default environment (no environment).
 				DEFAULT,
-#if defined(OS_WIN)
 				// Place the pool's workers in a COM MTA.
 				COM_MTA,
 				// Place the pool's *foreground* workers in a COM STA. This exists to
@@ -55,7 +52,6 @@ namespace base {
 				// CreateCOMSTATaskRunner() instead of Create(Sequenced)TaskRunner() +
 				// this init param.
 				DEPRECATED_COM_STA_IN_FOREGROUND_GROUP,
-#endif  // defined(OS_WIN)
 			};
 
 			InitParams(int max_num_foreground_threads_in);
@@ -69,8 +65,23 @@ namespace base {
 			CommonThreadPoolEnvironment common_thread_pool_environment =
 				CommonThreadPoolEnvironment::DEFAULT;
 
-			// Suggested time after which an unused thread can be reclaimed.
-			TimeDelta suggested_reclaim_time = TimeDelta::FromSeconds(30);
+			// An experiment conducted in July 2019 revealed that on Android, changing
+			// the reclaim time from 30 seconds to 5 minutes:
+			// - Reduces jank by 5% at 99th percentile
+			// - Reduces first input delay by 5% at 99th percentile
+			// - Reduces input delay by 3% at 50th percentile
+			// - Reduces navigation to first contentful paint by 2-3% at 25-95th
+			//   percentiles
+			// On Windows and Mac, we instead see no impact or small regressions.
+			//
+			// TODO(scheduler-dev): Conduct experiments to find the optimal value for
+			// each process type on each platform. In particular, due to regressions at
+			// high percentiles for *HeartbeatLatencyMicroseconds.Renderer* histograms,
+			// it was suggested that we might want a different reclaim time in
+			// renderers. Note that the regression is not present in
+			// *TaskLatencyMicroseconds.Renderer* histograms.
+			TimeDelta suggested_reclaim_time =
+				TimeDelta::FromSeconds(30);
 		};
 
 		// A Scoped(BestEffort)ExecutionFence prevents new tasks of any/BEST_EFFORT
@@ -162,7 +173,6 @@ namespace base {
 		// not thread-safe; proper synchronization is required to use the post_task.h
 		// API after registering a new ThreadPoolInstance.
 
-#if !defined(OS_NACL)
   // Creates and starts a thread pool using default params. |name| is used to
   // label histograms, it must not be empty. It should identify the component
   // that calls this. Start() is called by this method; it is invalid to call it
@@ -173,7 +183,6 @@ namespace base {
 		// Same as CreateAndStartWithDefaultParams() but allows callers to split the
 		// Create() and StartWithDefaultParams() calls.
 		void StartWithDefaultParams();
-#endif  // !defined(OS_NACL)
 
 		// Creates a ready to start thread pool. |name| is used to label histograms,
 		// it must not be empty. It should identify the component that creates the

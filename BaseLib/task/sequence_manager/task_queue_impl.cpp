@@ -12,6 +12,7 @@
 #include "task/sequence_manager/sequence_manager_impl.h"
 #include "task/sequence_manager/time_domain.h"
 #include "task/sequence_manager/work_queue.h"
+#include "task/task_observer.h"
 #include "threading/thread_restrictions.h"
 #include "time/time.h"
 #include "trace_event/blame_context.h"
@@ -276,13 +277,19 @@ namespace base::sequence_manager {
 				const auto sequence_number = sequence_manager_->GetNextSequenceNumber();
 				const auto was_immediate_incoming_queue_empty =
 					any_thread_.immediate_incoming_queue.empty();
-				base::TimeTicks desired_run_time;
+				base::TimeTicks delayed_run_time;
 				// The desired run time is only required when delayed fence is allowed.
 				// Avoid evaluating it when not required.
-				if (delayed_fence_allowed_)
-					desired_run_time = lazy_now.Now();
+			    //
+			    // TODO(https://crbug.com/997203) The code that records jank metrics depends
+			    // on the delayed run time to be set when |add_queue_time_to_tasks| is true.
+			    // We should remove that dependency and only set the delayed run time here
+			    // when |delayed_fence_allowed_| is true. See https://crbug.com/997203#c22
+			    // for details about the dependency.
+				if (delayed_fence_allowed_ || add_queue_time_to_tasks)
+					delayed_run_time = lazy_now.Now();
 				any_thread_.immediate_incoming_queue.push_back(Task(
-					std::move(task), desired_run_time, sequence_number, sequence_number));
+					std::move(task), delayed_run_time, sequence_number, sequence_number));
 
 				if (any_thread_.on_task_ready_handler) {
 					any_thread_.on_task_ready_handler.Run(
@@ -336,14 +343,12 @@ namespace base::sequence_manager {
 			DCHECK_GT(task.delay, TimeDelta());
 
 			WakeUpResolution resolution = WakeUpResolution::kLow;
-#if defined(OS_WIN)
 			// We consider the task needs a high resolution timer if the delay is more
 			// than 0 and less than 32ms. This caps the relative error to less than 50% :
 			// a 33ms wait can wake at 48ms since the default resolution on Windows is
 			// between 10 and 15ms.
 			if (task.delay.InMilliseconds() < (2 * Time::kMinLowResolutionThresholdMs))
 				resolution = WakeUpResolution::kHigh;
-#endif  // defined(OS_WIN)
 
 			if (current_thread == CurrentThread::kMainThread) {
 				// Lock-free fast path for delayed tasks posted from the main thread.

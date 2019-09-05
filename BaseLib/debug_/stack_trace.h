@@ -8,19 +8,9 @@
 #include <string>
 
 #include "base_export.h"
-#include "build_config.h"
 
-#if defined(OS_POSIX)
-#if !defined(OS_NACL)
-#include <signal.h>
-#endif
-#include <unistd.h>
-#endif
-
-#if defined(OS_WIN)
 struct _EXCEPTION_POINTERS;
 struct _CONTEXT;
-#endif
 
 namespace base {
 	namespace debug {
@@ -35,19 +25,6 @@ namespace base {
 		// that are loaded in memory and caches their file descriptors (this cannot be
 		// done in official builds because it has security implications).
 		BASE_EXPORT bool EnableInProcessStackDumping();
-
-		#if defined(OS_POSIX) && !defined(OS_NACL)
-		// Sets a first-chance callback for the stack dump signal handler. This callback
-		// is called at the beginning of the signal handler to handle special kinds of
-		// signals, like out-of-bounds memory accesses in WebAssembly (WebAssembly Trap
-		// Handler).
-		// {SetStackDumpFirstChanceCallback} returns {true} if the callback
-		// has been set correctly. It returns {false} if the stack dump signal handler
-		// has not been registered with the OS, e.g. because of ASAN.
-		BASE_EXPORT bool SetStackDumpFirstChanceCallback(bool (*handler)(int,
-                                                             siginfo_t*,
-                                                             void*));
-		#endif
 
 		// Returns end of the stack, or 0 if we couldn't get it.
 /*#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
@@ -71,13 +48,11 @@ namespace base {
 			// limited to at most |kMaxTraces|.
 			StackTrace(const void* const* trace, size_t count);
 
-#if defined(OS_WIN)
 			// Creates a stacktrace for an exception.
 			// Note: this function will throw an import not found (StackWalk64) exception
 			// on system without dbghelp 5.1.
 			StackTrace(_EXCEPTION_POINTERS* exception_pointers);
 			StackTrace(const _CONTEXT* context);
-#endif
 
 			// Copying and assignment are allowed with the default functions.
 
@@ -92,13 +67,11 @@ namespace base {
 			// each output line.
 			void PrintWithPrefix(const char* prefix_string) const;
 
-#if !defined(__UCLIBC__) & !defined(_AIX)
 			// Resolves backtrace to symbols and write to stream.
 			void OutputToStream(std::ostream* os) const;
 			// Resolves backtrace to symbols and write to stream, with the provided
 			// prefix string prepended to each line.
 			void OutputToStreamWithPrefix(std::ostream* os, const char* prefix_string) const;
-#endif
 
 			// Resolves backtrace to symbols and returns as string.
 			std::string ToString() const;
@@ -108,19 +81,11 @@ namespace base {
 			std::string ToStringWithPrefix(const char* prefix_string) const;
 
 		private:
-#if defined(OS_WIN)
 			void InitTrace(const _CONTEXT* context_record);
-#endif
 
-#if defined(OS_ANDROID)
-			// TODO(https://crbug.com/925525): Testing indicates that Android has issues
-			// with a larger value here, so leave Android at 62.
-			static constexpr int kMaxTraces = 62;
-#else
 			// For other platforms, use 250. This seems reasonable without
 			// being huge.
 			static constexpr int kMaxTraces = 250;
-#endif
 
 			void* trace_[kMaxTraces]{};
 
@@ -134,24 +99,6 @@ namespace base {
 		// Record a stack trace with up to |count| frames into |trace|. Returns the
 		// number of frames read.
 		BASE_EXPORT size_t CollectStackTrace(void** trace, size_t count);
-
-		namespace internal {
-
-#if defined(OS_POSIX) && !defined(OS_ANDROID)
-			// POSIX doesn't define any async-signal safe function for converting
-			// an integer to ASCII. We'll have to define our own version.
-			// itoa_r() converts a (signed) integer to ASCII. It returns "buf", if the
-			// conversion was successful or NULL otherwise. It never writes more than "sz"
-			// bytes. Output will be truncated as needed, and a NUL character is always
-			// appended.
-			BASE_EXPORT char *itoa_r(intptr_t i,
-			                         char *buf,
-			                         size_t sz,
-			                         int base,
-			                         size_t padding);
-#endif  // defined(OS_POSIX) && !defined(OS_ANDROID)
-
-		}  // namespace internal
 
 	}  // namespace debug
 }  // namespace base

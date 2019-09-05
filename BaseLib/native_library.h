@@ -11,61 +11,22 @@
 
 #include "base_export.h"
 #include "files/file_path.h"
-#include "build_config.h"
 
-#if defined(OS_WIN)
-#include <windows.h>
-#elif defined(OS_MACOSX)
-#import <CoreFoundation/CoreFoundation.h>
-#endif  // OS_*
+#include <Windows.h>
 
 namespace base
 {
 
-#if defined(OS_WIN)
 	using NativeLibrary = HMODULE;
-#elif defined(OS_MACOSX)
-	enum NativeLibraryType
-	{
-		BUNDLE,
-		DYNAMIC_LIB
-	};
-	enum NativeLibraryObjCStatus
-	{
-		OBJC_UNKNOWN,
-		OBJC_PRESENT,
-		OBJC_NOT_PRESENT,
-	};
-	struct NativeLibraryStruct
-	{
-		NativeLibraryType type;
-		CFBundleRefNum bundle_resource_ref;
-		NativeLibraryObjCStatus objc_status;
-		union
-		{
-			CFBundleRef bundle;
-			void* dylib;
-		};
-	};
-	using NativeLibrary = NativeLibraryStruct *;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-	using NativeLibrary = void*;
-#endif  // OS_*
 
 	struct BASE_EXPORT NativeLibraryLoadError
 	{
-#if defined(OS_WIN)
 		NativeLibraryLoadError() : code(0) {}
-#endif  // OS_WIN
 
 		// Returns a string representation of the load error.
 		std::string ToString() const;
 
-#if defined(OS_WIN)
 		DWORD code;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-		std::string message;
-#endif  // OS_WIN
 	};
 
 	struct BASE_EXPORT NativeLibraryOptions
@@ -87,7 +48,6 @@ namespace base
 	BASE_EXPORT NativeLibrary LoadNativeLibrary(const FilePath& library_path,
 		NativeLibraryLoadError* error);
 
-#if defined(OS_WIN)
 	// Loads a native library from the system directory using the appropriate flags.
 	// The function first checks to see if the library is already loaded and will
 	// get a handle if so. Blocking may occur if the library is not loaded and
@@ -100,7 +60,6 @@ namespace base
 	// method returns null and includes the error. This method results in a lock
 	// that may block the calling thread.
 	BASE_EXPORT NativeLibrary PinSystemLibrary(FilePath::StringPieceType name, NativeLibraryLoadError* error = nullptr);
-#endif
 
 	// Loads a native library from disk.  Release it with UnloadNativeLibrary when
 	// you're done.  Returns NULL on failure.

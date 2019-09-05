@@ -8,7 +8,7 @@
 //    OS_NACL (NACL_SFI or NACL_NONSFI) / OS_NACL_SFI / OS_NACL_NONSFI
 //    OS_CHROMEOS is set by the build system
 //  Compiler:
-//    COMPILER_MSVC / COMPILER_GCC
+//    COMPILER_MSVC
 //  Processor:
 //    ARCH_CPU_X86 / ARCH_CPU_X86_64 / ARCH_CPU_X86_FAMILY (X86 or X86_64)
 //    ARCH_CPU_32_BITS / ARCH_CPU_64_BITS
@@ -176,30 +176,4 @@
 #endif
 
 // Type detection for wchar_t.
-#if defined(OS_WIN)
 #define WCHAR_T_IS_UTF16
-#elif defined(OS_FUCHSIA)
-#define WCHAR_T_IS_UTF32
-#elif defined(OS_POSIX) && defined(COMPILER_GCC) && defined(__WCHAR_MAX__) && \
-    (__WCHAR_MAX__ == 0x7fffffff || __WCHAR_MAX__ == 0xffffffff)
-#define WCHAR_T_IS_UTF32
-#elif defined(OS_POSIX) && defined(COMPILER_GCC) && defined(__WCHAR_MAX__) && \
-    (__WCHAR_MAX__ == 0x7fff || __WCHAR_MAX__ == 0xffff)
-// On Posix, we'll detect short wchar_t, but projects aren't guaranteed to
-// compile in this mode (in particular, Chrome doesn't). This is intended for
-// other projects using base who manage their own dependencies and make sure
-// short wchar works for them.
-#define WCHAR_T_IS_UTF16
-#else
-#error Please add support for your compiler in build_config.h
-#endif
-
-#if defined(OS_ANDROID)
-// The compiler thinks std::string::const_iterator and "const char*" are
-// equivalent types.
-#define STD_STRING_ITERATOR_IS_CHAR_POINTER
-// The compiler thinks base::string16::const_iterator and "char16*" are
-// equivalent types.
-#define BASE_STRING16_ITERATOR_IS_CHAR16_POINTER
-#endif
-

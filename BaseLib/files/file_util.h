@@ -11,22 +11,9 @@
 #include <cstdint>
 #include <string>
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
-
 #include "base_export.h"
 #include "files/file.h"
 #include "files/file_path.h"
-#include "build_config.h"
-
-#if defined(OS_WIN)
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-#include "base/file_descriptor_posix.h"
-#include "base/logging.h"
-#include "base/posix/eintr_wrapper.h"
-#endif
 
 namespace base {
 
@@ -62,14 +49,12 @@ namespace base {
 	//          TO "rm -rf", SO USE WITH CAUTION.
 	BASE_EXPORT bool DeleteFile(const FilePath& path, bool recursive);
 
-#if defined(OS_WIN)
 	// Schedules to delete the given path, whether it's a file or a directory, until
 	// the operating system is restarted.
 	// Note:
 	// 1) The file/directory to be deleted should exist in a temp folder.
 	// 2) The directory to be deleted must be empty.
 	BASE_EXPORT bool DeleteFileAfterReboot(const FilePath& path);
-#endif
 
 	// Moves the given path, whether it's a file or a directory.
 	// If a simple rename is not possible, such as in the case where the paths are
@@ -171,73 +156,6 @@ namespace base {
 												 std::string* contents, 
 												 size_t max_size);
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-
-	// Read exactly |bytes| bytes from file descriptor |fd|, storing the result
-	// in |buffer|. This function is protected against EINTR and partial reads.
-	// Returns true iff |bytes| bytes have been successfully read from |fd|.
-	BASE_EXPORT bool ReadFromFD(int fd, char* buffer, size_t bytes);
-
-	// Performs the same function as CreateAndOpenTemporaryFileInDir(), but returns
-	// the file-descriptor wrapped in a ScopedFD, rather than wrapped in a FILE.
-	BASE_EXPORT ScopedFD CreateAndOpenFdForTemporaryFileInDir(const FilePath& dir,
-		FilePath* path);
-
-#endif  // defined(OS_POSIX) || defined(OS_FUCHSIA)
-
-#if defined(OS_POSIX)
-
-	// Creates a symbolic link at |symlink| pointing to |target|.  Returns
-	// false on failure.
-	BASE_EXPORT bool CreateSymbolicLink(const FilePath& target,
-		const FilePath& symlink);
-
-	// Reads the given |symlink| and returns where it points to in |target|.
-	// Returns false upon failure.
-	BASE_EXPORT bool ReadSymbolicLink(const FilePath& symlink, FilePath* target);
-
-	// Bits and masks of the file permission.
-	enum FilePermissionBits {
-		FILE_PERMISSION_MASK = S_IRWXU | S_IRWXG | S_IRWXO,
-		FILE_PERMISSION_USER_MASK = S_IRWXU,
-		FILE_PERMISSION_GROUP_MASK = S_IRWXG,
-		FILE_PERMISSION_OTHERS_MASK = S_IRWXO,
-
-		FILE_PERMISSION_READ_BY_USER = S_IRUSR,
-		FILE_PERMISSION_WRITE_BY_USER = S_IWUSR,
-		FILE_PERMISSION_EXECUTE_BY_USER = S_IXUSR,
-		FILE_PERMISSION_READ_BY_GROUP = S_IRGRP,
-		FILE_PERMISSION_WRITE_BY_GROUP = S_IWGRP,
-		FILE_PERMISSION_EXECUTE_BY_GROUP = S_IXGRP,
-		FILE_PERMISSION_READ_BY_OTHERS = S_IROTH,
-		FILE_PERMISSION_WRITE_BY_OTHERS = S_IWOTH,
-		FILE_PERMISSION_EXECUTE_BY_OTHERS = S_IXOTH,
-	};
-
-	// Reads the permission of the given |path|, storing the file permission
-	// bits in |mode|. If |path| is symbolic link, |mode| is the permission of
-	// a file which the symlink points to.
-	BASE_EXPORT bool GetPosixFilePermissions(const FilePath& path, int* mode);
-	// Sets the permission of the given |path|. If |path| is symbolic link, sets
-	// the permission of a file which the symlink points to.
-	BASE_EXPORT bool SetPosixFilePermissions(const FilePath& path, int mode);
-
-	// Returns true iff |executable| can be found in any directory specified by the
-	// environment variable in |env|.
-	BASE_EXPORT bool ExecutableExistsInPath(Environment* env,
-		const FilePath::StringType& executable);
-
-#if defined(OS_LINUX) || defined(OS_AIX)
-	// Determine if files under a given |path| can be mapped and then mprotect'd
-	// PROT_EXEC. This depends on the mount options used for |path|, which vary
-	// among different Linux distributions and possibly local configuration. It also
-	// depends on details of kernel--ChromeOS uses the noexec option for /dev/shm
-	// but its kernel allows mprotect with PROT_EXEC anyway.
-	BASE_EXPORT bool IsPathExecutable(const FilePath & path);
-#endif  // OS_LINUX || OS_AIX
-
-#endif  // OS_POSIX
-
 	// Returns true if the given directory is empty
 	BASE_EXPORT bool IsDirectoryEmpty(const FilePath& dir_path);
 
@@ -310,8 +228,6 @@ namespace base {
 	// fail if |real_path| would be longer than MAX_PATH characters.
 	BASE_EXPORT bool NormalizeFilePath(const FilePath& path, FilePath* real_path);
 
-#if defined(OS_WIN)
-
 	// Given a path in NT native form ("\Device\HarddiskVolumeXX\..."),
 	// return in |drive_letter_path| the equivalent path that starts with
 	// a drive letter ("C:\...").  Return false if no such path exists.
@@ -326,7 +242,6 @@ namespace base {
 	// base::GetTempDir) just uses the value specified by TMP or TEMP, and so can
 	// return a short path. Returns an empty path on error.
 	BASE_EXPORT FilePath MakeLongFilePath(const FilePath& input);
-#endif
 
 	// This function will return if the given file is a symlink or not.
 	BASE_EXPORT bool IsLink(const FilePath& file_path);
@@ -364,20 +279,6 @@ namespace base {
 	BASE_EXPORT int WriteFile(const FilePath& filename, const char* data,
 		int size);
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-	// Appends |data| to |fd|. Does not close |fd| when done.  Returns true iff
-	// |size| bytes of |data| were written to |fd|.
-	BASE_EXPORT bool WriteFileDescriptor(const int fd, const char* data, int size);
-
-	// Allocates disk space for the file referred to by |fd| for the byte range
-	// starting at |offset| and continuing for |size| bytes. The file size will be
-	// changed if |offset|+|len| is greater than the file size. Zeros will fill the
-	// new space.
-	// After a successful call, subsequent writes into the specified range are
-	// guaranteed not to fail because of lack of disk space.
-	BASE_EXPORT bool AllocateFileRegion(File* file, int64_t offset, size_t size);
-#endif
-
 	// Appends |data| to |filename|.  Returns true iff |size| bytes of |data| were
 	// written to |filename|.
 	BASE_EXPORT bool AppendToFile(const FilePath& filename,
@@ -390,16 +291,19 @@ namespace base {
 	// Sets the current working directory for the process.
 	BASE_EXPORT bool SetCurrentDirectory(const FilePath& path);
 
-	// Attempts to find a number that can be appended to the |path| to make it
-	// unique. If |path| does not exist, 0 is returned.  If it fails to find such
-	// a number, -1 is returned. If |suffix| is not empty, also checks the
-	// existence of it with the given suffix.
-	BASE_EXPORT int GetUniquePathNumber(
-		const FilePath& path,
-    	FilePath::StringPieceType suffix = FilePath::StringPieceType());
+	// The largest value attempted by GetUniquePath{Number,}.
+	enum { kMaxUniqueFiles = 100 };
 
-	// If file at |path| already exists, modifies filename portion of |path| to
-	// return unique path.
+	// Returns the number N that makes |path| unique when formatted as " (N)" in a
+	// suffix to its basename before any file extension, where N is a number between
+	// 1 and 100 (inclusive). Returns 0 if |path| does not exist (meaning that it is
+	// unique as-is), or -1 if no such number can be found.
+	BASE_EXPORT int GetUniquePathNumber(const FilePath& path);
+
+	// Returns |path| if it does not exist. Otherwise, returns |path| with the
+	// suffix " (N)" appended to its basename before any file extension, where N is
+	// a number between 1 and 100 (inclusive). Returns an empty path if no such
+	// number can be found.
 	BASE_EXPORT FilePath GetUniquePath(const FilePath& path);
 
 	// Sets the given |fd| to non-blocking mode.
@@ -407,88 +311,9 @@ namespace base {
 	// false.
 	BASE_EXPORT bool SetNonBlocking(int fd);
 
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-
-	// Creates a pipe. Returns true on success, otherwise false.
-	// On success, |read_fd| will be set to the fd of the read side, and
-	// |write_fd| will be set to the one of write side. If |non_blocking|
-	// is set the pipe will be created with O_NONBLOCK|O_CLOEXEC flags set
-	// otherwise flag is set to zero (default).
-	BASE_EXPORT bool CreatePipe(ScopedFD * read_fd,
-		ScopedFD * write_fd,
-		bool non_blocking = false);
-
-	// Creates a non-blocking, close-on-exec pipe.
-	// This creates a non-blocking pipe that is not intended to be shared with any
-	// child process. This will be done atomically if the operating system supports
-	// it. Returns true if it was able to create the pipe, otherwise false.
-	BASE_EXPORT bool CreateLocalNonBlockingPipe(int fds[2]);
-
-	// Sets the given |fd| to close-on-exec mode.
-	// Returns true if it was able to set it in the close-on-exec mode, otherwise
-	// false.
-	BASE_EXPORT bool SetCloseOnExec(int fd);
-
-	// Test that |path| can only be changed by a given user and members of
-	// a given set of groups.
-	// Specifically, test that all parts of |path| under (and including) |base|:
-	// * Exist.
-	// * Are owned by a specific user.
-	// * Are not writable by all users.
-	// * Are owned by a member of a given set of groups, or are not writable by
-	//   their group.
-	// * Are not symbolic links.
-	// This is useful for checking that a config file is administrator-controlled.
-	// |base| must contain |path|.
-	BASE_EXPORT bool VerifyPathControlledByUser(const base::FilePath& base,
-		const base::FilePath& path,
-		uid_t owner_uid,
-		const std::set<gid_t>& group_gids);
-#endif  // defined(OS_POSIX) || defined(OS_FUCHSIA)
-
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-	// Is |path| writable only by a user with administrator privileges?
-	// This function uses Mac OS conventions.  The super user is assumed to have
-	// uid 0, and the administrator group is assumed to be named "admin".
-	// Testing that |path|, and every parent directory including the root of
-	// the filesystem, are owned by the superuser, controlled by the group
-	// "admin", are not writable by all users, and contain no symbolic links.
-	// Will return false if |path| does not exist.
-	BASE_EXPORT bool VerifyPathControlledByAdmin(const base::FilePath& path);
-#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
-
 	// Returns the maximum length of path component on the volume containing
 	// the directory |path|, in the number of FilePath::CharType, or -1 on failure.
 	BASE_EXPORT int GetMaximumPathComponentLength(const base::FilePath& path);
-
-#if defined(OS_LINUX) || defined(OS_AIX)
-	// Broad categories of file systems as returned by statfs() on Linux.
-	enum FileSystemType {
-		FILE_SYSTEM_UNKNOWN,  // statfs failed.
-		FILE_SYSTEM_0,        // statfs.f_type == 0 means unknown, may indicate AFS.
-		FILE_SYSTEM_ORDINARY,       // on-disk filesystem like ext2
-		FILE_SYSTEM_NFS,
-		FILE_SYSTEM_SMB,
-		FILE_SYSTEM_CODA,
-		FILE_SYSTEM_MEMORY,         // in-memory file system
-		FILE_SYSTEM_CGROUP,         // cgroup control.
-		FILE_SYSTEM_OTHER,          // any other value.
-		FILE_SYSTEM_TYPE_COUNT
-	};
-
-	// Attempts determine the FileSystemType for |path|.
-	// Returns false if |path| doesn't exist.
-	BASE_EXPORT bool GetFileSystemType(const FilePath& path, FileSystemType* type);
-#endif
-
-#if defined(OS_POSIX) || defined(OS_FUCHSIA)
-	// Get a temporary directory for shared memory files. The directory may depend
-	// on whether the destination is intended for executable files, which in turn
-	// depends on how /dev/shmem was mounted. As a result, you must supply whether
-	// you intend to create executable shmem segments so this function can find
-	// an appropriate location.
-	BASE_EXPORT bool GetShmemTempDir(bool executable, FilePath * path);
-#endif
 
 	// Internal --------------------------------------------------------------------
 
@@ -499,14 +324,12 @@ namespace base {
 		BASE_EXPORT bool MoveUnsafe(const FilePath& from_path,
 			const FilePath& to_path);
 
-#if defined(OS_WIN)
 		// Copy from_path to to_path recursively and then delete from_path recursively.
 		// Returns true if all operations succeed.
 		// This function simulates Move(), but unlike Move() it works across volumes.
 		// This function is not transactional.
 		BASE_EXPORT bool CopyAndDeleteDirectory(const FilePath& from_path,
 			const FilePath& to_path);
-#endif  // defined(OS_WIN)
 
 	}  // namespace internal
 }  // namespace base

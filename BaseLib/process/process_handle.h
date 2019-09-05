@@ -5,52 +5,27 @@
 #pragma once
 
 #include <cstdint>
-#include <sys/types.h>
 
 #include "base_export.h"
 #include "files/file_path.h"
-#include "build_config.h"
 
-#if defined(OS_WIN)
 #include "win/windows_types.h"
-#endif
-
-#if defined(OS_FUCHSIA)
-#include <zircon/types.h>
-#endif
 
 namespace base {
 
 	// ProcessHandle is a platform specific type which represents the underlying OS
 	// handle to a process.
 	// ProcessId is a number which identifies the process in the OS.
-#if defined(OS_WIN)
 	typedef HANDLE ProcessHandle;
 	typedef DWORD ProcessId;
 	typedef HANDLE UserTokenHandle;
 	const ProcessHandle kNullProcessHandle = NULL;
 	const ProcessId kNullProcessId = 0;
-#elif defined(OS_FUCHSIA)
-	typedef zx_handle_t ProcessHandle;
-	typedef zx_koid_t ProcessId;
-	const ProcessHandle kNullProcessHandle = ZX_HANDLE_INVALID;
-	const ProcessId kNullProcessId = ZX_KOID_INVALID;
-#elif defined(OS_POSIX)
-// On POSIX, our ProcessHandle will just be the PID.
-	typedef pid_t ProcessHandle;
-	typedef pid_t ProcessId;
-	const ProcessHandle kNullProcessHandle = 0;
-	const ProcessId kNullProcessId = 0;
-#endif  // defined(OS_WIN)
 
 	// To print ProcessIds portably use CrPRIdPid (based on PRIuS and friends from
 	// C99 and format_macros.h) like this:
 	// base::StringPrintf("PID is %" CrPRIdPid ".\n", pid);
-#if defined(OS_WIN) || defined(OS_FUCHSIA)
 #define CrPRIdPid "ld"
-#else
-#define CrPRIdPid "d"
-#endif
 
 	class UniqueProcId {
 	public:
@@ -102,17 +77,6 @@ namespace base {
 	// processes may be reused.
 	BASE_EXPORT UniqueProcId GetUniqueIdForProcess();
 
-#if defined(OS_LINUX)
-	// When a process is started in a different PID namespace from the browser
-	// process, this function must be called with the process's PID in the browser's
-	// PID namespace in order to initialize its unique ID. Not thread safe.
-	// WARNING: To avoid inconsistent results from GetUniqueIdForProcess, this
-	// should only be called very early after process startup - ideally as soon
-	// after process creation as possible.
-	BASE_EXPORT void InitUniqueIdForProcessInPidNamespace(
-		ProcessId pid_outside_of_namespace);
-#endif
-
 	// Returns the ProcessHandle of the current process.
 	BASE_EXPORT ProcessHandle GetCurrentProcessHandle();
 
@@ -124,16 +88,9 @@ namespace base {
 	// processes.
 	BASE_EXPORT ProcessId GetProcId(ProcessHandle process);
 
-#if !defined(OS_FUCHSIA)
 	// Returns the ID for the parent of the given process. Not available on Fuchsia.
 	// Returning a negative value indicates an error, such as if the |process| does
 	// not exist. Returns 0 when |process| has no parent process.
 	BASE_EXPORT ProcessId GetParentProcessId(ProcessHandle process);
-#endif  // !defined(OS_FUCHSIA)
-
-#if defined(OS_POSIX)
-	// Returns the path to the executable of the given process.
-	BASE_EXPORT FilePath GetProcessExecutablePath(ProcessHandle process);
-#endif
 
 } // namespace base

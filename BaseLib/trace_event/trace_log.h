@@ -23,7 +23,6 @@
 #include "trace_event/trace_config.h"
 #include "trace_event/trace_event_impl.h"
 #include "threading/thread_local.h"
-#include "build_config.h"
 
 namespace base {
 	class RefCountedString;
@@ -103,11 +102,6 @@ namespace base {
 			// implement the TRACE_EVENT_IS_NEW_TRACE() primitive.
 			int GetNumTracesRecorded() const;
 
-#if defined(OS_ANDROID)
-			void StartATrace();
-			void StopATrace();
-			void AddClockSyncMetadataEvent();
-#endif
 			// Enabled state listeners give a callback when tracing is enabled or
 			// disabled. This can be used to tie into other library's tracing systems
 			// on-demand.
@@ -352,12 +346,10 @@ namespace base {
 			// may not handle the flush request in time causing lost of unflushed events.
 			void SetCurrentThreadBlocksMessageLoop();
 
-#if defined(OS_WIN)
 			// This function is called by the ETW exporting module whenever the ETW
 			// keyword (flags) changes. This keyword indicates which categories should be
 			// exported, so whenever it changes, we adjust accordingly.
 			//void UpdateETWCategoryGroupEnabledFlags();
-#endif
 
 			// Replaces |logged_events_| with a new TraceBuffer for testing.
 			void SetTraceBufferForTesting(std::unique_ptr<TraceBuffer> trace_buffer);

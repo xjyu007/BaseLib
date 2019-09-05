@@ -16,22 +16,24 @@ namespace base {
 
 			~NoOpPromiseExecutor();
 
-			static scoped_refptr<internal::AbstractPromise> Create(
-				const Location& from_here,
-				bool can_resolve,
-				bool can_reject,
-				RejectPolicy reject_policy);
+		static constexpr PromiseExecutor::PrerequisitePolicy kPrerequisitePolicy =
+			PromiseExecutor::PrerequisitePolicy::kNever;
+
+		static scoped_refptr<AbstractPromise> Create(Location from_here,
+													 bool can_resolve,
+													 bool can_reject,
+													 RejectPolicy reject_policy);
 
 			[[nodiscard]] PromiseExecutor::PrerequisitePolicy GetPrerequisitePolicy() const;
-			[[nodiscard]] static bool IsCancelled();
+			[[nodiscard]] bool IsCancelled() const;
 
 #if DCHECK_IS_ON()
-			[[nodiscard]] static PromiseExecutor::ArgumentPassingType ResolveArgumentPassingType();
-			[[nodiscard]] static PromiseExecutor::ArgumentPassingType RejectArgumentPassingType();
+			[[nodiscard]] PromiseExecutor::ArgumentPassingType ResolveArgumentPassingType() const;
+			[[nodiscard]] PromiseExecutor::ArgumentPassingType RejectArgumentPassingType() const;
 			[[nodiscard]] bool CanResolve() const;
 			[[nodiscard]] bool CanReject() const;
 #endif
-			static void Execute(AbstractPromise* promise);
+			void Execute(AbstractPromise* promise);
 
 		private:
 #if DCHECK_IS_ON()

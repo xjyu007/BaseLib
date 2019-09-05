@@ -12,7 +12,6 @@
 #include "command_line.h"
 #include "feature_list.h"
 #include "location.h"
-#include "logging.h"
 #include "metrics/field_trial_params.h"
 #include "no_destructor.h"
 #include "system/sys_info_internal.h"
@@ -20,7 +19,6 @@
 #include "task/task_traits.h"
 #include "task_runner_util.h"
 #include "time/time.h"
-#include "build_config.h"
 
 namespace base {
 	namespace {
@@ -76,8 +74,6 @@ namespace base {
 		return IsLowEndDeviceImpl();
 	}
 
-#if !defined(OS_ANDROID)
-
 	bool DetectLowEndDevice() {
 		const auto command_line = CommandLine::ForCurrentProcess();
 		if (command_line->HasSwitch(switches::kEnableLowEndDeviceMode))
@@ -96,31 +92,15 @@ namespace base {
 			instance;
 		return instance->value();
 	}
-#endif
 
-#if !defined(OS_MACOSX) && !defined(OS_ANDROID)
 	std::string SysInfo::HardwareModelName() {
 		return std::string();
 	}
-#endif
 
 	void SysInfo::GetHardwareInfo(OnceCallback<void(HardwareInfo)> callback) {
-#if defined(OS_WIN)
 		PostTaskAndReplyWithResult(
 		CreateCOMSTATaskRunner({ThreadPool()}).get(), FROM_HERE,
 		BindOnce(&GetHardwareInfoSync), std::move(callback));
-#elif defined(OS_ANDROID) || defined(OS_MACOSX)
-		base::PostTaskAndReplyWithResult(
-			FROM_HERE, base::BindOnce(&GetHardwareInfoSync), std::move(callback));
-#elif defined(OS_LINUX)
-		base::PostTaskAndReplyWithResult(FROM_HERE, {ThreadPool(), base::MayBlock()},
-										 base::BindOnce(&GetHardwareInfoSync),
-										 std::move(callback));
-#else
-		NOTIMPLEMENTED();
-		base::PostTask(FROM_HERE,
-					   base::BindOnce(std::move(callback), HardwareInfo()));
-#endif
 	}
 
 	// static

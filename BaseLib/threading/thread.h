@@ -19,7 +19,6 @@
 #include "synchronization/lock.h"
 #include "synchronization/waitable_event.h"
 #include "threading/platform_thread.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -127,7 +126,6 @@ namespace base {
 		// before it is destructed.
 		~Thread() override;
 
-#if defined(OS_WIN)
 		// Causes the thread to initialize COM.  This must be called before calling
 		// Start() or StartWithOptions().  If |use_mta| is false, the thread is also
 		// started with a TYPE_UI message loop.  It is an error to call
@@ -137,7 +135,6 @@ namespace base {
 			DCHECK(!delegate_);
 			com_status_ = use_mta ? MTA : STA;
 		}
-#endif
 
 		// Starts the thread.  Returns true if the thread was successfully started;
 		// otherwise, returns false.  Upon successful return, the message_loop()
@@ -264,23 +261,19 @@ namespace base {
 		friend class MessageLoopTaskRunnerTest;
 		friend class ScheduleWorkTest;
 
-#if defined(OS_WIN)
 		enum ComStatus {
 			NONE,
 			STA,
 			MTA,
 		};
-#endif
 
 		// PlatformThread::Delegate methods:
 		void ThreadMain() override;
 
 		void ThreadQuitHelper() const;
 
-#if defined(OS_WIN)
 		// Whether this thread needs to initialize COM, and if so, in what mode.
 		ComStatus com_status_ = NONE;
-#endif
 
 		// Mirrors the Options::joinable field used to start this thread. Verified
 		// on Stop() -- non-joinable threads can't be joined (must be leaked).

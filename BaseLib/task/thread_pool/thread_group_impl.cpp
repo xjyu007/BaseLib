@@ -26,9 +26,7 @@
 #include "time/time_override.h"
 #include "build_config.h"
 
-#if defined(OS_WIN)
 #include "win/scoped_windows_thread_environment.h"
-#endif  // defined(OS_WIN)
 
 // Data from deprecated UMA histograms:
 //
@@ -210,7 +208,7 @@ namespace base::internal {
 		// WorkerThread::Delegate:
 		WorkerThread::ThreadLabel GetThreadLabel() const override;
 		void OnMainEntry(const WorkerThread* worker) override;
-		RunIntentWithRegisteredTaskSource GetWork(WorkerThread* worker) override;
+		RegisteredTaskSource GetWork(WorkerThread* worker) override;
 		void DidProcessTask(RegisteredTaskSource task_source) override;
 		TimeDelta GetSleepTimeout() override;
 		void OnMainExit(WorkerThread* worker) override;
@@ -272,9 +270,7 @@ namespace base::internal {
 			// yet).
 			bool is_running_task = false;
 
-#if defined(OS_WIN)
 			std::unique_ptr<win::ScopedWindowsThreadEnvironment> win_thread_environment{};
-#endif  // defined(OS_WIN)
 		} worker_only_;
 
 		// Writes from the worker thread protected by |outer_->lock_|. Reads from any
@@ -419,10 +415,9 @@ namespace base::internal {
 		DCHECK(workers_.empty());
 	}
 
-	void ThreadGroupImpl::UpdateSortKey(
-		TransactionWithOwnedTaskSource transaction_with_task_source) {
-		ScopedWorkersExecutor executor(this);
-		UpdateSortKeyImpl(&executor, std::move(transaction_with_task_source));
+	void ThreadGroupImpl::UpdateSortKey(TaskSource::Transaction transaction) {
+			ScopedWorkersExecutor executor(this);
+		UpdateSortKeyImpl(&executor, std::move(transaction));
 	}
 
 	void ThreadGroupImpl::PushTaskSourceAndWakeUpWorkers(
@@ -554,10 +549,8 @@ namespace base::internal {
 #endif
 		}
 
-#if defined(OS_WIN)
 		worker_only().win_thread_environment = GetScopedWindowsThreadEnvironment(
 			outer_->after_start().worker_environment);
-#endif  // defined(OS_WIN)
 
 		PlatformThread::SetName(
 			StringPrintf("ThreadPool%sWorker", outer_->thread_group_label_.c_str()));
@@ -566,8 +559,8 @@ namespace base::internal {
 		SetBlockingObserverForCurrentThread(this);
 	}
 
-	RunIntentWithRegisteredTaskSource
-		ThreadGroupImpl::WorkerThreadDelegateImpl::GetWork(WorkerThread* worker) {
+	RegisteredTaskSource ThreadGroupImpl::WorkerThreadDelegateImpl::GetWork(
+	    WorkerThread* worker) {
 		DCHECK_CALLED_ON_VALID_THREAD(worker_thread_checker_);
 		DCHECK(!worker_only().is_running_task);
 
@@ -585,7 +578,7 @@ namespace base::internal {
 		if (!CanGetWorkLockRequired(worker))
 			return nullptr;
 
-		RunIntentWithRegisteredTaskSource task_source;
+		RegisteredTaskSource task_source;
 		TaskPriority priority;
 		while (!task_source && !outer_->priority_queue_.IsEmpty()) {
 			// Enforce the CanRunPolicy and that no more than |max_best_effort_tasks_|
@@ -598,7 +591,7 @@ namespace base::internal {
 				break;
 			}
 
-			task_source = outer_->TakeRunIntentWithRegisteredTaskSource(&executor);
+			task_source = outer_->TakeRegisteredTaskSource(&executor);
 		}
 		if (!task_source) {
 			OnWorkerBecomesIdleLockRequired(worker);
@@ -752,9 +745,7 @@ namespace base::internal {
 		}
 #endif
 
-#if defined(OS_WIN)
 		worker_only().win_thread_environment.reset();
-#endif  // defined(OS_WIN)
 	}
 
 	void ThreadGroupImpl::WorkerThreadDelegateImpl::BlockingStarted(

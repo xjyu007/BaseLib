@@ -18,7 +18,7 @@ namespace base {
 	public:
 		using MessagePumpFactory = std::unique_ptr<MessagePump>();
 		// Uses the given base::MessagePumpFactory to override the default MessagePump
-		// implementation for 'Type::UI'. May only be called once.
+		// implementation for 'MessagePumpType::UI'. May only be called once.
 		static void OverrideMessagePumpForUIFactory(MessagePumpFactory* factory);
 
 		// Returns true if the MessagePumpForUI has been overidden.

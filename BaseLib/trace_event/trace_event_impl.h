@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <string>
 
-#include "atomicops.h"
 #include "base_export.h"
 #include "callback.h"
 #include "macros.h"
@@ -22,12 +21,12 @@
 namespace base {
 	namespace trace_event {
 
-		typedef base::RepeatingCallback<bool(const char* arg_name)>	ArgumentNameFilterPredicate;
+		typedef RepeatingCallback<bool(const char* arg_name)>	ArgumentNameFilterPredicate;
 
-		typedef base::RepeatingCallback<bool(const char* category_group_name, const char* event_name, ArgumentNameFilterPredicate*)>
+		typedef RepeatingCallback<bool(const char* category_group_name, const char* event_name, ArgumentNameFilterPredicate*)>
 			ArgumentFilterPredicate;
 
-		typedef base::RepeatingCallback<bool(const std::string& metadata_name)> MetadataFilterPredicate;
+		typedef RepeatingCallback<bool(const std::string& metadata_name)> MetadataFilterPredicate;
 
 		struct TraceEventHandle {
 			uint32_t chunk_seq;
@@ -41,7 +40,7 @@ namespace base {
 		class BASE_EXPORT TraceEvent {
 		public:
 			// TODO(898794): Remove once all users have been updated.
-			using TraceValue = base::trace_event::TraceValue;
+			using TraceValue = TraceValue;
 
 			TraceEvent();
 
@@ -147,10 +146,6 @@ namespace base {
 					? arg_value(index).as_convertable
 					: nullptr;
 			}
-
-#if defined(OS_ANDROID)
-			void SendToATrace();
-#endif
 
 		private:
 			void InitArgs(TraceArguments* args);

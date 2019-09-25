@@ -9,10 +9,12 @@
 #include <memory>
 #include <random>
 #include <set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 #include <optional>
 
+#include "atomic_sequence_num.h"
 #include "cancelable_callback.h"
 #include "containers/circular_deque.h"
 #include "debug_/crash_logging.h"
@@ -24,9 +26,11 @@
 #include "pending_task.h"
 #include "run_loop.h"
 #include "single_thread_task_runner.h"
+#include "synchronization/lock.h"
+#include "task/common/task_annotator.h"
 #include "task/sequence_manager/associated_thread_id.h"
 #include "task/sequence_manager/enqueue_order.h"
-//#include "task/sequence_manager/enqueue_order_generator.h"
+#include "task/sequence_manager/enqueue_order_generator.h"
 #include "task/sequence_manager/sequence_manager.h"
 #include "task/sequence_manager/task_queue_impl.h"
 #include "task/sequence_manager/task_queue_selector.h"
@@ -36,6 +40,8 @@
 #include "build_config.h"
 
 namespace base {
+
+	class TaskObserver;
 
 	namespace trace_event {
 		class ConvertableToTraceFormat;
@@ -382,7 +388,7 @@ namespace base {
 				TimeDelta GetDelayTillNextDelayedTask(LazyNow* lazy_now) const;
 
 #if DCHECK_IS_ON()
-				void LogTaskDebugInfo(const ExecutingTask& executing_task) const;
+				void LogTaskDebugInfo(const internal::WorkQueue* work_queue) const;
 #endif
 
 				// Determines if wall time or thread time should be recorded for the next
@@ -392,7 +398,7 @@ namespace base {
 
 				scoped_refptr<AssociatedThreadId> associated_thread_;
 
-				EnqueueOrder::Generator enqueue_order_generator_;
+				EnqueueOrderGenerator enqueue_order_generator_;
 
 				const std::unique_ptr<internal::ThreadController> controller_;
 				const Settings settings_;

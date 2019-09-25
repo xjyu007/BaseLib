@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <stdlib.h>
+#include <cstdlib>
 
 namespace base {
 

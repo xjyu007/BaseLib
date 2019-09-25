@@ -267,6 +267,7 @@ namespace base {
 	inline const wchar_t* as_u16cstr(std::wstring_view str) {
 		return reinterpret_cast<const wchar_t*>(str.data());
 	}
+
 #endif  // defined(WCHAR_T_IS_UTF16)
 
 	// Trims any whitespace from either end of the input string.
@@ -455,10 +456,6 @@ namespace base {
 	// convenient in that is can be used inline in the call, and fast in that it
 	// avoids copying the results of the call from a char* into a string.
 	//
-	// |length_with_null| must be at least 2, since otherwise the underlying string
-	// would have size 0, and trying to access &((*str)[0]) in that case can result
-	// in a number of problems.
-	//
 	// Internally, this takes linear time because the resize() call 0-fills the
 	// underlying array for potentially all
 	// (|length_with_null - 1| * sizeof(string_type::value_type)) bytes.  Ideally we
@@ -539,3 +536,4 @@ namespace base {
 }  // namespace base
 
 #include "strings/string_util_win.h"
+

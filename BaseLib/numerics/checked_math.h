@@ -56,13 +56,9 @@ namespace base {
 			// and is within the range supported by the destination type. Returns true if
 			// successful and false otherwise.
 			template <typename Dst>
-#if defined(__clang__) || defined(__GNUC__)
-			__attribute__((warn_unused_result))
-#elif defined(_MSC_VER)
 			_Check_return_
-#endif
 			constexpr bool AssignIfValid(Dst * result) const {
-				return BASE_NUMERICS_LIKELY(IsValid<Dst>()) ? ((*result = static_cast<Dst>(state_.value())), true) : false;
+				return IsValid<Dst>() ? ((*result = static_cast<Dst>(state_.value())), true) : false;
 			}
 
 			// ValueOrDie() - The primary accessor for the underlying value. If the
@@ -75,7 +71,7 @@ namespace base {
 			// the underlying value, and it is not available through other means.
 			template <typename Dst = T, class CheckHandler = CheckOnFailure>
 			[[nodiscard]] constexpr StrictNumeric<Dst> ValueOrDie() const {
-				return BASE_NUMERICS_LIKELY(IsValid<Dst>()) ? static_cast<Dst>(state_.value())
+				return IsValid<Dst>() ? static_cast<Dst>(state_.value())
 					: CheckHandler::template HandleFailure<Dst>();
 			}
 
@@ -87,7 +83,7 @@ namespace base {
 			// if the supplied default_value is not within range of the destination type.
 			template <typename Dst = T, typename Src>
 			constexpr StrictNumeric<Dst> ValueOrDefault(const Src default_value) const {
-				return BASE_NUMERICS_LIKELY(IsValid<Dst>())
+				return IsValid<Dst>()
 					? static_cast<Dst>(state_.value())
 					: checked_cast<Dst>(default_value);
 			}

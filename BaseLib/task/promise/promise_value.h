@@ -39,13 +39,10 @@ namespace base {
 				"Can't have Resolved<NoResolve>");
 		}
 
-		Resolved(const Resolved& other) = default;
-		Resolved(Resolved&& other) = default;
-
 		// Conversion constructor accepts any arguments except Resolved<T>.
 		/*template <
 			typename... Args,
-			std::enable_if_t < !all_of(
+			std::enable_if_t <!all_of(
 				{ std::is_same<Resolved, std::decay_t<Args>>::value... }) > * = nullptr >
 		Resolved(Args && ... args) noexcept : value(std::forward<Args>(args)...) {}*/
 
@@ -73,9 +70,6 @@ namespace base {
 			static_assert(!std::is_same<T, NoReject>::value,
 				"Can't have Rejected<NoReject>");
 		}
-
-		Rejected(const Rejected& other) = default;
-		Rejected(Rejected&& other) = default;
 
 		// Conversion constructor accepts any arguments except Rejected<T>.
 		/*template <

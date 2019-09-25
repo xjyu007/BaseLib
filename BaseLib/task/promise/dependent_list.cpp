@@ -14,8 +14,8 @@
 namespace base::internal {
 
 	// static
-	DependentList::Node* DependentList::ReverseList(Node* list) {
-		Node* prev = nullptr;
+	DependentList::Node* DependentList::ReverseList(DependentList::Node* list) {
+		DependentList::Node* prev = nullptr;
 		while (list) {
 			const auto next = list->next_;
 			list->next_ = prev;
@@ -27,11 +27,12 @@ namespace base::internal {
 
 	// static
 	void DependentList::DispatchAll(DependentList::Node* head,
-		Visitor* visitor,
-		bool retain_prerequsites) {
+									DependentList::Visitor* visitor,
+									bool retain_prerequsites) {
 		head = ReverseList(head);
+		DependentList::Node* next = nullptr;
 		while (head) {
-			Node* next = head->next_;
+			next = head->next_;
 			if (retain_prerequsites)
 				head->RetainSettledPrerequisite();
 			// |visitor| might delete the node, so no access to node past this
@@ -45,7 +46,7 @@ namespace base::internal {
 
 	DependentList::Node::Node() = default;
 
-	DependentList::Node::Node(Node&& other) {
+	DependentList::Node::Node(Node&& other) noexcept {
 		prerequisite_ = other.prerequisite_.load(std::memory_order_relaxed);
 		other.prerequisite_ = 0;
 		dependent_ = std::move(other.dependent_);
@@ -53,7 +54,7 @@ namespace base::internal {
 	}
 
 	DependentList::Node::Node(AbstractPromise* prerequisite,
-	                          const scoped_refptr<AbstractPromise>& dependent)
+	                          scoped_refptr<AbstractPromise> dependent)
 		: prerequisite_(reinterpret_cast<intptr_t>(prerequisite)),
 		dependent_(std::move(dependent)) {
 	}
@@ -84,7 +85,7 @@ namespace base::internal {
 	DependentList::~DependentList() = default;
 
 	void DependentList::Node::Reset(AbstractPromise* prerequisite,
-	                                const scoped_refptr<AbstractPromise>&& dependent) {
+									scoped_refptr<AbstractPromise> dependent) {
 		SetPrerequisite(prerequisite);
 		dependent_ = std::move(dependent);
 		next_ = nullptr;

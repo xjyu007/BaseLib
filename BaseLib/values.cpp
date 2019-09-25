@@ -55,7 +55,7 @@ namespace base {
 			for (const auto& entry : list.GetList()) {
 				std::unique_ptr<Value> child_copy = CopyWithoutEmptyChildren(entry);
 				if (child_copy)
-					copy.GetList().push_back(std::move(*child_copy));
+					copy.Append(std::move(*child_copy));
 			}
 			return copy.GetList().empty() ? nullptr
 				: std::make_unique<Value>(std::move(copy));
@@ -235,7 +235,7 @@ namespace base {
 		: type_(Type::DICTIONARY), dict_(std::move(in_dict)) {
 	}
 
-	Value::Value(const ListStorage& in_list) : type_(Type::LIST), list_() {
+	Value::Value(span<const Value> in_list) : type_(Type::LIST), list_() {
 		list_.reserve(in_list.size());
 		for (const auto& val : in_list)
 			list_.emplace_back(val.Clone());
@@ -337,9 +337,54 @@ namespace base {
 		return list_;
 	}
 
-	const Value::ListStorage& Value::GetList() const {
+	span<const Value> Value::GetList() const {
 		CHECK(is_list());
 		return list_;
+	}
+
+	void Value::Append(bool value) {
+		CHECK(is_list());
+		list_.emplace_back(value);
+	}
+
+	void Value::Append(int value) {
+		CHECK(is_list());
+		list_.emplace_back(value);
+	}
+
+	void Value::Append(double value) {
+		CHECK(is_list());
+		list_.emplace_back(value);
+	}
+
+	void Value::Append(const char* value) {
+		CHECK(is_list());
+		list_.emplace_back(value);
+	}
+
+	void Value::Append(std::string_view value) {
+		CHECK(is_list());
+		list_.emplace_back(value);
+	}
+
+	void Value::Append(std::string&& value) {
+		CHECK(is_list());
+		list_.emplace_back(std::move(value));
+	}
+
+	void Value::Append(const wchar_t* value) {
+		CHECK(is_list());
+		list_.emplace_back(value);
+	}
+
+	void Value::Append(std::wstring_view value) {
+		CHECK(is_list());
+		list_.emplace_back(value);
+	}
+
+	void Value::Append(Value&& value) {
+		CHECK(is_list());
+		list_.emplace_back(std::move(value));
 	}
 
 	Value* Value::FindKey(std::string_view key) {
@@ -500,28 +545,28 @@ namespace base {
 	}
 
 	const Value* Value::FindPathOfType(std::string_view path, Type type) const {
-		const auto cur = FindPath(path);
+		const Value* cur = FindPath(path);
 		if (!cur || cur->type() != type)
 			return nullptr;
 		return cur;
 	}
 
 	std::optional<bool> Value::FindBoolPath(std::string_view path) const {
-		const auto cur = FindPath(path);
+		const Value* cur = FindPath(path);
 		if (!cur || !cur->is_bool())
 			return std::nullopt;
 		return cur->bool_value_;
 	}
 
 	std::optional<int> Value::FindIntPath(std::string_view path) const {
-		const auto cur = FindPath(path);
+		const Value* cur = FindPath(path);
 		if (!cur || !cur->is_int())
 			return std::nullopt;
 		return cur->int_value_;
 	}
 
 	std::optional<double> Value::FindDoublePath(std::string_view path) const {
-		const auto cur = FindPath(path);
+		const Value* cur = FindPath(path);
 		if (cur) {
 			if (cur->is_int())
 				return static_cast<double>(cur->int_value_);
@@ -666,7 +711,7 @@ namespace base {
 
 	const Value* Value::FindPathOfType(span<const std::string_view> path,
 		Type type) const {
-		const auto result = FindPath(path);
+		const Value* result = FindPath(path);
 		if (!result || result->type() != type)
 			return nullptr;
 		return result;
@@ -682,7 +727,7 @@ namespace base {
 
 		// Walk/construct intermediate dictionaries. The last element requires
 		// special handling so skip it in this loop.
-		auto cur = this;
+		Value* cur = this;
 		auto cur_path = path.begin();
 		for (; (cur_path + 1) < path.end(); ++cur_path) {
 			if (!cur->is_dict())
@@ -1075,7 +1120,7 @@ namespace base {
 		DCHECK(splitter.HasNext()) << "Cannot call SetPath() with empty path";
 		// Walk/construct intermediate dictionaries. The last element requires
 		// special handling so skip it in this loop.
-		auto cur = this;
+		Value* cur = this;
 		auto path_component = splitter.Next();
 		while (splitter.HasNext()) {
 			if (!cur->is_dict())
@@ -1538,7 +1583,7 @@ namespace base {
 	}
 
 	ListValue::ListValue() : Value(Type::LIST) {}
-	ListValue::ListValue(const ListStorage& in_list) : Value(in_list) {}
+	ListValue::ListValue(span<const Value> in_list) : Value(in_list) {}
 	ListValue::ListValue(ListStorage&& in_list) noexcept
 		: Value(std::move(in_list)) {
 	}

@@ -1,5 +1,3 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -50,6 +48,8 @@
 //   ThreadTicks: Benchmarking how long the current thread has been doing actual
 //                work.
 
+#pragma once
+
 #include <cstdint>
 #include <ctime>
 
@@ -85,8 +85,8 @@ namespace base {
 		// as infinity and will always saturate the return value (infinity math applies
 		// if |value| also is at either limit of its spectrum). The int64_t argument and
 		// return value are in terms of a microsecond timebase.
-		BASE_EXPORT int64_t SaturatedAdd(int64_t value, TimeDelta delta);
-		BASE_EXPORT int64_t SaturatedSub(int64_t value, TimeDelta delta);
+		BASE_EXPORT constexpr int64_t SaturatedAdd(int64_t value, TimeDelta delta);
+		BASE_EXPORT constexpr int64_t SaturatedSub(int64_t value, TimeDelta delta);
 
 	}  // namespace time_internal
 
@@ -97,6 +97,9 @@ namespace base {
 		constexpr TimeDelta() : delta_(0) {}
 
 		// Converts units of time to TimeDeltas.
+		// WARNING: Floating point arithmetic is such that FromXXXD(t.InXXXF()) may
+		// not precisely equal |t|. Hence, floating point values should not be used
+		// for storage.
 		static constexpr TimeDelta FromDays(int days);
 		static constexpr TimeDelta FromHours(int hours);
 		static constexpr TimeDelta FromMinutes(int minutes);
@@ -170,6 +173,9 @@ namespace base {
 		// towards zero, std::trunc() behavior). The InXYZFloored() versions round to
 		// lesser integers (std::floor() behavior). The XYZRoundedUp() versions round
 		// up to greater integers (std::ceil() behavior).
+		// WARNING: Floating point arithmetic is such that FromXXXD(t.InXXXF()) may
+		// not precisely equal |t|. Hence, floating point values should not be used
+		// for storage.
 		[[nodiscard]] int InDays() const;
 		[[nodiscard]] int InDaysFloored() const;
 		[[nodiscard]] int InHours() const;
@@ -183,30 +189,25 @@ namespace base {
 		[[nodiscard]] double InMicrosecondsF() const;
 		[[nodiscard]] int64_t InNanoseconds() const;
 
-		// Computations with other deltas. Can easily be made constexpr with C++17 but
-		// hard to do until then per limitations around
-		// __builtin_(add|sub)_overflow in safe_math_clang_gcc_impl.h :
-		// https://chromium-review.googlesource.com/c/chromium/src/+/873352#message-59594ab70827795a67e0780404adf37b4b6c2f14
-		TimeDelta operator+(TimeDelta other) const {
+		// Computations with other deltas.
+		constexpr TimeDelta operator+(TimeDelta other) const {
 			return TimeDelta(time_internal::SaturatedAdd(delta_, other));
 		}
-		TimeDelta operator-(TimeDelta other) const {
+		constexpr TimeDelta operator-(TimeDelta other) const {
 			return TimeDelta(time_internal::SaturatedSub(delta_, other));
 		}
 
-		TimeDelta& operator+=(TimeDelta other) {
+		constexpr TimeDelta& operator+=(TimeDelta other) {
 			return *this = (*this + other);
 		}
-		TimeDelta& operator-=(TimeDelta other) {
+		constexpr TimeDelta& operator-=(TimeDelta other) {
 			return *this = (*this - other);
 		}
 		constexpr TimeDelta operator-() const { return TimeDelta(-delta_); }
 
-		// Computations with numeric types. operator*() isn't constexpr because of a
-		// limitation around __builtin_mul_overflow (but operator/(1.0/a) works for
-		// |a|'s of "reasonable" size -- i.e. that don't risk overflow).
+		// Computations with numeric types.
 		template <typename T>
-		TimeDelta operator*(T a) const {
+		constexpr TimeDelta operator*(T a) const {
 			CheckedNumeric<int64_t> rv(delta_);
 			rv *= a;
 			if (rv.IsValid())
@@ -229,7 +230,7 @@ namespace base {
 			return TimeDelta(std::numeric_limits<int64_t>::max());
 		}
 		template <typename T>
-		TimeDelta& operator*=(T a) {
+		constexpr TimeDelta& operator*=(T a) {
 			return *this = (*this * a);
 		}
 		template <typename T>
@@ -238,9 +239,11 @@ namespace base {
 		}
 
 		constexpr int64_t operator/(TimeDelta a) const { return delta_ / a.delta_; }
+
 		constexpr TimeDelta operator%(TimeDelta a) const {
 			return TimeDelta(delta_ % a.delta_);
 		}
+		TimeDelta& operator%=(TimeDelta other) { return *this = (*this % other); }
 
 		// Comparison operators.
 		constexpr bool operator==(TimeDelta other) const {
@@ -263,8 +266,10 @@ namespace base {
 		}
 
 	private:
-		friend int64_t time_internal::SaturatedAdd(int64_t value, TimeDelta delta);
-		friend int64_t time_internal::SaturatedSub(int64_t value, TimeDelta delta);
+		friend constexpr int64_t time_internal::SaturatedAdd(int64_t value, 
+												   TimeDelta delta);
+		friend constexpr int64_t time_internal::SaturatedSub(int64_t value, 
+												   TimeDelta delta);
 
 		// Constructs a delta given the duration in microseconds. This is private
 		// to avoid confusion by callers with an integer constructor. Use
@@ -283,7 +288,7 @@ namespace base {
 	};
 
 	template <typename T>
-	TimeDelta operator*(T a, TimeDelta td) {
+	constexpr TimeDelta operator*(T a, TimeDelta td) {
 		return td * a;
 	}
 
@@ -294,6 +299,39 @@ namespace base {
 	// use one of the time subclasses instead, and only reference the public
 	// TimeBase members via those classes.
 	namespace time_internal {
+#undef min
+#undef max
+		constexpr int64_t SaturatedAdd(int64_t value, TimeDelta delta) {
+			// Treat Min/Max() as +/- infinity (additions involving two infinities are
+			// only valid if signs match).
+			if (delta.is_max()) {
+				if(value > std::numeric_limits<int64_t>::min())
+				//CHECK_GT(value, std::numeric_limits<int64_t>::min());
+				return std::numeric_limits<int64_t>::max();
+			} else if (delta.is_min()) {
+				if(value < std::numeric_limits<int64_t>::max())
+				//CHECK_LT(value, std::numeric_limits<int64_t>::max());
+				return std::numeric_limits<int64_t>::min();
+			}
+
+			return base::ClampAdd(value, delta.delta_);
+		}
+
+		constexpr int64_t SaturatedSub(int64_t value, TimeDelta delta) {
+			// Treat Min/Max() as +/- infinity (subtractions involving two infinities are
+			// only valid if signs are opposite).
+			if (delta.is_max()) {
+				if(value < std::numeric_limits<int64_t>::max())
+				//CHECK_LT(value, std::numeric_limits<int64_t>::max());
+				return std::numeric_limits<int64_t>::min();
+			} else if (delta.is_min()) {
+				if(value > std::numeric_limits<int64_t>::min())
+				//CHECK_GT(value, std::numeric_limits<int64_t>::min());
+				return std::numeric_limits<int64_t>::max();
+			}
+
+			return base::ClampSub(value, delta.delta_);
+		}
 
 		// TimeBase--------------------------------------------------------------------
 
@@ -308,15 +346,19 @@ namespace base {
 			static constexpr int64_t kSecondsPerMinute = 60;
 			static constexpr int64_t kSecondsPerHour = 60 * kSecondsPerMinute;
 			static constexpr int64_t kMillisecondsPerSecond = 1000;
-			static constexpr int64_t kMillisecondsPerDay = kMillisecondsPerSecond * 60 * 60 * kHoursPerDay;
+			static constexpr int64_t kMillisecondsPerDay = 
+				kMillisecondsPerSecond * 60 * 60 * kHoursPerDay;
 			static constexpr int64_t kMicrosecondsPerMillisecond = 1000;
-			static constexpr int64_t kMicrosecondsPerSecond = kMicrosecondsPerMillisecond * kMillisecondsPerSecond;
+			static constexpr int64_t kMicrosecondsPerSecond = 
+				kMicrosecondsPerMillisecond * kMillisecondsPerSecond;
 			static constexpr int64_t kMicrosecondsPerMinute = kMicrosecondsPerSecond * 60;
 			static constexpr int64_t kMicrosecondsPerHour = kMicrosecondsPerMinute * 60;
-			static constexpr int64_t kMicrosecondsPerDay = kMicrosecondsPerHour * kHoursPerDay;
+			static constexpr int64_t kMicrosecondsPerDay = 
+				kMicrosecondsPerHour * kHoursPerDay;
 			static constexpr int64_t kMicrosecondsPerWeek = kMicrosecondsPerDay * 7;
 			static constexpr int64_t kNanosecondsPerMicrosecond = 1000;
-			static constexpr int64_t kNanosecondsPerSecond = kNanosecondsPerMicrosecond * kMicrosecondsPerSecond;
+			static constexpr int64_t kNanosecondsPerSecond = 
+				kNanosecondsPerMicrosecond * kMicrosecondsPerSecond;
 
 			// Returns true if this object has not been initialized.
 			//
@@ -336,11 +378,11 @@ namespace base {
 
 			// Returns the maximum/minimum times, which should be greater/less than than
 			// any reasonable time with which we might compare it.
-			static TimeClass Max() {
+			static constexpr TimeClass Max() {
 				return TimeClass(std::numeric_limits<int64_t>::max());
 			}
 
-			static TimeClass Min() {
+			static constexpr TimeClass Min() {
 				return TimeClass(std::numeric_limits<int64_t>::min());
 			}
 
@@ -362,51 +404,39 @@ namespace base {
 				return TimeDelta::FromMicroseconds(us_);
 			}
 
-			TimeClass& operator=(TimeClass other) {
+			constexpr TimeClass& operator=(TimeClass other) {
 				us_ = other.us_;
 				return *(static_cast<TimeClass*>(this));
 			}
 
 			// Compute the difference between two times.
-			TimeDelta operator-(TimeClass other) const {
+			constexpr TimeDelta operator-(TimeClass other) const {
 				return TimeDelta::FromMicroseconds(us_ - other.us_);
 			}
 
 			// Return a new time modified by some delta.
-			TimeClass operator+(const TimeDelta delta) const {
+			constexpr TimeClass operator+(const TimeDelta delta) const {
 				return TimeClass(time_internal::SaturatedAdd(us_, delta));
 			}
-			TimeClass operator-(const TimeDelta delta) const {
+			constexpr TimeClass operator-(const TimeDelta delta) const {
 				return TimeClass(time_internal::SaturatedSub(us_, delta));
 			}
 
 			// Modify by some time delta.
-			TimeClass& operator+=(TimeDelta delta) {
+			constexpr TimeClass& operator+=(TimeDelta delta) {
 				return static_cast<TimeClass&>(*this = (*this + delta));
 			}
-			TimeClass& operator-=(TimeDelta delta) {
+			constexpr TimeClass& operator-=(TimeDelta delta) {
 				return static_cast<TimeClass&>(*this = (*this - delta));
 			}
 
 			// Comparison operators
-			bool operator==(TimeClass other) const {
-				return us_ == other.us_;
-			}
-			bool operator!=(TimeClass other) const {
-				return us_ != other.us_;
-			}
-			bool operator<(TimeClass other) const {
-				return us_ < other.us_;
-			}
-			bool operator<=(TimeClass other) const {
-				return us_ <= other.us_;
-			}
-			bool operator>(TimeClass other) const {
-				return us_ > other.us_;
-			}
-			bool operator>=(TimeClass other) const {
-				return us_ >= other.us_;
-			}
+			constexpr bool operator==(TimeClass other) const { return us_ == other.us_;	}
+			constexpr bool operator!=(TimeClass other) const { return us_ != other.us_;	}
+			constexpr bool operator<(TimeClass other) const { return us_ < other.us_; }
+			constexpr bool operator<=(TimeClass other) const { return us_ <= other.us_; }
+			constexpr bool operator>(TimeClass other) const { return us_ > other.us_; }
+			constexpr bool operator>=(TimeClass other) const { return us_ >= other.us_; }
 
 		protected:
 			constexpr explicit TimeBase(int64_t us) : us_(us) {}
@@ -418,7 +448,7 @@ namespace base {
 	}  // namespace time_internal
 
 	template<class TimeClass>
-	inline TimeClass operator+(TimeDelta delta, TimeClass t) {
+	inline constexpr TimeClass operator+(TimeDelta delta, TimeClass t) {
 		return t + delta;
 	}
 
@@ -564,10 +594,12 @@ namespace base {
 		// Converts an exploded structure representing either the local time or UTC
 		// into a Time class. Returns false on a failure when, for example, a day of
 		// month is set to 31 on a 28-30 day month. Returns Time(0) on overflow.
-		static bool FromUTCExploded(const Exploded& exploded, Time* time) WARN_UNUSED_RESULT {
+		static bool FromUTCExploded(const Exploded& exploded, 
+									Time* time) WARN_UNUSED_RESULT {
 			return FromExploded(false, exploded, time);
 		}
-		static bool FromLocalExploded(const Exploded& exploded, Time* time) WARN_UNUSED_RESULT {
+		static bool FromLocalExploded(const Exploded& exploded, 
+									  Time* time) WARN_UNUSED_RESULT {
 			return FromExploded(true, exploded, time);
 		}
 
@@ -585,10 +617,12 @@ namespace base {
 		//
 		// TODO(iyengar) Move the FromString/FromTimeT/ToTimeT/FromFileTime to
 		// a new time converter class.
-		static bool FromString(const char* time_string, Time* parsed_time) WARN_UNUSED_RESULT {
+		static bool FromString(const char* time_string, 
+							   Time* parsed_time) WARN_UNUSED_RESULT {
 			return FromStringInternal(time_string, true, parsed_time);
 		}
-		static bool FromUTCString(const char* time_string, Time* parsed_time) WARN_UNUSED_RESULT {
+		static bool FromUTCString(const char* time_string, 
+								  Time* parsed_time) WARN_UNUSED_RESULT {
 			return FromStringInternal(time_string, false, parsed_time);
 		}
 
@@ -628,7 +662,9 @@ namespace base {
 		// |is_local = true| or UTC |is_local = false|. Function returns false on
 		// failure and sets |time| to Time(0). Otherwise returns true and sets |time|
 		// to non-exploded time.
-		static bool FromExploded(bool is_local, const Exploded& exploded, Time* time) WARN_UNUSED_RESULT;
+		static bool FromExploded(bool is_local, 
+								 const Exploded& exploded, 
+								 Time* time) WARN_UNUSED_RESULT;
 
 		// Rounds down the time to the nearest day in either local time
 		// |is_local = true| or UTC |is_local = false|.
@@ -641,25 +677,34 @@ namespace base {
 		// UTC |is_local = false| is assumed. A timezone that cannot be parsed
 		// (e.g. "UTC" which is not specified in RFC822) is treated as if the
 		// timezone is not specified.
-		static bool FromStringInternal(const char* time_string, bool is_local, Time* parsed_time) WARN_UNUSED_RESULT;
+		static bool FromStringInternal(const char* time_string, 
+									   bool is_local, 
+									   Time* parsed_time) WARN_UNUSED_RESULT;
 
 		// Comparison does not consider |day_of_week| when doing the operation.
-		static bool ExplodedMostlyEquals(const Exploded& lhs, const Exploded& rhs) WARN_UNUSED_RESULT;
+		static bool ExplodedMostlyEquals(const Exploded& lhs, 
+										 const Exploded& rhs) WARN_UNUSED_RESULT;
 	};
 
 	// static
 	constexpr TimeDelta TimeDelta::FromDays(int days) {
-		return days == std::numeric_limits<int>::max() ? Max() : TimeDelta(days * Time::kMicrosecondsPerDay);
+		return days == std::numeric_limits<int>::max() 
+					? Max() 
+					: TimeDelta(days * Time::kMicrosecondsPerDay);
 	}
 
 	// static
 	constexpr TimeDelta TimeDelta::FromHours(int hours) {
-		return hours == std::numeric_limits<int>::max() ? Max() : TimeDelta(hours * Time::kMicrosecondsPerHour);
+		return hours == std::numeric_limits<int>::max() 
+					? Max() 
+					: TimeDelta(hours * Time::kMicrosecondsPerHour);
 	}
 
 	// static
 	constexpr TimeDelta TimeDelta::FromMinutes(int minutes) {
-		return minutes == std::numeric_limits<int>::max() ? Max() : TimeDelta(minutes * Time::kMicrosecondsPerMinute);
+		return minutes == std::numeric_limits<int>::max() 
+					? Max() 
+					: TimeDelta(minutes * Time::kMicrosecondsPerMinute);
 	}
 
 	// static
@@ -791,7 +836,8 @@ namespace base {
 		// Returns |this| snapped to the next tick, given a |tick_phase| and
 		// repeating |tick_interval| in both directions. |this| may be before,
 		// after, or equal to the |tick_phase|.
-		[[nodiscard]] TimeTicks SnappedToNextTick(TimeTicks tick_phase, TimeDelta tick_interval) const;
+		[[nodiscard]] TimeTicks SnappedToNextTick(TimeTicks tick_phase, 
+												  TimeDelta tick_interval) const;
 
 		// Returns an enum indicating the underlying clock being used to generate
 		// TimeTicks timestamps. This function should only be used for debugging and
@@ -810,7 +856,7 @@ namespace base {
 		}
 
 	protected:
-		typedef DWORD(*TickFunctionType)();
+		typedef DWORD(*TickFunctionType)(void);
 		static TickFunctionType SetMockTickFunction(TickFunctionType ticker);
 
 	private:

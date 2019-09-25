@@ -14,7 +14,6 @@
 #include "task/single_thread_task_runner_thread_mode.h"
 #include "task/thread_pool/environment_config.h"
 #include "task/thread_pool/tracked_ref.h"
-#include "thread_annotations.h"
 #include "threading/platform_thread.h"
 
 namespace base {
@@ -108,7 +107,7 @@ namespace base {
 			WorkerThread* CreateAndRegisterWorkerThread(
 				const std::string& name,
 				SingleThreadTaskRunnerThreadMode thread_mode,
-				ThreadPriority priority_hint) EXCLUSIVE_LOCKS_REQUIRED(lock_);
+				ThreadPriority priority_hint);
 
 			template <typename DelegateType>
 			WorkerThread*& GetSharedWorkerThreadForTraits(const TaskTraits& traits);
@@ -125,8 +124,8 @@ namespace base {
 			WorkerThreadObserver* worker_thread_observer_ = nullptr;
 
 			CheckedLock lock_;
-			std::vector<scoped_refptr<WorkerThread>> workers_ GUARDED_BY(lock_);
-			int next_worker_id_ GUARDED_BY(lock_) = 0;
+			std::vector<scoped_refptr<WorkerThread>> workers_;
+			int next_worker_id_ = 0;
 
 			// Workers for SingleThreadTaskRunnerThreadMode::SHARED tasks. It is
 			// important to have separate threads for CONTINUE_ON_SHUTDOWN and non-
@@ -134,13 +133,12 @@ namespace base {
 			// CONTINUE_ON_SHUTDOWN task effectively blocks shutdown by preventing a
 			// BLOCK_SHUTDOWN task to be scheduled. https://crbug.com/829786
 			WorkerThread* shared_worker_threads_[ENVIRONMENT_COUNT]
-				[CONTINUE_ON_SHUTDOWN_COUNT] GUARDED_BY(
-					lock_) = {};
+				[CONTINUE_ON_SHUTDOWN_COUNT] = {};
 			WorkerThread* shared_com_worker_threads_
-				[ENVIRONMENT_COUNT][CONTINUE_ON_SHUTDOWN_COUNT] GUARDED_BY(lock_) = {};
+				[ENVIRONMENT_COUNT][CONTINUE_ON_SHUTDOWN_COUNT] = {};
 
 			// Set to true when Start() is called.
-			bool started_ GUARDED_BY(lock_) = false;
+			bool started_ = false;
 
 			DISALLOW_COPY_AND_ASSIGN(PooledSingleThreadTaskRunnerManager);
 		};

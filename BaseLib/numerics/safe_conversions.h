@@ -94,7 +94,7 @@ namespace base {
 			// This throws a compile-time error on evaluating the constexpr if it can be
 			// determined at compile-time as failing, otherwise it will CHECK at runtime.
 			using SrcType = typename internal::UnderlyingType<Src>::type;
-			return BASE_NUMERICS_LIKELY((IsValueInRangeForNumericType<Dst>(value)))
+			return (IsValueInRangeForNumericType<Dst>(value))
 				? static_cast<Dst>(static_cast<SrcType>(value))
 				: CheckHandler::template HandleFailure<Dst>();
 		}
@@ -167,7 +167,7 @@ namespace base {
 				Dst saturated = CommonMaxOrMin<Dst, Src>(
 					IsMaxInRangeForNumericType<Dst, Src>() ||
 					(!IsMinInRangeForNumericType<Dst, Src>() && IsValueNegative(value)));
-				return BASE_NUMERICS_LIKELY(IsValueInRangeForNumericType<Dst>(value)) ? static_cast<Dst>(value) : saturated;
+				return IsValueInRangeForNumericType<Dst>(value) ? static_cast<Dst>(value) : saturated;
 			}
 		};
 

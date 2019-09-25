@@ -51,8 +51,8 @@ namespace base {
 
 		// Writes out string1 and then string2 to pickle.
 		void WriteStringPair(Pickle* pickle,
-			const std::string_view& string1,
-			const std::string_view& string2) {
+							 const std::string_view& string1,
+							 const std::string_view& string2) {
 			pickle->WriteString(string1);
 			pickle->WriteString(string2);
 		}
@@ -87,7 +87,7 @@ namespace base {
 			//   static_cast<FieldTrial::Probability>(100 * 0.58) == 57
 			//   static_cast<FieldTrial::Probability>(100 * 0.59) == 59
 			const double kEpsilon = 1e-8;
-			const FieldTrial::Probability result =
+			const auto result =
 				static_cast<FieldTrial::Probability>(divisor * entropy_value + kEpsilon);
 			// Ensure that adding the epsilon still results in a value < |divisor|.
 #undef min
@@ -105,7 +105,7 @@ namespace base {
 		// Returns true if the string was parsed correctly. On failure, the |entries|
 		// array may end up being partially filled.
 		bool ParseFieldTrialsString(const std::string& trials_string,
-			std::vector<FieldTrialStringEntry>* entries) {
+									std::vector<FieldTrialStringEntry>* entries) {
 			const std::string_view trials_string_piece(trials_string);
 
 			size_t next_item = 0;
@@ -141,8 +141,8 @@ namespace base {
 		}
 
 		void AddFeatureAndFieldTrialFlags(const char* enable_features_switch,
-			const char* disable_features_switch,
-			CommandLine* cmd_line) {
+										  const char* disable_features_switch,
+										  CommandLine* cmd_line) {
 			std::string enabled_features;
 			std::string disabled_features;
 			FeatureList::GetInstance()->GetFeatureOverrides(&enabled_features,
@@ -167,8 +167,8 @@ namespace base {
 
 		// Returns whether the operation succeeded.
 		bool DeserializeGUIDFromStringPieces(std::string_view first,
-			std::string_view second,
-			UnguessableToken* guid) {
+											 std::string_view second,
+											 UnguessableToken* guid) {
 			uint64_t high = 0;
 			uint64_t low = 0;
 			if (!StringToUint64(first, &high) || !StringToUint64(second, &low))
@@ -402,7 +402,7 @@ namespace base {
 	}
 
 	bool FieldTrial::GetStateWhileLocked(State* field_trial_state,
-		bool include_disabled) {
+										 bool include_disabled) {
 		if (!include_disabled && !enable_field_trial_)
 			return false;
 		FinalizeGroupChoiceImpl(true);
@@ -443,7 +443,7 @@ namespace base {
 		// Note: If this DCHECK fires in a test that uses ScopedFeatureList, it is
 		// likely caused by nested ScopedFeatureLists being destroyed in a different
 		// order than they are initialized.
-		DCHECK_EQ(this, global_);
+		//DCHECK_EQ(this, global_);
 		global_ = nullptr;
 	}
 
@@ -600,7 +600,7 @@ namespace base {
 
 	// static
 	std::string FieldTrialList::AllParamsToString(bool include_disabled,
-		EscapeDataFunc encode_data_func) {
+												  EscapeDataFunc encode_data_func) {
 		auto params_associator =
 			FieldTrialParamAssociator::GetInstance();
 		std::string output;

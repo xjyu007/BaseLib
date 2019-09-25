@@ -11,7 +11,6 @@
 #include "task/common/checked_lock.h"
 #include "task/task_traits.h"
 #include "task_runner.h"
-#include "thread_annotations.h"
 #include "time/time.h"
 
 namespace base {
@@ -49,7 +48,7 @@ namespace base {
 			// List of alive Sequences instantiated by this PooledParallelTaskRunner.
 			// Sequences are added when they are instantiated, and removed when they are
 			// destroyed.
-			base::flat_set<Sequence*> sequences_{} GUARDED_BY(lock_);
+			flat_set<Sequence*> sequences_{};
 
 			DISALLOW_COPY_AND_ASSIGN(PooledParallelTaskRunner);
 		};

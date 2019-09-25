@@ -1,13 +1,12 @@
-#pragma once
-
 // Copyright (c) 2011 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include "base_export.h"
 #include "logging.h"
 #include "macros.h"
-#include "thread_annotations.h"
 
 #include "win/windows_types.h"
 
@@ -52,19 +51,19 @@ namespace base {
 
 		// This is an implementation used for AutoLock templated on the lock type.
 		template <class LockType>
-		class SCOPED_LOCKABLE BasicAutoLock {
+		class BasicAutoLock {
 		public:
 			struct AlreadyAcquired {};
 
-			explicit BasicAutoLock(LockType& lock) EXCLUSIVE_LOCK_FUNCTION(lock) : lock_(lock) {
+			explicit BasicAutoLock(LockType& lock) : lock_(lock) {
 				lock_.Acquire();
 			}
 
-			BasicAutoLock(LockType& lock, const AlreadyAcquired&) EXCLUSIVE_LOCKS_REQUIRED(lock) : lock_(lock) {
+			BasicAutoLock(LockType& lock, const AlreadyAcquired&) : lock_(lock) {
 				lock_.AssertAcquired();
 			}
 
-			~BasicAutoLock() UNLOCK_FUNCTION() {
+			~BasicAutoLock() {
 				lock_.AssertAcquired();
 				lock_.Release();
 			}
@@ -93,14 +92,14 @@ namespace base {
 
 		// This is an implementation used for AutoLockMaybe templated on the lock type.
 		template <class LockType>
-		class SCOPED_LOCKABLE BasicAutoLockMaybe {
+		class BasicAutoLockMaybe {
 		public:
-			explicit BasicAutoLockMaybe(LockType* lock) EXCLUSIVE_LOCK_FUNCTION(lock) : lock_(lock) {
+			explicit BasicAutoLockMaybe(LockType* lock) : lock_(lock) {
 				if (lock_)
 					lock_->Acquire();
 			}
 
-			~BasicAutoLockMaybe() UNLOCK_FUNCTION() {
+			~BasicAutoLockMaybe() {
 				if (lock_) {
 					lock_->AssertAcquired();
 					lock_->Release();
@@ -115,21 +114,21 @@ namespace base {
 		// This is an implementation used for ReleasableAutoLock templated on the lock
 		// type.
 		template <class LockType>
-		class SCOPED_LOCKABLE BasicReleasableAutoLock {
+		class BasicReleasableAutoLock {
 		public:
-			explicit BasicReleasableAutoLock(LockType* lock) EXCLUSIVE_LOCK_FUNCTION(lock) : lock_(lock) {
+			explicit BasicReleasableAutoLock(LockType* lock) : lock_(lock) {
 				DCHECK(lock_);
 				lock_->Acquire();
 			}
 
-			~BasicReleasableAutoLock() UNLOCK_FUNCTION() {
+			~BasicReleasableAutoLock() {
 				if (lock_) {
 					lock_->AssertAcquired();
 					lock_->Release();
 				}
 			}
 
-			void Release() UNLOCK_FUNCTION() {
+			void Release() {
 				DCHECK(lock_);
 				lock_->AssertAcquired();
 				lock_->Release();

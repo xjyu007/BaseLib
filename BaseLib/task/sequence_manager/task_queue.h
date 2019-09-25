@@ -326,7 +326,7 @@ namespace base {
 			// queue is unblocked when it is enabled and no fence prevents the front task
 			// from running. If the EnqueueOrder of a task is greater than this when it
 			// starts running, it means that is was never blocked.
-			internal::EnqueueOrder GetLastUnblockEnqueueOrder() const;
+			EnqueueOrder GetLastUnblockEnqueueOrder() const;
 
 			void SetObserver(Observer* observer) const;
 

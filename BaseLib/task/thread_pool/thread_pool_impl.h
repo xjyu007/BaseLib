@@ -46,7 +46,7 @@ namespace base {
 				TaskTracker;
 
 			// Creates a ThreadPoolImpl with a production TaskTracker.
-			//|histogram_label| is used to label histograms, it must not be empty.
+			// is used to label histograms, No histograms are recorded if it is empty.
 			explicit ThreadPoolImpl(std::string_view histogram_label);
 
 			// For testing only. Creates a ThreadPoolImpl with a custom TaskTracker

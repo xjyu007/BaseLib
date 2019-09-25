@@ -196,34 +196,6 @@ namespace base {
 		DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 	};
 
-#if !defined(OS_NACL)
-
-	//-----------------------------------------------------------------------------
-	// MessageLoopForUI extends MessageLoop with methods that are particular to a
-	// MessageLoop instantiated with TYPE_UI.
-	//
-	// By instantiating a MessageLoopForUI on the current thread, the owner enables
-	// native UI message pumping.
-	//
-	// MessageLoopCurrentForUI is exposed statically on its thread via
-	// MessageLoopCurrentForUI::Get() to provide additional functionality.
-	//
-	class BASE_EXPORT MessageLoopForUI : public MessageLoop {
-	public:
-		explicit MessageLoopForUI(MessagePumpType type = MessagePumpType::UI);
-
-		// See method of the same name in the Windows MessagePumpForUI implementation.
-		void EnableWmQuit() const;
-	};
-
-	// Do not add any member variables to MessageLoopForUI!  This is important b/c
-	// MessageLoopForUI is often allocated via MessageLoop(TYPE_UI).  Any extra
-	// data that you need should be stored on the MessageLoop's pump_ instance.
-	static_assert(sizeof(MessageLoop) == sizeof(MessageLoopForUI), 
-				  "MessageLoopForUI should not have extra member variables");
-
-#endif  // !defined(OS_NACL)
-
 	//-----------------------------------------------------------------------------
 	// MessageLoopForIO extends MessageLoop with methods that are particular to a
 	// MessageLoop instantiated with TYPE_IO.

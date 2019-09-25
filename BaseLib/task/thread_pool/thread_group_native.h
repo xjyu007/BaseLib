@@ -51,22 +51,22 @@ namespace base {
 				TransactionWithRegisteredTaskSource transaction_with_task_source)
 				override;
 			void EnsureEnoughWorkersLockRequired(BaseScopedWorkersExecutor* executor)
-				override EXCLUSIVE_LOCKS_REQUIRED(lock_);
+				override;
 
 			// Updates the minimum priority allowed to run below which tasks should yield,
 			// based on task sources in |priority_queue_|.
-			void UpdateMinAllowedPriorityLockRequired() EXCLUSIVE_LOCKS_REQUIRED(lock_);
+			void UpdateMinAllowedPriorityLockRequired();
 
 			// Returns the top TaskSource off the |priority_queue_|. Returns nullptr
 			// if the |priority_queue_| is empty.
 			RegisteredTaskSource GetWork();
 
 			// Indicates whether the thread group has been started yet.
-			bool started_ GUARDED_BY(lock_) = false;
+			bool started_ = false;
 
 			// Number of threadpool work submitted to the thread group which haven't
 			// popped a TaskSource from the PriorityQueue yet.
-			size_t num_pending_threadpool_work_ GUARDED_BY(lock_) = 0;
+			size_t num_pending_threadpool_work_ = 0;
 
 #if DCHECK_IS_ON()
 			// Set once JoinForTesting() has returned.

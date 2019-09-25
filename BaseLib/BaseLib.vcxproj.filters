@@ -213,9 +213,6 @@
     <ClInclude Include="win\windows_types.h">
       <Filter>win</Filter>
     </ClInclude>
-    <ClInclude Include="thread_annotations.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="threading\platform_thread.h">
       <Filter>threading</Filter>
     </ClInclude>
@@ -698,9 +695,6 @@
     </ClInclude>
     <ClInclude Include="callback_helpers.h">
       <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="numerics\ranges.h">
-      <Filter>numerics</Filter>
     </ClInclude>
     <ClInclude Include="win\message_window.h">
       <Filter>win</Filter>
@@ -1472,6 +1466,15 @@
     </ClInclude>
     <ClInclude Include="syslog_logging.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="thread_annotations.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="task\sequence_manager\enqueue_order_generator.h">
+      <Filter>task\sequence_manager</Filter>
+    </ClInclude>
+    <ClInclude Include="numerics\ranges.h">
+      <Filter>numerics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2285,9 +2288,6 @@
     <ClCompile Include="task\sequence_manager\atomic_flag_set.cpp">
       <Filter>task\sequence_manager</Filter>
     </ClCompile>
-    <ClCompile Include="task\sequence_manager\enqueue_order.cpp">
-      <Filter>task\sequence_manager</Filter>
-    </ClCompile>
     <ClCompile Include="task\sequence_manager\lazy_now.cpp">
       <Filter>task\sequence_manager</Filter>
     </ClCompile>
@@ -2473,6 +2473,9 @@
     </ClCompile>
     <ClCompile Include="syslog_logging.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="task\sequence_manager\enqueue_order_generator.cpp">
+      <Filter>task\sequence_manager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

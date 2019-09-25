@@ -7,11 +7,15 @@
 #include <string>
 
 #include "base_export.h"
+#include "containers/span.h"
 #include <string>
 
 namespace base {
 
-	// Encodes the input string in base64. The encoding can be done in-place.
+	// Encodes the input binary data in base64.
+	BASE_EXPORT std::string Base64Encode(span<const uint8_t> input);
+
+	// Encodes the input string in base64.
 	BASE_EXPORT void Base64Encode(const std::string_view& input, std::string* output);
 
 	// Decodes the base64 input string.  Returns true if successful and false

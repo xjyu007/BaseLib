@@ -13,7 +13,7 @@
 #include "logging.h"
 #include "no_destructor.h"
 #include "numerics/safe_math.h"
-#include "strings/utf_string_conversions.h"
+#include "strings/string_util.h"
 #include "third_party/double_conversion/double-conversion.h"
 
 namespace base {
@@ -318,11 +318,11 @@ namespace base {
 		return IntToStringT<std::wstring, int>::IntToString(value);
 	}
 
-	std::string NumberToString(unsigned value) {
+	std::string NumberToString(unsigned int value) {
 		return IntToStringT<std::string, unsigned>::IntToString(value);
 	}
 
-	std::wstring NumberToString16(unsigned value) {
+	std::wstring NumberToString16(unsigned int value) {
 		return IntToStringT<std::wstring, unsigned>::IntToString(value);
 	}
 
@@ -374,7 +374,13 @@ namespace base {
 	}
 
 	std::wstring NumberToString16(double value) {
-		return UTF8ToWide(NumberToString(value));
+		char buffer[32];
+		double_conversion::StringBuilder builder(buffer, sizeof(buffer));
+		GetDoubleToStringConverter()->ToShortest(value, &builder);
+		
+		// The number will be ASCII. This creates the string using the "input
+		// iterator" variant which promotes from 8-bit to 16-bit via "=".
+		return std::wstring(&buffer[0], &buffer[builder.position()]);
 	}
 
 	bool StringToInt(std::string_view input, int* output) {
@@ -417,14 +423,15 @@ namespace base {
 		return String16ToIntImpl(input, output);
 	}
 
-	bool StringToDouble(const std::string& input, double* output) {
+	template <typename STRING, typename CHAR>
+	bool StringToDoubleImpl(STRING input, const CHAR* data, double* output) {
 		static NoDestructor<double_conversion::StringToDoubleConverter> converter(
 			double_conversion::StringToDoubleConverter::ALLOW_LEADING_SPACES |
 		    double_conversion::StringToDoubleConverter::ALLOW_TRAILING_JUNK,
 		  0.0, 0, nullptr, nullptr);
 
 		int processed_characters_count;
-		*output = converter->StringToDouble(input.c_str(), input.size(),
+		*output = converter->StringToDouble(data, input.size(),
 		                                  &processed_characters_count);
 
 		// Cases to return false:
@@ -436,16 +443,17 @@ namespace base {
 		//  - If the first character is a space, there was leading whitespace
 		return !input.empty() && *output != HUGE_VAL && *output != -HUGE_VAL &&
 		       static_cast<size_t>(processed_characters_count) == input.size() &&
-		       !isspace(input[0]);
+		       !IsUnicodeWhitespace(input[0]);
 	}
 
-	// Note: if you need to add String16ToDouble, first ask yourself if it's
-	// really necessary. If it is, probably the best implementation here is to
-	// convert to 8-bit and then use the 8-bit version.
+	bool StringToDouble(std::string_view input, double* output) {
+		return StringToDoubleImpl(input, input.data(), output);
+	}
 
-	// Note: if you need to add an iterator range version of StringToDouble, first
-	// ask yourself if it's really necessary. If it is, probably the best
-	// implementation here is to instantiate a string and use the string version.
+	bool StringToDouble(std::wstring_view input, double* output) {
+		return StringToDoubleImpl(
+			input, reinterpret_cast<const uint16_t*>(input.data()), output);
+	}
 
 	std::string HexEncode(const void* bytes, size_t size) {
 		static const char kHexChars[] = "0123456789ABCDEF";

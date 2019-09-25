@@ -100,8 +100,7 @@ namespace base {
 			bool DidProcessTask(TaskSource::Transaction* transaction) override;
 			SequenceSortKey GetSortKey() const override;
 
-			// Releases reference to TaskRunner. This might cause this object to be
-			// deleted; therefore, no member access should be made after this method.
+			// Releases reference to TaskRunner.
 			void ReleaseTaskRunner();
 
 			const SequenceToken token_ = SequenceToken::Create();

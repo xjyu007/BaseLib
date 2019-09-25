@@ -8,7 +8,6 @@
 #include "compiler_specific.h"
 #include "sequence_token.h"
 #include "synchronization/lock.h"
-#include "thread_annotations.h"
 #include "threading/platform_thread.h"
 
 namespace base {
@@ -41,15 +40,15 @@ namespace base {
 		void DetachFromThread();
 
 	private:
-		void EnsureAssignedLockRequired() const EXCLUSIVE_LOCKS_REQUIRED(lock_);
+		void EnsureAssignedLockRequired() const;
 
 		// Members are mutable so that CalledOnValidThread() can set them.
 
 		// Synchronizes access to all members.
-		mutable base::Lock lock_;
+		mutable Lock lock_;
 
 		// Thread on which CalledOnValidThread() may return true.
-		mutable PlatformThreadRef thread_id_ GUARDED_BY(lock_);
+		mutable PlatformThreadRef thread_id_;
 
 		// TaskToken for which CalledOnValidThread() always returns true. This allows
 		// CalledOnValidThread() to return true when called multiple times from the
@@ -57,13 +56,13 @@ namespace base {
 		// (allowing usage of ThreadChecker objects on the stack in the scope of one-
 		// off tasks). Note: CalledOnValidThread() may return true even if the current
 		// TaskToken is not equal to this.
-		mutable TaskToken task_token_ GUARDED_BY(lock_);
+		mutable TaskToken task_token_;
 
 		// SequenceToken for which CalledOnValidThread() may return true. Used to
 		// ensure that CalledOnValidThread() doesn't return true for ThreadPool
 		// tasks that happen to run on the same thread but weren't posted to the same
 		// SingleThreadTaskRunner.
-		mutable SequenceToken sequence_token_ GUARDED_BY(lock_);
+		mutable SequenceToken sequence_token_;
 	};
 
 }  // namespace base

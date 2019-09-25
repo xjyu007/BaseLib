@@ -1,18 +1,16 @@
-#pragma once
-
 // Copyright (c) 2011 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include "base_export.h"
 #include "callback.h"
 #include "containers/stack.h"
 #include "macros.h"
 #include "synchronization/lock.h"
-#include "thread_annotations.h"
 
-namespace base
-{
+namespace base {
 
 	// This class provides a facility similar to the CRT atexit(), except that
 	// we control when the callbacks are executed. Under Windows for a DLL they
@@ -28,8 +26,7 @@ namespace base
 	// When the exit_manager object goes out of scope, all the registered
 	// callbacks and singleton destructors will be called.
 
-	class BASE_EXPORT AtExitManager
-	{
+	class BASE_EXPORT AtExitManager {
 	public:
 		typedef void (*AtExitCallbackType)(void*);
 
@@ -64,10 +61,10 @@ namespace base
 	private:
 		base::Lock lock_;
 
-		base::stack<base::Closure> stack_ GUARDED_BY(lock_);
+		base::stack<base::Closure> stack_;
 
 #if DCHECK_IS_ON()
-		bool processing_callbacks_ GUARDED_BY(lock_) = false;
+		bool processing_callbacks_ = false;
 #endif
 
 		// Stack of managers to allow shadowing.
@@ -77,8 +74,7 @@ namespace base
 	};
 
 #if defined(UNIT_TEST)
-	class ShadowingAtExitManager : public AtExitManager
-	{
+	class ShadowingAtExitManager : public AtExitManager {
 	public:
 		ShadowingAtExitManager() : AtExitManager(true) {}
 	};

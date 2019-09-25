@@ -16,7 +16,6 @@
 #include "sequence_checker.h"
 #include "threading/thread_checker.h"
 #include "time/time.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -66,17 +65,17 @@ namespace base {
 		// RunLoop::Delegate asynchronously.
 		void Run();
 
-  // Run the current RunLoop::Delegate until it doesn't find any tasks or
-  // messages in its queue (it goes idle).
-  // WARNING #1: This may run long (flakily timeout) and even never return! Do
-  //             not use this when repeating tasks such as animated web pages
-  //             are present.
-  // WARNING #2: This may return too early! For example, if used to run until an
-  //             incoming event has occurred but that event depends on a task in
-  //             a different queue -- e.g. another TaskRunner or a system event.
-  // Per the warnings above, this tends to lead to flaky tests; prefer
-  // QuitClosure()+Run() when at all possible.
-  void RunUntilIdle();
+		// Run the current RunLoop::Delegate until it doesn't find any tasks or
+		// messages in its queue (it goes idle).
+		// WARNING #1: This may run long (flakily timeout) and even never return! Do
+		//             not use this when repeating tasks such as animated web pages
+		//             are present.
+		// WARNING #2: This may return too early! For example, if used to run until an
+		//             incoming event has occurred but that event depends on a task in
+		//             a different queue -- e.g. another TaskRunner or a system event.
+		// Per the warnings above, this tends to lead to flaky tests; prefer
+		// QuitClosure()+Run() when at all possible.
+		void RunUntilIdle();
 
 		bool running() const {
 			DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
@@ -205,7 +204,7 @@ namespace base {
 			using RunLoopStack = stack<RunLoop*, std::vector<RunLoop*>>;
 
 			RunLoopStack active_run_loops_;
-			ObserverList<RunLoop::NestingObserver>::Unchecked nesting_observers_;
+			ObserverList<NestingObserver>::Unchecked nesting_observers_;
 
 #if DCHECK_IS_ON()
 			bool allow_running_for_testing_ = true;

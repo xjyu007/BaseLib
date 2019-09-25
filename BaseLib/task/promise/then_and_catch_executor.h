@@ -6,6 +6,7 @@
 
 #include <type_traits>
 
+#include "callback.h"
 #include "task/promise/abstract_promise.h"
 #include "task/promise/helpers.h"
 
@@ -14,11 +15,11 @@ namespace base::internal {
 	// Exists to reduce template bloat.
 	class BASE_EXPORT ThenAndCatchExecutorCommon {
 	public:
-		ThenAndCatchExecutorCommon(CallbackBase&& resolve_executor,
-			CallbackBase&& reject_executor) noexcept
-			: resolve_callback_(std::move(resolve_executor)),
-			reject_callback_(std::move(reject_executor)) {
-			DCHECK(!resolve_callback_.is_null() || !reject_callback_.is_null());
+		ThenAndCatchExecutorCommon(CallbackBase&& then_callback,
+								   CallbackBase&& catch_callback) noexcept
+			: then_callback_(std::move(then_callback)),
+			catch_callback_(std::move(catch_callback)) {
+			DCHECK(!then_callback_.is_null() || !catch_callback_.is_null());
 		}
 
 		~ThenAndCatchExecutorCommon() = default;
@@ -41,24 +42,23 @@ namespace base::internal {
 			AbstractPromise* arg,
 			AbstractPromise* result);
 
-		CallbackBase resolve_callback_;
-		CallbackBase reject_callback_;
+		CallbackBase then_callback_;
+		CallbackBase catch_callback_;
 	};
 
 	// Tag signals no callback which is used to eliminate dead code.
 	struct NoCallback {};
 
-	template <typename ResolveOnceCallback,
-		typename RejectOnceCallback,
+	template <typename ThenOnceCallback,
+		typename CatchOnceCallback,
 		typename ArgResolve,
 		typename ArgReject,
 		typename ResolveStorage,
 		typename RejectStorage>
 		class ThenAndCatchExecutor {
 		public:
-			using ResolveReturnT =
-				typename CallbackTraits<ResolveOnceCallback>::ReturnType;
-			using RejectReturnT = typename CallbackTraits<RejectOnceCallback>::ReturnType;
+			using ThenReturnT = typename CallbackTraits<ThenOnceCallback>::ReturnType;
+			using CatchReturnT = typename CallbackTraits<CatchOnceCallback>::ReturnType;
 			using PrerequisiteCouldResolve =
 				std::integral_constant<bool,
 				!std::is_same<ArgResolve, NoCallback>::value>;
@@ -66,8 +66,8 @@ namespace base::internal {
 				std::integral_constant<bool, !std::is_same<ArgReject, NoCallback>::value>;
 
 			ThenAndCatchExecutor(CallbackBase&& resolve_callback,
-				CallbackBase&& reject_callback) noexcept
-				: common_(std::move(resolve_callback), std::move(reject_callback)) {}
+				CallbackBase&& catch_callback) noexcept
+				: common_(std::move(resolve_callback), std::move(catch_callback)) {}
 
 			[[nodiscard]] bool IsCancelled() const { return common_.IsCancelled(); }
 
@@ -82,29 +82,29 @@ namespace base::internal {
 
 #if DCHECK_IS_ON()
 			[[nodiscard]] PromiseExecutor::ArgumentPassingType ResolveArgumentPassingType() const {
-				return common_.resolve_callback_.is_null()
+				return common_.then_callback_.is_null()
 					? PromiseExecutor::ArgumentPassingType::kNoCallback
-					: CallbackTraits<ResolveOnceCallback>::argument_passing_type;
+					: CallbackTraits<ThenOnceCallback>::argument_passing_type;
 			}
 
 			[[nodiscard]] PromiseExecutor::ArgumentPassingType RejectArgumentPassingType() const {
-				return common_.reject_callback_.is_null()
+				return common_.catch_callback_.is_null()
 					? PromiseExecutor::ArgumentPassingType::kNoCallback
-					: CallbackTraits<RejectOnceCallback>::argument_passing_type;
+					: CallbackTraits<CatchOnceCallback>::argument_passing_type;
 			}
 
 			[[nodiscard]] bool CanResolve() const {
-				return (!common_.resolve_callback_.is_null() &&
-					PromiseCallbackTraits<ResolveReturnT>::could_resolve) ||
-					(!common_.reject_callback_.is_null() &&
-						PromiseCallbackTraits<RejectReturnT>::could_resolve);
+				return (!common_.then_callback_.is_null() &&
+					PromiseCallbackTraits<ThenReturnT>::could_resolve) ||
+					(!common_.catch_callback_.is_null() &&
+						PromiseCallbackTraits<CatchReturnT>::could_resolve);
 			}
 
 			[[nodiscard]] bool CanReject() const {
-				return (!common_.resolve_callback_.is_null() &&
-					PromiseCallbackTraits<ResolveReturnT>::could_reject) ||
-					(!common_.reject_callback_.is_null() &&
-						PromiseCallbackTraits<RejectReturnT>::could_reject);
+				return (!common_.then_callback_.is_null() &&
+					PromiseCallbackTraits<ThenReturnT>::could_reject) ||
+					(!common_.catch_callback_.is_null() &&
+						PromiseCallbackTraits<CatchReturnT>::could_reject);
 			}
 #endif
 
@@ -118,19 +118,25 @@ namespace base::internal {
 
 			static void ExecuteCatch(AbstractPromise* prerequisite,
 				AbstractPromise* promise,
-				CallbackBase* reject_callback) {
-				ExecuteCatchInternal(prerequisite, promise, reject_callback,
+				CallbackBase* catch_callback) {
+				ExecuteCatchInternal(prerequisite, promise, catch_callback,
 					PrerequisiteCouldReject());
 			}
 
 			static void ExecuteThenInternal(AbstractPromise* prerequisite,
-				AbstractPromise* promise,
-				CallbackBase* resolve_callback,
-				std::true_type can_resolve) {
-				RunHelper<ResolveOnceCallback, Resolved<ArgResolve>, ResolveStorage,
-					RejectStorage>::
-					Run(std::move(*static_cast<ResolveOnceCallback*>(resolve_callback)),
-						prerequisite, promise);
+											AbstractPromise* promise,
+											CallbackBase* resolve_callback,
+											std::true_type can_resolve) {
+				// Internally RunHelper uses const RepeatingCallback<>& to avoid the
+				// binary size overhead of moving a scoped_refptr<> about.  We respect
+				// the onceness of the callback and RunHelper will overwrite the callback
+				// with the result.
+				using RepeatingThenCB =
+					typename ToRepeatingCallback<ThenOnceCallback>::value;
+				RunHelper<
+					RepeatingThenCB, Resolved<ArgResolve>, ResolveStorage,
+					RejectStorage>::Run(*static_cast<RepeatingThenCB*>(resolve_callback),
+										prerequisite, promise);
 			}
 
 			static void ExecuteThenInternal(AbstractPromise* prerequisite,
@@ -141,19 +147,25 @@ namespace base::internal {
 			}
 
 			static void ExecuteCatchInternal(AbstractPromise* prerequisite,
-				AbstractPromise* promise,
-				CallbackBase* reject_callback,
-				std::true_type can_reject) {
-				RunHelper<RejectOnceCallback, Rejected<ArgReject>, ResolveStorage,
-					RejectStorage>::
-					Run(std::move(*static_cast<RejectOnceCallback*>(reject_callback)),
-						prerequisite, promise);
+											 AbstractPromise* promise,
+											 CallbackBase* catch_callback,
+											 std::true_type can_reject) {
+				// Internally RunHelper uses const RepeatingCallback<>& to avoid the
+				// binary size overhead of moving a scoped_refptr<> about.  We respect
+				// the onceness of the callback and RunHelper will overwrite the callback
+				// with the result.
+				using RepeatingCatchCB =
+					typename ToRepeatingCallback<CatchOnceCallback>::value;
+				RunHelper<
+					RepeatingCatchCB, Rejected<ArgReject>, ResolveStorage,
+					RejectStorage>::Run(*static_cast<RepeatingCatchCB*>(catch_callback),
+										prerequisite, promise);
 			}
 
 			static void ExecuteCatchInternal(AbstractPromise* prerequisite,
-				AbstractPromise* promise,
-				CallbackBase* reject_callback,
-				std::false_type can_reject) {
+											 AbstractPromise* promise,
+											 CallbackBase* catch_callback,
+											 std::false_type can_reject) {
 				// |prerequisite| can't reject so don't generate dead code.
 			}
 

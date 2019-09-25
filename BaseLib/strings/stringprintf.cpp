@@ -20,22 +20,30 @@ namespace base {
 		// large enough to accommodate the formatted string without truncation, they
 		// return the number of characters that would be in the fully-formatted string
 		// (vsnprintf, and vswprintf on Windows), or -1 (vswprintf on POSIX platforms).
-		int vsnprintfT(char* buffer, size_t buf_size, const char* format, va_list argptr) {
+		inline int vsnprintfT(char* buffer, 
+							  size_t buf_size, 
+							  const char* format, 
+							  va_list argptr) {
 			return base::vsnprintf(buffer, buf_size, format, argptr);
 		}
 
-		int vsnprintfT(wchar_t* buffer, size_t buf_size, const wchar_t* format, va_list argptr) {
+		inline int vsnprintfT(wchar_t* buffer, 
+							  size_t buf_size, 
+							  const wchar_t* format, 
+							  va_list argptr) {
 			return base::vswprintf(buffer, buf_size, format, argptr);
 		}
 
 		// Templatized backend for StringPrintF/StringAppendF. This does not finalize
 		// the va_list, the caller is expected to do that.
-		template <class StringType>
-		static void StringAppendVT(StringType* dst, const typename StringType::value_type* format, va_list ap) {
+		template <class CharT>
+		static void StringAppendVT(std::basic_string<CharT>* dst, 
+								   const CharT* format, 
+								   va_list ap) {
 			// First try with a small fixed size buffer.
 			// This buffer size should be kept in sync with StringUtilTest.GrowBoundary
 			// and StringUtilTest.StringPrintfBounds.
-			typename StringType::value_type stack_buf[1024];
+			CharT stack_buf[1024];
 
 			va_list ap_copy;
 			va_copy(ap_copy, ap);
@@ -72,7 +80,7 @@ namespace base {
 					return;
 				}
 
-				std::vector<typename StringType::value_type> mem_buf(mem_length);
+				std::vector<CharT> mem_buf(mem_length);
 
 				// NOTE: You can only use a va_list once.  Since we're in a while loop, we
 				// need to make a new copy each time so we don't use up the original.

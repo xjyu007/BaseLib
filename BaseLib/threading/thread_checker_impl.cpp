@@ -41,13 +41,13 @@ namespace base {
 		DCHECK(other_called_on_valid_thread);
 
 		// Intentionally not using either |lock_| to let TSAN catch racy assign.
-		TS_UNCHECKED_READ(thread_id_) = TS_UNCHECKED_READ(other.thread_id_);
-		TS_UNCHECKED_READ(task_token_) = TS_UNCHECKED_READ(other.task_token_);
-		TS_UNCHECKED_READ(sequence_token_) = TS_UNCHECKED_READ(other.sequence_token_);
+		thread_id_ = other.thread_id_;
+		task_token_ = other.task_token_;
+		sequence_token_ = other.sequence_token_;
 
-		TS_UNCHECKED_READ(other.thread_id_) = PlatformThreadRef();
-		TS_UNCHECKED_READ(other.task_token_) = TaskToken();
-		TS_UNCHECKED_READ(other.sequence_token_) = SequenceToken();
+		other.thread_id_ = PlatformThreadRef();
+		other.task_token_ = TaskToken();
+		other.sequence_token_ = SequenceToken();
 
 		return *this;
 	}

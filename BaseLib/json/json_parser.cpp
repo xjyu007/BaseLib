@@ -382,8 +382,10 @@ namespace base::internal {
 		}
 
 		ConsumeChar();  // Closing '}'.
-
-		return Value(Value::DictStorage(std::move(dict_storage), KEEP_LAST_OF_DUPES));
+		// Reverse |dict_storage| to keep the last of elements with the same key in
+		// the input.
+		std::reverse(dict_storage.begin(), dict_storage.end());
+		return Value(Value::DictStorage(std::move(dict_storage)));
 	}
 
 	std::optional<Value> JSONParser::ConsumeList() {

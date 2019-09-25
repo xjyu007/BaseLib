@@ -4,18 +4,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <limits>
 #include <type_traits>
-
-#if defined(__GNUC__) || defined(__clang__)
-#define BASE_NUMERICS_LIKELY(x) __builtin_expect(!!(x), 1)
-#define BASE_NUMERICS_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else
-#define BASE_NUMERICS_LIKELY(x) (x)
-#define BASE_NUMERICS_UNLIKELY(x) (x)
-#endif
 
 #undef max
 
@@ -78,15 +70,6 @@ namespace base {
 		}
 
 		// This allows us to switch paths on known compile-time constants.
-#if defined(__clang__) || defined(__GNUC__)
-		constexpr bool CanDetectCompileTimeConstant() {
-			return true;
-		}
-		template <typename T>
-		constexpr bool IsCompileTimeConstant(const T v) {
-			return __builtin_constant_p(v);
-		}
-#else
 		constexpr bool CanDetectCompileTimeConstant() {
 			return false;
 		}
@@ -94,7 +77,6 @@ namespace base {
 		constexpr bool IsCompileTimeConstant(const T) {
 			return false;
 		}
-#endif
 		template <typename T>
 		constexpr bool MustTreatAsConstexpr(const T v) {
 			// Either we can't detect a compile-time constant, and must always use the
@@ -108,13 +90,7 @@ namespace base {
 		struct CheckOnFailure {
 			template <typename T>
 			static T HandleFailure() {
-#if defined(_MSC_VER)
 				__debugbreak();
-#elif defined(__GNUC__) || defined(__clang__)
-				__builtin_trap();
-#else
-				((void)(*(volatile char*)0 = 0));
-#endif
 				return T();
 			}
 		};

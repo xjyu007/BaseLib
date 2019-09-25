@@ -10,7 +10,6 @@
 #include "synchronization/condition_variable.h"
 #include "synchronization/lock.h"
 #include "task/common/checked_lock_impl.h"
-#include "thread_annotations.h"
 
 namespace base {
 	namespace internal {
@@ -54,7 +53,7 @@ namespace base {
 		//     Creates a condition variable using this as a lock.
 
 #if DCHECK_IS_ON()
-		class LOCKABLE CheckedLock : public CheckedLockImpl {
+		class CheckedLock : public CheckedLockImpl {
 		public:
 			CheckedLock() = default;
 			explicit CheckedLock(const CheckedLock* predecessor)
@@ -102,18 +101,17 @@ namespace base {
 		// example.value = 42;  // Doesn't compile without |annotate|.
 		//
 		// [1] https://clang.llvm.org/docs/ThreadSafetyAnalysis.html#no-alias-analysis
-		class SCOPED_LOCKABLE AnnotateAcquiredLockAlias {
+		class AnnotateAcquiredLockAlias {
 		public:
 			// |acquired_lock| is an acquired lock. |lock_alias| is an alias of
 			// |acquired_lock|.
 			AnnotateAcquiredLockAlias(const CheckedLock& acquired_lock,
 				const CheckedLock& lock_alias)
-				EXCLUSIVE_LOCK_FUNCTION(lock_alias)
 				: acquired_lock_(acquired_lock) {
 				DCHECK_EQ(&acquired_lock, &lock_alias);
 				acquired_lock_.AssertAcquired();
 			}
-			~AnnotateAcquiredLockAlias() UNLOCK_FUNCTION() {
+			~AnnotateAcquiredLockAlias() {
 				acquired_lock_.AssertAcquired();
 			}
 

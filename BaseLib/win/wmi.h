@@ -25,10 +25,8 @@
 
 #include "base_export.h"
 
-namespace base
-{
-	namespace win
-	{
+namespace base {
+	namespace win {
 
 		// Creates an instance of the WMI service connected to the local computer and
 		// returns its COM interface. If |set_blanket| is set to true, the basic COM
@@ -68,8 +66,7 @@ namespace base
 		// 'Win32_Bios' WMI classes; see :
 		// https://docs.microsoft.com/en-us/windows/desktop/CIMWin32Prov/win32-computersystem
 		// https://docs.microsoft.com/en-us/windows/desktop/CIMWin32Prov/win32-systembios
-		class BASE_EXPORT WmiComputerSystemInfo
-		{
+		class BASE_EXPORT WmiComputerSystemInfo {
 		public:
 			static WmiComputerSystemInfo Get();
 

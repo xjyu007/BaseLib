@@ -89,7 +89,7 @@ namespace logging {
 		}
 		LPCSTR strings[1] = { message.data() };
 		PSID user_sid = nullptr;
-		if (!::ConvertStringSidToSid(base::as_wcstr(*g_user_sid), &user_sid)) {
+		if (!::ConvertStringSidToSid(g_user_sid->c_str(), &user_sid)) {
 			stream() << " !!ERROR GETTING USER SID!!";
 		}
 

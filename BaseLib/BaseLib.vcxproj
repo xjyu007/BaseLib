@@ -410,6 +410,7 @@
     <ClInclude Include="task\sequence_manager\associated_thread_id.h" />
     <ClInclude Include="task\sequence_manager\atomic_flag_set.h" />
     <ClInclude Include="task\sequence_manager\enqueue_order.h" />
+    <ClInclude Include="task\sequence_manager\enqueue_order_generator.h" />
     <ClInclude Include="task\sequence_manager\lazily_deallocated_deque.h" />
     <ClInclude Include="task\sequence_manager\lazy_now.h" />
     <ClInclude Include="task\sequence_manager\real_time_domain.h" />
@@ -995,7 +996,7 @@
     <ClCompile Include="task\scoped_set_task_priority_for_current_thread.cpp" />
     <ClCompile Include="task\sequence_manager\associated_thread_id.cpp" />
     <ClCompile Include="task\sequence_manager\atomic_flag_set.cpp" />
-    <ClCompile Include="task\sequence_manager\enqueue_order.cpp" />
+    <ClCompile Include="task\sequence_manager\enqueue_order_generator.cpp" />
     <ClCompile Include="task\sequence_manager\lazy_now.cpp" />
     <ClCompile Include="task\sequence_manager\real_time_domain.cpp" />
     <ClCompile Include="task\sequence_manager\sequence_manager.cpp" />

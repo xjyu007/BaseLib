@@ -76,7 +76,7 @@ namespace base {
 		// Even if both files aren't openable (and thus, in some sense, "equal"),
 		// any unusable file yields a result of "false".
 		if (!file1.is_open() || !file2.is_open())
-			return false;  // NOLINT(readability-simplify-boolean-expr)
+			return false;
 
 		do {
 			std::string line1, line2;
@@ -267,6 +267,45 @@ namespace base {
 			return path.InsertBeforeExtensionASCII(StringPrintf(" (%d)", uniquifier));
 		return uniquifier == 0 ? path : base::FilePath();
 	}
-#endif  // !defined(OS_NACL_NONSFI)
 
-}  // namespace base
+	namespace internal {
+
+		bool PreReadFileSlow(const FilePath& file_path, int64_t max_bytes) {
+			DCHECK_GE(max_bytes, 0);
+
+			File file(file_path, File::FLAG_OPEN | File::FLAG_READ |
+								 File::FLAG_SEQUENTIAL_SCAN |
+								 File::FLAG_SHARE_DELETE);
+			if (!file.IsValid())
+				return false;
+
+			constexpr int kBufferSize = 1024 * 1024;
+			// Ensures the buffer is deallocated at function exit.
+			std::unique_ptr<char[]> buffer_deleter(new char[kBufferSize]);
+			char* const buffer = buffer_deleter.get();
+
+			while (max_bytes > 0) {
+				// The static_cast<int> is safe because kBufferSize is int, and both values
+				// are non-negative. So, the minimum is guaranteed to fit in int.
+				const int read_size =
+					static_cast<int>(std::min<int64_t>(max_bytes, kBufferSize));
+				DCHECK_GE(read_size, 0);
+				DCHECK_LE(read_size, kBufferSize);
+
+				const int read_bytes = file.ReadAtCurrentPos(buffer, read_size);
+				if (read_bytes < 0)
+					return false;
+				if (read_bytes == 0)
+					break;
+
+				max_bytes -= read_bytes;
+			}
+
+			return true;
+		}
+
+	}  // namespace internal
+
+	#endif  // !defined(OS_NACL_NONSFI)
+
+	}  // namespace base

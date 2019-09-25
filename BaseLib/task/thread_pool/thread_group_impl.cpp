@@ -8,13 +8,17 @@
 #include <type_traits>
 #include <utility>
 
+#include "atomicops.h"
 #include "auto_reset.h"
 #include "bind.h"
+#include "bind_helpers.h"
 #include "compiler_specific.h"
 #include "feature_list.h"
 #include "location.h"
+#include "memory/ptr_util.h"
 #include "metrics/histogram.h"
 #include "numerics/clamped_math.h"
+#include "sequence_token.h"
 #include "strings/string_util.h"
 #include "strings/stringprintf.h"
 #include "task/task_features.h"
@@ -23,29 +27,13 @@
 #include "threading/platform_thread.h"
 #include "threading/scoped_blocking_call.h"
 #include "threading/thread_checker.h"
+#include "threading/thread_restrictions.h"
 #include "time/time_override.h"
-#include "build_config.h"
 
+#include "win/scoped_com_initializer.h"
 #include "win/scoped_windows_thread_environment.h"
-
-// Data from deprecated UMA histograms:
-//
-// ThreadPool.NumTasksBetweenWaits.(Browser/Renderer).Foreground, August 2019
-//   Number of tasks between two waits by a foreground worker thread in a
-//   browser/renderer process.
-//
-//  Windows (browser/renderer)
-//    1 at 87th percentile / 92th percentile
-//    2 at 95th percentile / 98th percentile
-//    5 at 99th percentile / 100th percentile
-//  Mac (browser/renderer)
-//    1 at 81th percentile / 90th percentile
-//    2 at 92th percentile / 97th percentile
-//    5 at 98th percentile / 100th percentile
-//  Android (browser/renderer)
-//    1 at 92th percentile / 96th percentile
-//    2 at 97th percentile / 98th percentile
-//    5 at 99th percentile / 100th percentile
+#include "win/scoped_winrt_initializer.h"
+#include "win/windows_version.h"
 
 namespace base::internal {
 
@@ -89,7 +77,7 @@ namespace base::internal {
 		// Only used in DCHECKs.
 		bool ContainsWorker(const std::vector<scoped_refptr<WorkerThread>>& workers,
 			const WorkerThread* worker) {
-			auto it = std::find_if(workers.begin(), workers.end(),
+			const auto it = std::find_if(workers.begin(), workers.end(),
 				[worker](const scoped_refptr<WorkerThread>& i) {
 				return i.get() == worker;
 			});
@@ -101,7 +89,7 @@ namespace base::internal {
 	// Upon destruction, executes actions that control the number of active workers.
 	// Useful to satisfy locking requirements of these actions.
 	class ThreadGroupImpl::ScopedWorkersExecutor 
-		: public ThreadGroup::BaseScopedWorkersExecutor {
+		: public BaseScopedWorkersExecutor {
 	public:
 		ScopedWorkersExecutor(ThreadGroupImpl* outer) : outer_(outer) {}
 
@@ -326,8 +314,13 @@ namespace base::internal {
 		priority_hint_(priority_hint),
 		idle_workers_stack_cv_for_testing_(lock_.CreateConditionVariable()),
 		// Mimics the UMA_HISTOGRAM_LONG_TIMES macro.
-		detach_duration_histogram_(Histogram::FactoryTimeGet(
-			JoinString({ kDetachDurationHistogramPrefix, histogram_label }, ""),
+		detach_duration_histogram_(
+          histogram_label.empty()
+              ? nullptr
+              : Histogram::FactoryTimeGet(
+                    JoinString(
+                        {kDetachDurationHistogramPrefix, histogram_label},
+                        ""),
 			TimeDelta::FromMilliseconds(1),
 			TimeDelta::FromHours(1),
 			50,
@@ -335,8 +328,12 @@ namespace base::internal {
 		// Mimics the UMA_HISTOGRAM_COUNTS_1000 macro. When a worker runs more
 		// than 1000 tasks before detaching, there is no need to know the exact
 		// number of tasks that ran.
-		num_tasks_before_detach_histogram_(Histogram::FactoryGet(
-			JoinString({ kNumTasksBeforeDetachHistogramPrefix, histogram_label },
+		num_tasks_before_detach_histogram_(
+          histogram_label.empty()
+              ? nullptr
+              : Histogram::FactoryGet(
+                    JoinString(
+                        {kNumTasksBeforeDetachHistogramPrefix, histogram_label},
 				""),
 			1,
 			1000,
@@ -346,31 +343,39 @@ namespace base::internal {
 		// expected to run between zero and a few tens of workers.
 		// When it runs more than 100 worker, there is no need to know the exact
 		// number of workers that ran.
-		num_workers_histogram_(Histogram::FactoryGet(
-			JoinString({ kNumWorkersHistogramPrefix, histogram_label }, ""),
+		num_workers_histogram_(
+          histogram_label.empty()
+              ? nullptr
+              : Histogram::FactoryGet(
+			JoinString({ kNumWorkersHistogramPrefix, histogram_label },
+                               ""),
 			1,
 			100,
 			50,
 			HistogramBase::kUmaTargetedHistogramFlag)),
-		num_active_workers_histogram_(Histogram::FactoryGet(
-			JoinString({ kNumActiveWorkersHistogramPrefix, histogram_label }, ""),
+		num_active_workers_histogram_(
+          histogram_label.empty()
+              ? nullptr
+              : Histogram::FactoryGet(
+                    JoinString(
+                        {kNumActiveWorkersHistogramPrefix, histogram_label},
+                        ""),
 			1,
 			100,
 			50,
 			HistogramBase::kUmaTargetedHistogramFlag)),
 		tracked_ref_factory_(this) {
-		DCHECK(!histogram_label.empty());
 		DCHECK(!thread_group_label_.empty());
 	}
 
 	void ThreadGroupImpl::Start(
-		int max_tasks,
-		int max_best_effort_tasks,
-		TimeDelta suggested_reclaim_time,
-		scoped_refptr<TaskRunner> service_thread_task_runner,
-		WorkerThreadObserver* worker_thread_observer,
-		WorkerEnvironment worker_environment,
-		std::optional<TimeDelta> may_block_threshold) {
+			int max_tasks,
+			int max_best_effort_tasks,
+			TimeDelta suggested_reclaim_time,
+			scoped_refptr<TaskRunner> service_thread_task_runner,
+			WorkerThreadObserver* worker_thread_observer,
+			WorkerEnvironment worker_environment,
+			std::optional<TimeDelta> may_block_threshold) {
 		DCHECK(!replacement_thread_group_);
 
 		ScopedWorkersExecutor executor(this);
@@ -515,10 +520,13 @@ namespace base::internal {
 
 	void ThreadGroupImpl::ReportHeartbeatMetrics() const {
 		CheckedAutoLock auto_lock(lock_);
-		num_workers_histogram_->Add(workers_.size());
-
-		num_active_workers_histogram_->Add(workers_.size() -
+		if (num_workers_histogram_) {
+			num_workers_histogram_->Add(workers_.size());
+		}
+		if (num_active_workers_histogram_) {
+			num_active_workers_histogram_->Add(workers_.size() -
 			idle_workers_stack_.Size());
+		}
 	}
 
 	ThreadGroupImpl::WorkerThreadDelegateImpl::WorkerThreadDelegateImpl(
@@ -579,7 +587,7 @@ namespace base::internal {
 			return nullptr;
 
 		RegisteredTaskSource task_source;
-		TaskPriority priority;
+		TaskPriority priority = {};
 		while (!task_source && !outer_->priority_queue_.IsEmpty()) {
 			// Enforce the CanRunPolicy and that no more than |max_best_effort_tasks_|
 			// BEST_EFFORT tasks run concurrently.
@@ -694,8 +702,10 @@ namespace base::internal {
 		WorkerThread* worker) {
 		DCHECK_CALLED_ON_VALID_THREAD(worker_thread_checker_);
 
-		outer_->num_tasks_before_detach_histogram_->Add(
-			worker_only().num_tasks_since_last_detach);
+		if (outer_->num_tasks_before_detach_histogram_) {
+			outer_->num_tasks_before_detach_histogram_->Add(
+				worker_only().num_tasks_since_last_detach);
+		}
 		outer_->cleanup_timestamps_.push(subtle::TimeTicksNowIgnoringOverride());
 		worker->Cleanup();
 		outer_->idle_workers_stack_.Remove(worker);
@@ -942,8 +952,10 @@ namespace base::internal {
 		DCHECK_LE(workers_.size(), max_tasks_);
 
 		if (!cleanup_timestamps_.empty()) {
-			detach_duration_histogram_->AddTime(subtle::TimeTicksNowIgnoringOverride() -
-				cleanup_timestamps_.top());
+			if (detach_duration_histogram_) {
+				detach_duration_histogram_->AddTime(
+					subtle::TimeTicksNowIgnoringOverride() - cleanup_timestamps_.top());
+			}
 			cleanup_timestamps_.pop();
 		}
 
@@ -1061,9 +1073,7 @@ namespace base::internal {
 	void ThreadGroupImpl::ScheduleAdjustMaxTasks() {
 		// |adjust_max_tasks_posted_| can't change before the task posted below runs.
 		// Skip check on NaCl to avoid unsafe reference acquisition warning.
-#if !defined(OS_NACL)
-		DCHECK(TS_UNCHECKED_READ(adjust_max_tasks_posted_));
-#endif
+		DCHECK(adjust_max_tasks_posted_);
 
 		after_start().service_thread_task_runner->PostDelayedTask(
 			FROM_HERE, BindOnce(&ThreadGroupImpl::AdjustMaxTasks, Unretained(this)),

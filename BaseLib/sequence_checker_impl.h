@@ -10,7 +10,6 @@
 #include "compiler_specific.h"
 #include "macros.h"
 #include "synchronization/lock.h"
-#include "thread_annotations.h"
 
 namespace base {
 
@@ -50,7 +49,7 @@ namespace base {
 		static bool HasThreadLocalStorageBeenDestroyed();
 
 		mutable Lock lock_;
-		mutable std::unique_ptr<Core> core_{} GUARDED_BY(lock_);
+		mutable std::unique_ptr<Core> core_{};
 
 		DISALLOW_COPY_AND_ASSIGN(SequenceCheckerImpl);
 	};

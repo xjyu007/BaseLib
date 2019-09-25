@@ -16,7 +16,6 @@
 #include "task/sequence_manager/sequenced_task_source.h"
 #include "task/sequence_manager/thread_controller.h"
 #include "task/sequence_manager/work_deduplicator.h"
-#include "thread_annotations.h"
 #include "threading/sequence_local_storage_map.h"
 #include "threading/thread_task_runner_handle.h"
 
@@ -90,8 +89,7 @@ namespace base {
 				// will be returned.
 				TimeDelta DoWorkImpl(LazyNow* continuation_lazy_now, bool* ran_task);
 
-				void InitializeThreadTaskRunnerHandle()
-					EXCLUSIVE_LOCKS_REQUIRED(task_runner_lock_);
+				void InitializeThreadTaskRunnerHandle();
 
 				struct MainThreadOnly {
 					MainThreadOnly();
@@ -137,8 +135,7 @@ namespace base {
 				MainThreadOnly main_thread_only_;
 
 				mutable base::internal::CheckedLock task_runner_lock_;
-				scoped_refptr<SingleThreadTaskRunner> task_runner_
-					GUARDED_BY(task_runner_lock_);
+				scoped_refptr<SingleThreadTaskRunner> task_runner_;
 
 				WorkDeduplicator work_deduplicator_;
 

@@ -19,7 +19,6 @@
 #include "strings/utf_string_conversion_utils.h"
 #include "strings/utf_string_conversions.h"
 #include "third_party/icu/icu_utf.h"
-#include "build_config.h"
 
 namespace base {
 	namespace {
@@ -79,14 +78,6 @@ namespace base {
 				return static_cast<MachineWord>(0xFF80FF80FF80FF80ULL);
 			}
 		};
-#if defined(WCHAR_T_IS_UTF32)
-		template <>
-		struct NonASCIIMask<wchar_t> {
-			static constexpr MachineWord value() {
-				return static_cast<MachineWord>(0xFFFFFF80FFFFFF80ULL);
-			}
-		};
-#endif  // WCHAR_T_IS_UTF32
 
 	}  // namespace
 
@@ -491,12 +482,6 @@ namespace base {
 		return DoIsStringASCII(str.data(), str.length());
 	}
 
-#if defined(WCHAR_T_IS_UTF32)
-	bool IsStringASCII(WStringPiece str) {
-		return DoIsStringASCII(str.data(), str.length());
-	}
-#endif
-
 	bool IsStringUTF8(std::string_view str) {
 		const auto src = str.data();
 		const auto src_len = static_cast<int32_t>(str.length());
@@ -661,17 +646,17 @@ namespace base {
 		size_t dimension = 0;
 		const int kKilo = 1024;
 		while (unit_amount >= kKilo &&
-			dimension < base::size(kByteStringsUnlocalized) - 1) {
+			dimension < size(kByteStringsUnlocalized) - 1) {
 			unit_amount /= kKilo;
 			dimension++;
 		}
 
 		char buf[64];
 		if (bytes != 0 && dimension > 0 && unit_amount < 100) {
-			base::snprintf(buf, base::size(buf), "%.1lf%s", unit_amount,
+			snprintf(buf, size(buf), "%.1lf%s", unit_amount,
 				kByteStringsUnlocalized[dimension]);
 		} else {
-			base::snprintf(buf, base::size(buf), "%.0lf%s", unit_amount,
+			snprintf(buf, size(buf), "%.0lf%s", unit_amount,
 				kByteStringsUnlocalized[dimension]);
 		}
 
@@ -771,7 +756,7 @@ namespace base {
 				expansion += expansion_per_match;
 				++num_matches;
 			}
-			const size_t final_length = str_length + expansion;
+			const auto final_length = str_length + expansion;
 
 			if (str->capacity() < final_length) {
 				// If we'd have to allocate a new buffer to grow the string, build the
@@ -781,7 +766,7 @@ namespace base {
 				str->reserve(final_length);
 
 				size_t pos = 0;
-				for (size_t match = first_match;; match = matcher.Find(src, pos)) {
+				for (auto match = first_match;; match = matcher.Find(src, pos)) {
 					str->append(src, pos, match - pos);
 					str->append(replace_with.data(), replace_length);
 					pos = match + find_length;
@@ -800,8 +785,8 @@ namespace base {
 			// Prepare for the copy/move loop below -- expand the string to its final
 			// size by shifting the data after the first match to the end of the resized
 			// string.
-			size_t shift_src = first_match + find_length;
-			size_t shift_dst = shift_src + expansion;
+			auto shift_src = first_match + find_length;
+			auto shift_dst = shift_src + expansion;
 
 			// Big |expansion| factors (relative to |str_length|) require padding up to
 			// |shift_dst|.
@@ -824,8 +809,8 @@ namespace base {
 		//       |read_offset|, but |expansion| is big enough so that |write_offset|
 		//       will only catch up to |read_offset| at the point of the last match.
 		auto* buffer = &((*str)[0]);
-		size_t write_offset = first_match;
-		size_t read_offset = first_match + expansion;
+		auto write_offset = first_match;
+		auto read_offset = first_match + expansion;
 		do {
 			if (replace_length) {
 				CharTraits::copy(buffer + write_offset, replace_with.data(), 
@@ -837,7 +822,7 @@ namespace base {
 			// min() clamps StringType::npos (the largest unsigned value) to str_length.
 			const size_t match = std::min(matcher.Find(*str, read_offset), str_length);
 
-			size_t length = match - read_offset;
+			auto length = match - read_offset;
 			if (length) {
 				CharTraits::move(buffer + write_offset, buffer + read_offset, length);
 				write_offset += length;

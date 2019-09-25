@@ -38,32 +38,9 @@
 // be removed in followups, so splitting it up like this now makes it easy to
 // land the followups.
 
-#if !defined(__clang__)
-
 // MSVC x64 doesn't support inline asm, so use the MSVC intrinsic.
 #define TRAP_SEQUENCE1_() __debugbreak()
 #define TRAP_SEQUENCE2_()
-
-#elif defined(ARCH_CPU_ARM64)
-
-#define TRAP_SEQUENCE1_() __asm volatile("brk #0\n")
-// Intentionally empty: __builtin_unreachable() is always part of the sequence
-// (see IMMEDIATE_CRASH below) and already emits a ud2 on Win64
-#define TRAP_SEQUENCE2_() __asm volatile("")
-
-#else
-
-#define TRAP_SEQUENCE1_() asm volatile("int3")
-
-#if defined(ARCH_CPU_64_BITS)
-// Intentionally empty: __builtin_unreachable() is always part of the sequence
-// (see IMMEDIATE_CRASH below) and already emits a ud2 on Win64
-#define TRAP_SEQUENCE2_() asm volatile("")
-#else
-#define TRAP_SEQUENCE2_() asm volatile("ud2")
-#endif  // defined(ARCH_CPU_64_bits)
-
-#endif  // __clang__
 
 #define TRAP_SEQUENCE_() \
   do {                   \

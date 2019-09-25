@@ -16,7 +16,7 @@ namespace base::win {
 	namespace {
 
 		BSTR AllocBstrOrDie(std::wstring_view non_bstr) {
-			const auto result = ::SysAllocStringLen(as_wcstr(non_bstr),
+			const auto result = ::SysAllocStringLen(non_bstr.data(),
 				checked_cast<UINT>(non_bstr.length()));
 			if (!result) {
 				base::TerminateBecauseOutOfMemory((non_bstr.length() + 1) *
@@ -77,8 +77,7 @@ namespace base::win {
 		return bstr_;
 	}
 
-	void ScopedBstr::SetByteLen(size_t bytes) const
-	{
+	void ScopedBstr::SetByteLen(size_t bytes) const {
 		DCHECK(bstr_);
 		const auto data = reinterpret_cast<uint32_t*>(bstr_);
 		data[-1] = checked_cast<uint32_t>(bytes);

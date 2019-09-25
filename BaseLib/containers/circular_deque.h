@@ -514,7 +514,7 @@ namespace base {
 
 		const value_type& at(size_type i) const {
 			DCHECK(i < size());
-			size_t right_size = buffer_.capacity() - begin_;
+			const size_t right_size = buffer_.capacity() - begin_;
 			if (begin_ <= end_ || i < right_size)
 				return buffer_[begin_ + i];
 			return buffer_[i - right_size];
@@ -586,7 +586,7 @@ namespace base {
 				SetCapacityTo(new_capacity);
 		}
 
-		size_type capacity() const {
+		[[nodiscard]] size_type capacity() const {
 			// One item is wasted to indicate end().
 			return buffer_.capacity() == 0 ? 0 : buffer_.capacity() - 1;
 		}
@@ -613,9 +613,9 @@ namespace base {
 			buffer_ = VectorBuffer();
 		}
 
-		bool empty() const { return begin_ == end_; }
+		[[nodiscard]] bool empty() const { return begin_ == end_; }
 
-		size_type size() const {
+		[[nodiscard]] size_type size() const {
 			if (begin_ <= end_)
 				return end_ - begin_;
 			return buffer_.capacity() - begin_ + end_;
@@ -643,7 +643,7 @@ namespace base {
 				while (size() < count)
 					emplace_back();
 			} else if (count < size()) {
-				size_t new_end = (begin_ + count) % buffer_.capacity();
+				const size_t new_end = (begin_ + count) % buffer_.capacity();
 				DestructRange(new_end, end_);
 				end_ = new_end;
 
@@ -658,7 +658,7 @@ namespace base {
 				while (size() < count)
 					emplace_back(value);
 			} else if (count < size()) {
-				size_t new_end = (begin_ + count) % buffer_.capacity();
+				const size_t new_end = (begin_ + count) % buffer_.capacity();
 				DestructRange(new_end, end_);
 				end_ = new_end;
 

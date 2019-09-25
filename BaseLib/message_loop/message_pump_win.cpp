@@ -10,7 +10,6 @@
 #include "bind.h"
 #include "debug_/alias.h"
 #include "metrics/histogram_macros.h"
-#include "numerics/ranges.h"
 #include "numerics/safe_conversions.h"
 #include "trace_event/trace_event.h"
 
@@ -401,8 +400,6 @@ namespace base {
 			// Consider removing this safety net.
 			delay_msec = std::clamp(delay_msec, UINT(USER_TIMER_MINIMUM),
 				UINT(USER_TIMER_MAXIMUM));
-			//delay_msec = ClampToRange(delay_msec, UINT(USER_TIMER_MINIMUM), 
-			//						  UINT(USER_TIMER_MAXIMUM));
 
 			// Tell the optimizer to retain the delay to simplify analyzing hangs.
 			base::debug::Alias(&delay_msec);

@@ -18,9 +18,11 @@
 
 #include "files/file_enumerator.h"
 #include "files/file_path.h"
+#include "files/memory_mapped_file.h"
 #include "guid.h"
 #include "logging.h"
 #include "metrics/histogram_functions.h"
+#include "numerics/safe_conversions.h"
 #include "process/process_handle.h"
 #include "rand_util.h"
 #include "stl_util.h"
@@ -46,7 +48,9 @@ namespace base {
 		// following the named operation. If |operation_succeeded| is true, the
 		// "operation succeeded" sample is recorded. Otherwise, the state of |path| is
 		// queried and the most meaningful sample is recorded.
-		void RecordPostOperationState(const FilePath& path, std::string_view operation, bool operation_succeeded) {
+		void RecordPostOperationState(const FilePath& path, 
+									  std::string_view operation, 
+									  bool operation_succeeded) {
 			// The state of a filesystem item after an operation.
 			// These values are persisted to logs. Entries should not be renumbered and
 			// numeric values should never be reused.
@@ -77,14 +81,12 @@ namespace base {
 						metric = PostOperationState::kAccessDeniedAfterFailure;
 					else
 						metric = PostOperationState::kNoAttributesAfterFailure;
-				}
-				else if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
+				} else if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
 					if (IsDirectoryEmpty(path))
 						metric = PostOperationState::kEmptyDirectoryAfterFailure;
 					else
 						metric = PostOperationState::kNonEmptyDirectoryAfterFailure;
-				}
-				else {
+				} else {
 					metric = PostOperationState::kNotDirectoryAfterFailure;
 				}
 			}
@@ -125,7 +127,8 @@ namespace base {
 									 FileEnumerator::FILES | FileEnumerator::DIRECTORIES, 
 									 pattern);
 			DWORD result = ERROR_SUCCESS;
-			for (auto current = traversal.Next(); !current.empty(); current = traversal.Next()) {
+			for (auto current = traversal.Next(); !current.empty(); 
+				 current = traversal.Next()) {
 				// Try to clear the read-only bit if we find it.
 				FileEnumerator::FileInfo info = traversal.GetInfo();
 				if ((info.find_data().dwFileAttributes & FILE_ATTRIBUTE_READONLY) && 
@@ -146,8 +149,7 @@ namespace base {
 							this_result = ReturnLastErrorOrSuccessOnNotFound();
 						}
 					}
-				}
-				else if (!::DeleteFile(as_wcstr(current.value()))) {
+				} else if (!::DeleteFile(as_wcstr(current.value()))) {
 					this_result = ReturnLastErrorOrSuccessOnNotFound();
 				}
 				if (result == ERROR_SUCCESS)
@@ -160,7 +162,8 @@ namespace base {
 		// https://msdn.microsoft.com/library/yeby3zcb.aspx for details.
 		void AppendModeCharacter(const wchar_t mode_char, std::wstring* mode) {
 			const auto comma_pos = mode->find(L',');
-			mode->insert(comma_pos == std::wstring::npos ? mode->length() : comma_pos, 1, mode_char);
+			mode->insert(comma_pos == std::wstring::npos ? mode->length() : comma_pos, 1, 
+						 mode_char);
 		}
 
 		bool DoCopyFile(const FilePath& from_path, 
@@ -224,8 +227,7 @@ namespace base {
 				real_to_path = MakeAbsoluteFilePath(real_to_path);
 				if (real_to_path.empty())
 					return false;
-			}
-			else {
+			} else {
 				real_to_path = MakeAbsoluteFilePath(real_to_path.DirName());
 				if (real_to_path.empty())
 					return false;
@@ -277,8 +279,7 @@ namespace base {
 							<< target_path.value().c_str();
 						success = false;
 					}
-				}
-				else if (!DoCopyFile(current, target_path, fail_if_exists)) {
+				} else if (!DoCopyFile(current, target_path, fail_if_exists)) {
 					DLOG(ERROR) << "CopyDirectory() couldn't create file: "
 						<< target_path.value().c_str();
 					success = false;
@@ -303,8 +304,10 @@ namespace base {
 				return ERROR_BAD_PATHNAME;
 
 			// Handle any path with wildcards.
-			if (path.BaseName().value().find_first_of(FILE_PATH_LITERAL("*?")) != FilePath::StringType::npos) {
-				const auto error_code = DeleteFileRecursive(path.DirName(), path.BaseName().value(), recursive);
+			if (path.BaseName().value().find_first_of(FILE_PATH_LITERAL("*?")) != 
+				FilePath::StringType::npos) {
+				const auto error_code = 
+					DeleteFileRecursive(path.DirName(), path.BaseName().value(), recursive);
 				DCHECK_NE(static_cast<LONG>(error_code), ERROR_FILE_NOT_FOUND);
 				DCHECK_NE(static_cast<LONG>(error_code), ERROR_PATH_NOT_FOUND);
 				return error_code;
@@ -316,24 +319,31 @@ namespace base {
 				return ReturnLastErrorOrSuccessOnNotFound();
 
 			// Clear the read-only bit if it is set.
-			if ((attr & FILE_ATTRIBUTE_READONLY) && !::SetFileAttributes(as_wcstr(path.value()), attr & ~FILE_ATTRIBUTE_READONLY)) {
+			if ((attr & FILE_ATTRIBUTE_READONLY) && 
+				!::SetFileAttributes(as_wcstr(path.value()), 
+									 attr & ~FILE_ATTRIBUTE_READONLY)) {
 				// It's possible for |path| to be gone now under a race with other deleters.
 				return ReturnLastErrorOrSuccessOnNotFound();
 			}
 
 			// Perform a simple delete on anything that isn't a directory.
 			if (!(attr & FILE_ATTRIBUTE_DIRECTORY)) {
-				return ::DeleteFile(as_wcstr(path.value())) ? ERROR_SUCCESS	: ReturnLastErrorOrSuccessOnNotFound();
+				return ::DeleteFile(as_wcstr(path.value())) 
+							? ERROR_SUCCESS	
+							: ReturnLastErrorOrSuccessOnNotFound();
 			}
 
 			if (recursive) {
-				const auto error_code = DeleteFileRecursive(path, FILE_PATH_LITERAL("*"), true);
+				const auto error_code = 
+					DeleteFileRecursive(path, FILE_PATH_LITERAL("*"), true);
 				DCHECK_NE(static_cast<LONG>(error_code), ERROR_FILE_NOT_FOUND);
 				DCHECK_NE(static_cast<LONG>(error_code), ERROR_PATH_NOT_FOUND);
 				if (error_code != ERROR_SUCCESS)
 					return error_code;
 			}
-			return ::RemoveDirectory(as_wcstr(path.value())) ? ERROR_SUCCESS : ReturnLastErrorOrSuccessOnNotFound();
+			return ::RemoveDirectory(as_wcstr(path.value())) 
+						? ERROR_SUCCESS 
+						: ReturnLastErrorOrSuccessOnNotFound();
 		}
 
 	}  // namespace
@@ -341,7 +351,8 @@ namespace base {
 	FilePath MakeAbsoluteFilePath(const FilePath& input) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 		wchar_t file_path[MAX_PATH];
-		if (!_wfullpath(as_writable_wcstr(file_path), as_wcstr(input.value()), MAX_PATH))
+		if (!_wfullpath(as_writable_wcstr(file_path), as_wcstr(input.value()), 
+						MAX_PATH))
 			return FilePath();
 		return FilePath(file_path);
 	}
@@ -372,10 +383,13 @@ namespace base {
 		if (path.value().length() >= MAX_PATH)
 			return false;
 
-		return ::MoveFileEx(as_wcstr(path.value()), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT);
+		return ::MoveFileEx(as_wcstr(path.value()), nullptr, 
+							MOVEFILE_DELAY_UNTIL_REBOOT);
 	}
 
-	bool ReplaceFile(const FilePath& from_path, const FilePath& to_path, File::Error* error) {
+	bool ReplaceFile(const FilePath& from_path, 
+					 const FilePath& to_path, 
+					 File::Error* error) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 		// Try a simple move first.  It will only succeed when |to_path| doesn't
 		// already exist.
@@ -388,7 +402,7 @@ namespace base {
 		// not be able to change the ACLs. Ignore ACL errors then
 		// (REPLACEFILE_IGNORE_MERGE_ERRORS).
 		if (::ReplaceFile(as_wcstr(to_path.value()), as_wcstr(from_path.value()),
-			nullptr, REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr)) {
+						  nullptr, REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr)) {
 			return true;
 		}
 		// In the case of FILE_ERROR_NOT_FOUND from ReplaceFile, it is likely that
@@ -396,16 +410,21 @@ namespace base {
 		// from the call to MoveFile.
 		if (error) {
 			auto replace_error = File::OSErrorToFileError(GetLastError());
-			*error = replace_error == File::FILE_ERROR_NOT_FOUND ? move_error : replace_error;
+			*error = replace_error == File::FILE_ERROR_NOT_FOUND ? move_error 
+																 : replace_error;
 		}
 		return false;
 	}
 
-	bool CopyDirectory(const FilePath& from_path, const FilePath& to_path, bool recursive) {
+	bool CopyDirectory(const FilePath& from_path, 
+					   const FilePath& to_path, 
+					   bool recursive) {
 		return DoCopyDirectory(from_path, to_path, recursive, false);
 	}
 
-	bool CopyDirectoryExcl(const FilePath& from_path, const FilePath& to_path, bool recursive) {
+	bool CopyDirectoryExcl(const FilePath& from_path, 
+						   const FilePath& to_path, 
+						   bool recursive) {
 		return DoCopyDirectory(from_path, to_path, recursive, true);
 	}
 
@@ -416,7 +435,9 @@ namespace base {
 
 	bool PathIsWritable(const FilePath& path) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
-		const auto dir = CreateFile(as_wcstr(path.value()), FILE_ADD_FILE, kFileShareAll, nullptr,	OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+		const auto dir = 
+			CreateFile(as_wcstr(path.value()), FILE_ADD_FILE, kFileShareAll, nullptr,	
+					   OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
 		if (dir == INVALID_HANDLE_VALUE)
 			return false;
@@ -447,7 +468,9 @@ namespace base {
 
 	FilePath GetHomeDir() {
 		wchar_t result[MAX_PATH];
-		if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, as_writable_wcstr(result))) && result[0]) {
+		if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, 
+									  as_writable_wcstr(result))) && 
+			result[0]) {
 			return FilePath(result);
 		}
 
@@ -507,8 +530,10 @@ namespace base {
 		// Although it is nearly impossible to get a duplicate name with GUID, we
 		// still use a loop here in case it happens.
 		for (auto i = 0; i < 100; ++i) {
-			temp_name = dir.Append(ASCIIToUTF16(GenerateGUID()) + FILE_PATH_LITERAL(".tmp"));
-			File file(temp_name, File::FLAG_CREATE | File::FLAG_READ | File::FLAG_WRITE);
+			temp_name = 
+				dir.Append(ASCIIToUTF16(GenerateGUID()) + FILE_PATH_LITERAL(".tmp"));
+			File file(temp_name, 
+					  File::FLAG_CREATE | File::FLAG_READ | File::FLAG_WRITE);
 			if (file.IsValid()) {
 				file.Close();
 				create_file_success = true;
@@ -517,12 +542,14 @@ namespace base {
 		}
 
 		if (!create_file_success) {
-			DPLOG(WARNING) << "Failed to get temporary file name in " << WideToUTF8(dir.value());
+			DPLOG(WARNING) << "Failed to get temporary file name in " 
+						   << WideToUTF8(dir.value());
 			return false;
 		}
 
 		wchar_t long_temp_name[MAX_PATH + 1];
-		const auto long_name_len = GetLongPathName(as_wcstr(temp_name.value()), as_writable_wcstr(long_temp_name), MAX_PATH);
+		const auto long_name_len = GetLongPathName(
+			as_wcstr(temp_name.value()), as_writable_wcstr(long_temp_name), MAX_PATH);
 		if (long_name_len > MAX_PATH || long_name_len == 0) {
 			// GetLongPathName() failed, but we still have a temporary file.
 			*temp_file = std::move(temp_name);
@@ -535,7 +562,9 @@ namespace base {
 		return true;
 	}
 
-	bool CreateTemporaryDirInDir(const FilePath& base_dir, const FilePath::StringType& prefix, FilePath* new_dir) {
+	bool CreateTemporaryDirInDir(const FilePath& base_dir, 
+								 const FilePath::StringType& prefix, 
+								 FilePath* new_dir) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 
 		for (auto count = 0; count < 50; ++count) {
@@ -545,7 +574,8 @@ namespace base {
 			new_dir_name.assign(prefix);
 			new_dir_name.append(NumberToString16(GetCurrentProcId()));
 			new_dir_name.push_back('_');
-			new_dir_name.append(NumberToString16(RandInt(0, std::numeric_limits<int16_t>::max())));
+			new_dir_name.append(
+				NumberToString16(RandInt(0, std::numeric_limits<int32_t>::max())));
 
 			auto path_to_create = base_dir.Append(new_dir_name);
 			if (::CreateDirectory(as_wcstr(path_to_create.value()), nullptr)) {
@@ -557,7 +587,8 @@ namespace base {
 		return false;
 	}
 
-	bool CreateNewTempDirectory(const FilePath::StringType& prefix, FilePath* new_temp_path) {
+	bool CreateNewTempDirectory(const FilePath::StringType& prefix, 
+								FilePath* new_temp_path) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 
 		FilePath system_temp_dir;
@@ -567,7 +598,8 @@ namespace base {
 		return CreateTemporaryDirInDir(system_temp_dir, prefix, new_temp_path);
 	}
 
-	bool CreateDirectoryAndGetError(const FilePath& full_path, File::Error* error) {
+	bool CreateDirectoryAndGetError(const FilePath& full_path, 
+									File::Error* error) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 
 		// If the path exists, we've succeeded if it's a directory, failed otherwise.
@@ -575,10 +607,12 @@ namespace base {
 		const auto fileattr = ::GetFileAttributes(full_path_str);
 		if (fileattr != INVALID_FILE_ATTRIBUTES) {
 			if ((fileattr & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-				DVLOG(1) << "CreateDirectory(" << full_path_str << "), " << "directory already exists.";
+				DVLOG(1) << "CreateDirectory(" << full_path_str << "), " 
+						 << "directory already exists.";
 				return true;
 			}
-			DLOG(WARNING) << "CreateDirectory(" << full_path_str << "), " << "conflicts with existing file.";
+			DLOG(WARNING) << "CreateDirectory(" << full_path_str << "), " 
+						  << "conflicts with existing file.";
 			if (error)
 				*error = File::FILE_ERROR_NOT_A_DIRECTORY;
 			::SetLastError(ERROR_FILE_EXISTS);
@@ -647,7 +681,8 @@ namespace base {
 			FilePath(std::wstring_view(native_file_path, used_wchars)), real_path);
 	}
 
-	bool DevicePathToDriveLetterPath(const FilePath& nt_device_path, FilePath* out_drive_letter_path) {
+	bool DevicePathToDriveLetterPath(const FilePath& nt_device_path, 
+									 FilePath* out_drive_letter_path) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 
 		// Get the mapping of drive letters to device paths.
@@ -670,10 +705,14 @@ namespace base {
 		while (*drive_map_ptr) {
 			drive[0] = drive_map_ptr[0];  // Copy the drive letter.
 
-			if (QueryDosDevice(as_wcstr(drive), as_writable_wcstr(device_path_as_string), MAX_PATH)) {
+			if (QueryDosDevice(as_wcstr(drive), 
+							   as_writable_wcstr(device_path_as_string), MAX_PATH)) {
 				FilePath device_path(device_path_as_string);
-				if (device_path == nt_device_path || device_path.IsParent(nt_device_path)) {
-					*out_drive_letter_path = FilePath(drive + nt_device_path.value().substr(wcslen(as_wcstr(device_path_as_string))));
+				if (device_path == nt_device_path || 
+					device_path.IsParent(nt_device_path)) {
+					*out_drive_letter_path = 
+						FilePath(drive + nt_device_path.value().substr(
+											wcslen(as_wcstr(device_path_as_string))));
 					return true;
 				}
 			}
@@ -691,18 +730,19 @@ namespace base {
 	FilePath MakeLongFilePath(const FilePath& input) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 
-		auto path_long_len = ::GetLongPathName(input.value().c_str(), nullptr, 0);
+		auto path_long_len = ::GetLongPathName(as_wcstr(input.value()), nullptr, 0);
 		if (path_long_len == 0UL)
 			return FilePath();
 
 		std::wstring path_long_str;
 		path_long_len = ::GetLongPathName(
-			input.value().c_str(), base::WriteInto(&path_long_str, path_long_len),
+			as_wcstr(input.value()),
+			as_writable_wcstr(WriteInto(&path_long_str, path_long_len)),
 			path_long_len);
 		if (path_long_len == 0UL)
 			return FilePath();
 
-		return base::FilePath(path_long_str);
+		return FilePath(path_long_str);
 	}
 
 	// TODO(rkc): Work out if we want to handle NTFS junctions here or not, handle
@@ -715,7 +755,8 @@ namespace base {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 
 		WIN32_FILE_ATTRIBUTE_DATA attr;
-		if (!GetFileAttributesEx(as_wcstr(file_path.value()), GetFileExInfoStandard, &attr)) {
+		if (!GetFileAttributesEx(as_wcstr(file_path.value()), GetFileExInfoStandard, 
+								 &attr)) {
 			return false;
 		}
 
@@ -723,7 +764,8 @@ namespace base {
 		size.HighPart = attr.nFileSizeHigh;
 		size.LowPart = attr.nFileSizeLow;
 		results->size = size.QuadPart;
-		results->is_directory = (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+		results->is_directory = 
+			(attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 		results->last_modified = Time::FromFileTime(attr.ftLastWriteTime);
 		results->last_accessed = Time::FromFileTime(attr.ftLastAccessTime);
 		results->creation_time = Time::FromFileTime(attr.ftCreationTime);
@@ -746,7 +788,8 @@ namespace base {
 	FILE* FileToFILE(File file, const char* mode) {
 		if (!file.IsValid())
 			return nullptr;
-		const auto fd = _open_osfhandle(reinterpret_cast<intptr_t>(file.GetPlatformFile()), 0);
+		const auto fd = 
+			_open_osfhandle(reinterpret_cast<intptr_t>(file.GetPlatformFile()), 0);
 		if (fd < 0)
 			return nullptr;
 		file.TakePlatformFile();
@@ -759,7 +802,9 @@ namespace base {
 	int ReadFile(const FilePath& filename, char* data, int max_size) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 		const win::ScopedHandle file(CreateFile(as_wcstr(filename.value()), GENERIC_READ,
-			FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr));
+												FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, 
+												OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, 
+												nullptr));
 		if (!file.IsValid())
 			return -1;
 
@@ -772,9 +817,12 @@ namespace base {
 
 	int WriteFile(const FilePath& filename, const char* data, int size) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
-		const win::ScopedHandle file(CreateFile(as_wcstr(filename.value()), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr));
+		const win::ScopedHandle file(CreateFile(as_wcstr(filename.value()), GENERIC_WRITE, 
+												0, nullptr, CREATE_ALWAYS, 
+												FILE_ATTRIBUTE_NORMAL, nullptr));
 		if (!file.IsValid()) {
-			DPLOG(WARNING) << "CreateFile failed for path "	<< WideToUTF8(filename.value());
+			DPLOG(WARNING) << "CreateFile failed for path "	
+						   << WideToUTF8(filename.value());
 			return -1;
 		}
 
@@ -785,18 +833,21 @@ namespace base {
 
 		if (!result) {
 			// WriteFile failed.
-			DPLOG(WARNING) << "writing file " << WideToUTF8(filename.value()) << " failed";
-		}
-		else {
+			DPLOG(WARNING) << "writing file " << WideToUTF8(filename.value()) 
+						   << " failed";
+		} else {
 			// Didn't write all the bytes.
-			DLOG(WARNING) << "wrote" << written << " bytes to "	<< WideToUTF8(filename.value()) << " expected " << size;
+			DLOG(WARNING) << "wrote" << written << " bytes to "	
+						  << WideToUTF8(filename.value()) << " expected " << size;
 		}
 		return -1;
 	}
 
 	bool AppendToFile(const FilePath& filename, const char* data, int size) {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
-		const win::ScopedHandle file(CreateFile(as_wcstr(filename.value()), FILE_APPEND_DATA, 0, nullptr, OPEN_EXISTING, 0, nullptr));
+		const win::ScopedHandle file(CreateFile(as_wcstr(filename.value()), 
+												FILE_APPEND_DATA, 0, nullptr, OPEN_EXISTING, 0, 
+												nullptr));
 		if (!file.IsValid()) {
 			VPLOG(1) << "CreateFile failed for path " << WideToUTF8(filename.value());
 			return false;
@@ -810,10 +861,10 @@ namespace base {
 		if (!result) {
 			// WriteFile failed.
 			VPLOG(1) << "Writing file " << WideToUTF8(filename.value()) << " failed";
-		}
-		else {
+		} else {
 			// Didn't write all the bytes.
-			VPLOG(1) << "Only wrote " << written << " out of " << size << " byte(s) to " << WideToUTF8(filename.value());
+			VPLOG(1) << "Only wrote " << written << " out of " << size << " byte(s) to " 
+					 << WideToUTF8(filename.value());
 		}
 		return false;
 	}
@@ -843,12 +894,14 @@ namespace base {
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 
 		wchar_t volume_path[MAX_PATH];
-		if (!GetVolumePathNameW(as_wcstr(path.NormalizePathSeparators().value()), volume_path, size(volume_path))) {
+		if (!GetVolumePathNameW(as_wcstr(path.NormalizePathSeparators().value()), 
+								volume_path, size(volume_path))) {
 			return -1;
 		}
 
 		DWORD max_length = 0;
-		if (!GetVolumeInformationW(volume_path, nullptr, 0, nullptr, &max_length, nullptr, nullptr, 0)) {
+		if (!GetVolumeInformationW(volume_path, nullptr, 0, nullptr, &max_length, 
+								   nullptr, nullptr, 0)) {
 			return -1;
 		}
 
@@ -869,6 +922,60 @@ namespace base {
 		return ioctlsocket(fd, FIONBIO, &nonblocking) == 0;
 	}
 
+	namespace {
+
+		// ::PrefetchVirtualMemory() is only available on Windows 8 and above. Chrome
+		// supports Windows 7, so we need to check for the function's presence
+		// dynamically.
+		using PrefetchVirtualMemoryPtr = decltype(&::PrefetchVirtualMemory);
+
+		// Returns null if ::PrefetchVirtualMemory() is not available.
+		PrefetchVirtualMemoryPtr GetPrefetchVirtualMemoryPtr() {
+			HMODULE kernel32_dll = ::GetModuleHandleA("kernel32.dll");
+			return reinterpret_cast<decltype(&::PrefetchVirtualMemory)>(
+				GetProcAddress(kernel32_dll, "PrefetchVirtualMemory"));
+		}
+
+	}  // namespace
+
+	bool PreReadFile(const FilePath& file_path,
+					 bool is_executable,
+					 int64_t max_bytes) {
+		DCHECK_GE(max_bytes, 0);
+
+		// On Win8 and higher use ::PrefetchVirtualMemory(). This is better than a
+		// simple data file read, more from a RAM perspective than CPU. This is
+		// because reading the file as data results in double mapping to
+		// Image/executable pages for all pages of code executed.
+		static PrefetchVirtualMemoryPtr prefetch_virtual_memory =
+			GetPrefetchVirtualMemoryPtr();
+
+		if (prefetch_virtual_memory == nullptr)
+			return internal::PreReadFileSlow(file_path, max_bytes);
+
+		if (max_bytes == 0) {
+			// PrefetchVirtualMemory() fails when asked to read zero bytes.
+			// base::MemoryMappedFile::Initialize() fails on an empty file.
+			return true;
+		}
+
+		// PrefetchVirtualMemory() fails if the file is opened with write access.
+		MemoryMappedFile::Access access = is_executable
+											? MemoryMappedFile::READ_CODE_IMAGE
+											: MemoryMappedFile::READ_ONLY;
+		MemoryMappedFile mapped_file;
+		if (!mapped_file.Initialize(file_path, access))
+			return false;
+
+		const ::SIZE_T length =
+			std::min(base::saturated_cast<::SIZE_T>(max_bytes),
+					 base::saturated_cast<::SIZE_T>(mapped_file.length()));
+		::_WIN32_MEMORY_RANGE_ENTRY address_range = {mapped_file.data(), length};
+		return (*prefetch_virtual_memory)(::GetCurrentProcess(),
+										  /*NumberOfEntries=*/1, &address_range,
+										  /*Flags=*/0);
+	}
+
 	// -----------------------------------------------------------------------------
 
 	namespace internal {
@@ -882,7 +989,8 @@ namespace base {
 				to_path.value().length() >= MAX_PATH) {
 				return false;
 			}
-			if (MoveFileEx(as_wcstr(from_path.value()), as_wcstr(to_path.value()), MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) != 0)
+			if (MoveFileEx(as_wcstr(from_path.value()), as_wcstr(to_path.value()), 
+						   MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) != 0)
 				return true;
 
 			// Keep the last error value from MoveFileEx around in case the below
@@ -906,7 +1014,8 @@ namespace base {
 			return ret;
 		}
 
-		bool CopyAndDeleteDirectory(const FilePath& from_path, const FilePath& to_path) {
+		bool CopyAndDeleteDirectory(const FilePath& from_path, 
+									const FilePath& to_path) {
 			ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 			if (CopyDirectory(from_path, to_path, true)) {
 				if (DeleteFile(from_path, true))

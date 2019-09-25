@@ -8,6 +8,7 @@
 #include "logging.h"
 #include "message_loop/message_pump_type.h"
 #include "message_loop/timer_slack.h"
+#include "sequence_checker.h"
 #include "time/time.h"
 
 namespace base {

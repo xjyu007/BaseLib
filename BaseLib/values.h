@@ -101,7 +101,8 @@ namespace base {
 		// buffer that's passed in.
 		// DEPRECATED, use std::make_unique<Value>(const BlobStorage&) instead.
 		// TODO(crbug.com/646113): Delete this and migrate callsites.
-		static std::unique_ptr<Value> CreateWithCopiedBuffer(const char* buffer, size_t size);
+		static std::unique_ptr<Value> CreateWithCopiedBuffer(const char* buffer, 
+															 size_t size);
 
 		// Adaptors for converting from the old way to the new way and vice versa.
 		static Value FromUniquePtrValue(std::unique_ptr<Value> val);
@@ -139,7 +140,7 @@ namespace base {
 		explicit Value(const DictStorage& in_dict);
 		explicit Value(DictStorage&& in_dict) noexcept;
 
-		explicit Value(const ListStorage& in_list);
+		explicit Value(span<const Value> in_list);
 		explicit Value(ListStorage&& in_list) noexcept;
 
 		Value& operator=(Value&& that) noexcept;
@@ -171,7 +172,19 @@ namespace base {
 		[[nodiscard]] const BlobStorage& GetBlob() const;
 
 		ListStorage& GetList();
-		[[nodiscard]] const ListStorage& GetList() const;
+		[[nodiscard]] span<const Value> GetList() const;
+
+		// Appends |value| to the end of the list.
+		// Note: These CHECK that type() is Type::LIST.
+		void Append(bool value);
+		void Append(int value);
+		void Append(double value);
+		void Append(const char* value);
+		void Append(std::string_view value);
+		void Append(std::string&& value);
+		void Append(const wchar_t* value);
+		void Append(std::wstring_view value);
+		void Append(Value&& value);
 
 		// |FindKey| looks up |key| in the underlying dictionary. If found, it returns
 		// a pointer to the element. Otherwise it returns nullptr.
@@ -196,7 +209,7 @@ namespace base {
 		Value* FindKeyOfType(std::string_view key, Type type);
 		[[nodiscard]] const Value* FindKeyOfType(std::string_view key, Type type) const;
 
-		// These are convenience forms of |FindKey|. They return |base::nullopt| if
+		// These are convenience forms of |FindKey|. They return |std::nullopt| if
 		// the value is not found or doesn't have the type specified in the
 		// function's name.
 		[[nodiscard]] std::optional<bool> FindBoolKey(std::string_view key) const;
@@ -718,7 +731,7 @@ namespace base {
 		static std::unique_ptr<ListValue> From(std::unique_ptr<Value> value);
 
 		ListValue();
-		explicit ListValue(const ListStorage& in_list);
+		explicit ListValue(span<const Value> in_list);
 		explicit ListValue(ListStorage&& in_list) noexcept;
 
 		// Clears the contents of this ListValue
@@ -798,24 +811,25 @@ namespace base {
 		// DEPRECATED, use GetList()::erase() instead.
 		iterator Erase(iterator iter, std::unique_ptr<Value>* out_value);
 
+		using Value::Append;
 		// Appends a Value to the end of the list.
-		// DEPRECATED, use GetList()::push_back() instead.
+		// DEPRECATED, use Value::Append() instead.
 		void Append(std::unique_ptr<Value> in_value);
 
 		// Convenience forms of Append.
-		// DEPRECATED, use GetList()::emplace_back() instead.
+		// DEPRECATED, use  Value::Append() instead.
 		void AppendBoolean(bool in_value);
 		void AppendInteger(int in_value);
 		void AppendDouble(double in_value);
 		void AppendString(std::string_view in_value);
 		void AppendString(const std::wstring& in_value);
-		// DEPRECATED, use GetList()::emplace_back() in a loop instead.
+		// DEPRECATED, use Value::Append() in a loop instead.
 		void AppendStrings(const std::vector<std::string>& in_values);
 		void AppendStrings(const std::vector<std::wstring>& in_values);
 
 		// Appends a Value if it's not already present. Returns true if successful,
 		// or false if the value was already
-		// DEPRECATED, use std::find() with GetList()::push_back() instead.
+		// DEPRECATED, use std::find() with Value::Append() instead.
 		bool AppendIfNotPresent(std::unique_ptr<Value> in_value);
 
 		// Insert a Value at index.

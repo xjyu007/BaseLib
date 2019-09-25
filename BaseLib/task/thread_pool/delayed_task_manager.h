@@ -17,7 +17,6 @@
 #include "task/common/checked_lock.h"
 #include "task/common/intrusive_heap.h"
 #include "task/thread_pool/task.h"
-#include "thread_annotations.h"
 #include "time/default_tick_clock.h"
 #include "time/tick_clock.h"
 
@@ -102,8 +101,7 @@ namespace base {
 			// Get the time at which to schedule the next |ProcessRipeTasks()| execution,
 			// or TimeTicks::Max() if none needs to be scheduled (i.e. no task, or next
 			// task already scheduled).
-			TimeTicks GetTimeToScheduleProcessRipeTasksLockRequired()
-				EXCLUSIVE_LOCKS_REQUIRED(queue_lock_);
+			TimeTicks GetTimeToScheduleProcessRipeTasksLockRequired();
 
 			// Schedule |ProcessRipeTasks()| on the service thread to be executed at the
 			// given |process_ripe_tasks_time|, provided the given time is not
@@ -124,7 +122,7 @@ namespace base {
 
 			scoped_refptr<TaskRunner> service_thread_task_runner_;
 
-			IntrusiveHeap<DelayedTask> delayed_task_queue_ GUARDED_BY(queue_lock_);
+			IntrusiveHeap<DelayedTask> delayed_task_queue_;
 
 			DISALLOW_COPY_AND_ASSIGN(DelayedTaskManager);
 		};

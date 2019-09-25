@@ -1,14 +1,13 @@
-#pragma once
-
 // Copyright (c) 2011 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include "base_export.h"
 #include "logging.h"
 #include "macros.h"
 #include "synchronization/lock_impl.h"
-#include "thread_annotations.h"
 #include "threading/platform_thread.h"
 
 namespace base {
@@ -16,7 +15,7 @@ namespace base {
 	// A convenient wrapper for an OS specific critical section.  The only real
 	// intelligence in this class is in debug mode for the support for the
 	// AssertAcquired() method.
-	class LOCKABLE BASE_EXPORT Lock {
+	class BASE_EXPORT Lock {
 	public:
 #if !DCHECK_IS_ON()
 		// Optimized wrapper implementation
@@ -90,7 +89,7 @@ namespace base {
 
 		// All private data is implicitly protected by lock_.
 		// Be VERY careful to only access members under that lock.
-		base::PlatformThreadRef owning_thread_ref_;
+		PlatformThreadRef owning_thread_ref_;
 #endif  // DCHECK_IS_ON()
 
 		// Platform specific underlying lock implementation.

@@ -24,10 +24,11 @@ namespace base {
 
 	// static
 	const scoped_refptr<SingleThreadTaskRunner>& ThreadTaskRunnerHandle::Get() {
-		const ThreadTaskRunnerHandle* current = thread_task_runner_tls.Pointer()->Get();
-		CHECK(current) << "Error: This caller requires a single-threaded context "
-			"(i.e. the current task needs to run from a "
-			"SingleThreadTaskRunner).";
+		const ThreadTaskRunnerHandle* current = 
+			thread_task_runner_tls.Pointer()->Get();
+		CHECK(current) 
+			<< "Error: This caller requires a single-threaded context (i.e. the "
+			"current task needs to run from a SingleThreadTaskRunner).";
 		return current->task_runner_;
 	}
 
@@ -45,7 +46,8 @@ namespace base {
 		DCHECK(!SequencedTaskRunnerHandle::IsSet() || IsSet());
 
 		if (!IsSet()) {
-			auto top_level_ttrh = std::make_unique<ThreadTaskRunnerHandle>(std::move(overriding_task_runner));
+			auto top_level_ttrh = std::make_unique<ThreadTaskRunnerHandle>(
+				std::move(overriding_task_runner));
 			return ScopedClosureRunner(base::BindOnce(
 				[](std::unique_ptr<ThreadTaskRunnerHandle> ttrh_to_release) {},
 				std::move(top_level_ttrh)));
@@ -57,7 +59,8 @@ namespace base {
 		ttrh->sequenced_task_runner_handle_.task_runner_ = overriding_task_runner;
 		ttrh->task_runner_.swap(overriding_task_runner);
 
-		auto no_running_during_override = std::make_unique<RunLoop::ScopedDisallowRunningForTesting>();
+		auto no_running_during_override = 
+			std::make_unique<RunLoop::ScopedDisallowRunningForTesting>();
 
 		return ScopedClosureRunner(base::BindOnce(
 			[](scoped_refptr<SingleThreadTaskRunner> task_runner_to_restore,
@@ -70,7 +73,8 @@ namespace base {
 				<< "Nested overrides must expire their ScopedClosureRunners "
 				"in LIFO order.";
 
-			ttrh->sequenced_task_runner_handle_.task_runner_ = task_runner_to_restore;
+			ttrh->sequenced_task_runner_handle_.task_runner_ = 
+				task_runner_to_restore;
 			ttrh->task_runner_.swap(task_runner_to_restore);
 		},
 			std::move(overriding_task_runner),
@@ -78,7 +82,8 @@ namespace base {
 			std::move(no_running_during_override)));
 	}
 
-	ThreadTaskRunnerHandle::ThreadTaskRunnerHandle(scoped_refptr<SingleThreadTaskRunner> task_runner)
+	ThreadTaskRunnerHandle::ThreadTaskRunnerHandle(
+		scoped_refptr<SingleThreadTaskRunner> task_runner)
 		: task_runner_(std::move(task_runner)),
 		sequenced_task_runner_handle_(task_runner_) {
 		DCHECK(task_runner_->BelongsToCurrentThread());

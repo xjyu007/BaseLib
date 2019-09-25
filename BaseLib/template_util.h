@@ -21,14 +21,6 @@
 #define CR_USE_FALLBACKS_FOR_OLD_EXPERIMENTAL_GLIBCXX
 #endif
 
-// This hacks around using gcc with libc++ which has some incompatibilies.
-// - is_trivially_* doesn't work: https://llvm.org/bugs/show_bug.cgi?id=27538
-// TODO(danakj): Remove this when android builders are all using a newer version
-// of gcc, or the android ndk is updated to a newer libc++ that works with older
-// gcc versions.
-#if !defined(__clang__) && defined(_LIBCPP_VERSION)
-#define CR_USE_FALLBACKS_FOR_GCC_WITH_LIBCXX
-#endif
 
 namespace base
 {

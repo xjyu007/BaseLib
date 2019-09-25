@@ -1,25 +1,22 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include "base_export.h"
 #include "callback.h"
 #include "location.h"
 #include "memory/ref_counted.h"
+#include "task/promise/abstract_promise.h"
 #include "time/time.h"
 
 namespace base {
 
-	namespace internal {
-		class AbstractPromise;
-	}  // namespace internal
-
 	struct TaskRunnerTraits;
 
 	// A TaskRunner is an object that runs posted tasks (in the form of
-	// Closure objects).  The TaskRunner interface provides a way of
+	// OnceClosure objects).  The TaskRunner interface provides a way of
 	// decoupling task posting from the mechanics of how each task will be
 	// run.  TaskRunner provides very weak guarantees as to how posted
 	// tasks are run (or if they're run at all).  In particular, it only
@@ -94,8 +91,8 @@ namespace base {
 		// |task| and |reply| are guaranteed to be deleted on the thread
 		// from which PostTaskAndReply() is invoked.  This allows objects
 		// that must be deleted on the originating thread to be bound into
-		// the |task| and |reply| Closures.  In particular, it can be useful
-		// to use WeakPtr<> in the |reply| Closure so that the reply
+		// the |task| and |reply| OnceClosures.  In particular, it can be useful
+		// to use WeakPtr<> in the |reply| OnceClosures so that the reply
 		// operation can be canceled. See the following pseudo-code:
 		//
 		// class DataBuffer : public RefCountedThreadSafe<DataBuffer> {
@@ -112,8 +109,8 @@ namespace base {
 		//      scoped_refptr<DataBuffer> buffer = new DataBuffer();
 		//      target_thread_.task_runner()->PostTaskAndReply(
 		//          FROM_HERE,
-		//          base::Bind(&DataBuffer::AddData, buffer),
-		//          base::Bind(&DataLoader::OnDataReceived, AsWeakPtr(), buffer));
+		//          base::BindOnce(&DataBuffer::AddData, buffer),
+		//          base::BindOnce(&DataLoader::OnDataReceived, AsWeakPtr(), buffer));
 		//    }
 		//
 		//  private:
@@ -136,9 +133,7 @@ namespace base {
 
 		// TODO(alexclarke): This should become pure virtual and replace
 		// PostDelayedTask. NB passing by reference to reduce binary size.
-		bool PostPromiseInternal(
-			const scoped_refptr<internal::AbstractPromise>& promise,
-			base::TimeDelta delay);
+		bool PostPromiseInternal(WrappedPromise promise, base::TimeDelta delay);
 
 	protected:
 		friend struct TaskRunnerTraits;

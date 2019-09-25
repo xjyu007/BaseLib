@@ -5,7 +5,6 @@
 // found in the LICENSE file.
 
 #include "metrics/histogram.h"
-#include "metrics/histogram_base.h"
 #include "time/time.h"
 
 // Functions for recording metrics.

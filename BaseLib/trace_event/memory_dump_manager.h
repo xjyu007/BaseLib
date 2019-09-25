@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright 2015 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <cstdint>
 
@@ -57,7 +57,8 @@ namespace base {
 			//      involves embedder-specific behaviors like multiprocess handshaking.
 			//      TODO(primiano): this is only required to trigger global dumps from
 			//      the scheduler. Should be removed once they are both moved out of base.
-			void Initialize(RequestGlobalDumpFunction request_dump_function, bool is_coordinator);
+			void Initialize(RequestGlobalDumpFunction request_dump_function, 
+							bool is_coordinator);
 
 			// (Un)Registers a MemoryDumpProvider instance.
 			// Args:
@@ -109,7 +110,7 @@ namespace base {
 			// thread on which CreateProcessDump() was called. This method should only be
 			// used by the memory-infra service while creating a global memory dump.
 			void CreateProcessDump(const MemoryDumpRequestArgs& args,
-				const ProcessMemoryDumpCallback& callback);
+								   ProcessMemoryDumpCallback callback);
 
 			// Lets tests see if a dump provider is registered.
 			bool IsDumpProviderRegisteredForTesting(MemoryDumpProvider*);
@@ -140,7 +141,8 @@ namespace base {
 			friend std::default_delete<MemoryDumpManager>;  // For the testing instance.
 			friend struct DefaultSingletonTraits<MemoryDumpManager>;
 			//friend class MemoryDumpManagerTest;
-			//FRIEND_TEST_ALL_PREFIXES(MemoryDumpManagerTest, NoStackOverflowWithTooManyMDPs);
+			//FRIEND_TEST_ALL_PREFIXES(MemoryDumpManagerTest, 
+			//						   NoStackOverflowWithTooManyMDPs);
 
 			// Holds the state of a process memory dump that needs to be carried over
 			// across task runners in order to fulfill an asynchronous CreateProcessDump()
@@ -190,7 +192,7 @@ namespace base {
 			MemoryDumpManager();
 			virtual ~MemoryDumpManager();
 
-			static void SetInstanceForTesting(MemoryDumpManager* instance);
+			//static void SetInstanceForTesting(MemoryDumpManager* instance);
 
 			// Lazily initializes dump_thread_ and returns its TaskRunner.
 			scoped_refptr<base::SequencedTaskRunner> GetOrCreateBgTaskRunnerLocked();
@@ -221,7 +223,7 @@ namespace base {
 			void UnregisterDumpProviderInternal(MemoryDumpProvider* mdp,
 				bool take_mdp_ownership_and_delete_async);
 
-			bool can_request_global_dumps() const {
+			[[nodiscard]] bool can_request_global_dumps() const {
 				return !request_dump_function_.is_null();
 			}
 

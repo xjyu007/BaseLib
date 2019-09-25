@@ -243,7 +243,7 @@ namespace base::internal {
 		// variable is atomic, keeping in mind that threads may not immediately see
 		// the new value when it is updated.
 		return !task_tracker_->CanRunPriority(priority) ||
-		     priority < TS_UNCHECKED_READ(min_allowed_priority_)
+		     priority < min_allowed_priority_
 		                    .load(std::memory_order_relaxed);
 	}
 

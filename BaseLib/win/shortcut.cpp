@@ -44,7 +44,8 @@ namespace base::win {
 	}  // namespace
 
 	ShortcutProperties::ShortcutProperties()
-		: icon_index(-1) {}
+	    : icon_index(-1), dual_mode(false), options(0U) {
+	}
 
 	ShortcutProperties::ShortcutProperties(const ShortcutProperties& other) =
 		default;
@@ -110,7 +111,7 @@ namespace base::win {
 		}
 
 		if (properties.options & ShortcutProperties::PROPERTIES_ARGUMENTS) {
-			if (FAILED(i_shell_link->SetArguments(as_wcstr(properties.arguments))))
+			if (FAILED(i_shell_link->SetArguments(properties.arguments.c_str())))
 				return false;
 		} else if (old_i_persist_file.Get()) {
 			wchar_t current_arguments[MAX_PATH] = { 0 };
@@ -121,7 +122,7 @@ namespace base::win {
 		}
 
 		if ((properties.options & ShortcutProperties::PROPERTIES_DESCRIPTION) &&
-			FAILED(i_shell_link->SetDescription(as_wcstr(properties.description)))) {
+			FAILED(i_shell_link->SetDescription(properties.description.c_str()))) {
 			return false;
 		}
 
@@ -222,37 +223,34 @@ namespace base::win {
 
 		wchar_t temp[MAX_PATH];
 		if (options & ShortcutProperties::PROPERTIES_TARGET) {
-			if (FAILED(i_shell_link->GetPath(as_writable_wcstr(temp), MAX_PATH, NULL,
-				SLGP_UNCPRIORITY))) {
+			if (FAILED(i_shell_link->GetPath(temp, MAX_PATH, NULL, SLGP_UNCPRIORITY))) {
 				return false;
 			}
 			properties->set_target(FilePath(temp));
 		}
 
 		if (options & ShortcutProperties::PROPERTIES_WORKING_DIR) {
-			if (FAILED(i_shell_link->GetWorkingDirectory(as_writable_wcstr(temp),
-				MAX_PATH)))
+			if (FAILED(i_shell_link->GetWorkingDirectory(temp, MAX_PATH)))
 				return false;
 			properties->set_working_dir(FilePath(temp));
 		}
 
 		if (options & ShortcutProperties::PROPERTIES_ARGUMENTS) {
-			if (FAILED(i_shell_link->GetArguments(as_writable_wcstr(temp), MAX_PATH)))
+			if (FAILED(i_shell_link->GetArguments(temp, MAX_PATH)))
 				return false;
 			properties->set_arguments(temp);
 		}
 
 		if (options & ShortcutProperties::PROPERTIES_DESCRIPTION) {
 			// Note: description length constrained by MAX_PATH.
-			if (FAILED(i_shell_link->GetDescription(as_writable_wcstr(temp), MAX_PATH)))
+			if (FAILED(i_shell_link->GetDescription(temp, MAX_PATH)))
 				return false;
 			properties->set_description(temp);
 		}
 
 		if (options & ShortcutProperties::PROPERTIES_ICON) {
 			int temp_index;
-			if (FAILED(i_shell_link->GetIconLocation(as_writable_wcstr(temp), MAX_PATH,
-				&temp_index))) {
+			if (FAILED(i_shell_link->GetIconLocation(temp, MAX_PATH, &temp_index))) {
 				return false;
 			}
 			properties->set_icon(FilePath(temp), temp_index);

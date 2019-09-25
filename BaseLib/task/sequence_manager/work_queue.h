@@ -160,6 +160,11 @@ namespace base {
 				// Test support function. This should not be used in production code.
 				void PopTaskForTesting();
 
+				// Iterates through |tasks_| adding any that are older than |reference| to
+				// |result|.
+				void CollectTasksOlderThan(EnqueueOrder reference,
+				                           std::vector<const Task*>* result) const;
+
 			private:
 				bool InsertFenceImpl(EnqueueOrder fence);
 

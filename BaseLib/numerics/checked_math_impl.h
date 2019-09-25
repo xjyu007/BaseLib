@@ -61,8 +61,8 @@ namespace base {
 					FastPromotion>::type;
 				// Fail if either operand is out of range for the promoted type.
 				// TODO(jschuh): This could be made to work for a broader range of values.
-				if (BASE_NUMERICS_UNLIKELY(!IsValueInRangeForNumericType<Promotion>(x) ||
-					!IsValueInRangeForNumericType<Promotion>(y))) {
+				if (!IsValueInRangeForNumericType<Promotion>(x) ||
+					!IsValueInRangeForNumericType<Promotion>(y)) {
 					return false;
 				}
 
@@ -122,8 +122,8 @@ namespace base {
 					FastPromotion>::type;
 				// Fail if either operand is out of range for the promoted type.
 				// TODO(jschuh): This could be made to work for a broader range of values.
-				if (BASE_NUMERICS_UNLIKELY(!IsValueInRangeForNumericType<Promotion>(x) ||
-					!IsValueInRangeForNumericType<Promotion>(y))) {
+				if (!IsValueInRangeForNumericType<Promotion>(x) ||
+					!IsValueInRangeForNumericType<Promotion>(y)) {
 					return false;
 				}
 
@@ -178,9 +178,9 @@ namespace base {
 
 				using Promotion = typename FastIntegerArithmeticPromotion<T, U>::type;
 				// Verify the destination type can hold the result (always true for 0).
-				if (BASE_NUMERICS_UNLIKELY((!IsValueInRangeForNumericType<Promotion>(x) ||
+				if ((!IsValueInRangeForNumericType<Promotion>(x) ||
 					!IsValueInRangeForNumericType<Promotion>(y)) &&
-					x && y)) {
+					x && y) {
 					return false;
 				}
 
@@ -215,25 +215,25 @@ namespace base {
 			using result_type = typename MaxExponentPromotion<T, U>::type;
 			template <typename V>
 			static constexpr bool Do(T x, U y, V* result) {
-				if (BASE_NUMERICS_UNLIKELY(!y))
+				if (!y)
 					return false;
 
 				// The overflow check can be compiled away if we don't have the exact
 				// combination of types needed to trigger this case.
 				using Promotion = typename BigEnoughPromotion<T, U>::type;
-				if (BASE_NUMERICS_UNLIKELY(
+				if (
 					(std::is_signed<T>::value && std::is_signed<U>::value &&
 						IsTypeInRangeForNumericType<T, Promotion>::value &&
 						static_cast<Promotion>(x) ==
 						std::numeric_limits<Promotion>::lowest() &&
-						y == static_cast<U>(-1)))) {
+						y == static_cast<U>(-1))) {
 					return false;
 				}
 
 				// This branch always compiles away if the above branch wasn't removed.
-				if (BASE_NUMERICS_UNLIKELY((!IsValueInRangeForNumericType<Promotion>(x) ||
+				if ((!IsValueInRangeForNumericType<Promotion>(x) ||
 					!IsValueInRangeForNumericType<Promotion>(y)) &&
-					x)) {
+					x) {
 					return false;
 				}
 
@@ -255,7 +255,7 @@ namespace base {
 			template <typename V>
 			static constexpr bool Do(T x, U y, V* result) {
 				using Promotion = typename BigEnoughPromotion<T, U>::type;
-				if (BASE_NUMERICS_LIKELY(y)) {
+				if (y) {
 					Promotion presult = static_cast<Promotion>(x) % static_cast<Promotion>(y);
 					*result = static_cast<Promotion>(presult);
 					return IsValueInRangeForNumericType<V>(presult);
@@ -279,9 +279,9 @@ namespace base {
 			template <typename V>
 			static constexpr bool Do(T x, U shift, V* result) {
 				// Disallow negative numbers and verify the shift is in bounds.
-				if (BASE_NUMERICS_LIKELY(!IsValueNegative(x) &&
+				if (!IsValueNegative(x) &&
 					as_unsigned(shift) <
-					as_unsigned(std::numeric_limits<T>::digits))) {
+					as_unsigned(std::numeric_limits<T>::digits)) {
 					// Shift as unsigned to avoid undefined behavior.
 					*result = static_cast<V>(as_unsigned(x) << shift);
 					// If the shift can be reversed, we know it was valid.
@@ -309,8 +309,8 @@ namespace base {
 			template <typename V>
 			static bool Do(T x, U shift, V* result) {
 				// Use the type conversion push negative values out of range.
-				if (BASE_NUMERICS_LIKELY(as_unsigned(shift) <
-					IntegerBitsPlusSign<T>::value)) {
+				if (as_unsigned(shift) <
+					IntegerBitsPlusSign<T>::value) {
 					T tmp = x >> shift;
 					*result = static_cast<V>(tmp);
 					return IsValueInRangeForNumericType<V>(tmp);

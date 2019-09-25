@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <memory>
 #include <string>
@@ -150,7 +150,7 @@ namespace base {
 		//
 		// This method is thread safe.
 		static bool SetCallback(const std::string& histogram_name,
-			OnSampleCallback callback);
+			OnSampleCallback cb);
 
 		// Clears any callback set on the histogram referred to by |histogram_name|.
 		//

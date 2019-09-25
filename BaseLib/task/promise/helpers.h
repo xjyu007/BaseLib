@@ -18,11 +18,6 @@ namespace base {
 
 	namespace internal {
 
-		// A wrapper around SequencedTaskRunnerHandle::Get(). This file is included by
-		// base/task_runner.h which means we can't include anything that depends on
-		// that!
-		scoped_refptr<TaskRunner> BASE_EXPORT GetCurrentSequence();
-
 		template <typename T>
 		using ToNonVoidT = std::conditional_t<std::is_void<T>::value, Void, T>;
 
@@ -411,9 +406,26 @@ namespace base {
 			}
 		};
 
+		// Helper for converting a callback to its repeating variant.
+		template <typename Cb>
+		struct ToRepeatingCallback;
+
+		template <typename Cb>
+		struct ToRepeatingCallback<OnceCallback<Cb>> {
+		  using value = RepeatingCallback<Cb>;
+		};
+
+		template <typename Cb>
+		struct ToRepeatingCallback<RepeatingCallback<Cb>> {
+		  using value = RepeatingCallback<Cb>;
+		};
+
 		// Helper for running a promise callback and storing the result if any.
 		//
-		// Callback = signature of the callback to execute,
+		// Callback = signature of the callback to execute. Note we use repeating
+		// callbacks to avoid the binary size overhead of a once callback which will
+		// generate a destructor which is redundant because we overwrite the executor
+		// with the promise result which also triggers the destructor.
 		// ArgStorageType = type of the callback parameter (or void if none)
 		// ResolveStorage = type to use for resolve, usually Resolved<T>.
 		// RejectStorage = type to use for reject, usually Rejected<T>.
@@ -430,18 +442,18 @@ namespace base {
 			typename ArgStorageType,
 			typename ResolveStorage,
 			typename RejectStorage>
-			struct RunHelper<OnceCallback<CbResult(CbArg)>,
+			struct RunHelper<RepeatingCallback<CbResult(CbArg)>,
 			ArgStorageType,
 			ResolveStorage,
 			RejectStorage> {
-			using Callback = OnceCallback<CbResult(CbArg)>;
+			using Callback = RepeatingCallback<CbResult(CbArg)>;
 
-			static void Run(Callback&& executor,
+			static void Run(const Callback& executor,
 				AbstractPromise* arg,
 				AbstractPromise* result) {
 				EmplaceHelper<ResolveStorage, RejectStorage>::Emplace(
-					result, std::move(executor).Run(
-						ArgMoveSemanticsHelper<CbArg, ArgStorageType>::Get(arg)));
+					result,
+					executor.Run(ArgMoveSemanticsHelper<CbArg, ArgStorageType>::Get(arg)));
 			}
 		};
 
@@ -450,19 +462,18 @@ namespace base {
 			typename ArgStorageType,
 			typename ResolveStorage,
 			typename RejectStorage>
-			struct RunHelper<OnceCallback<void(CbArg)>,
+			struct RunHelper<RepeatingCallback<void(CbArg)>,
 			ArgStorageType,
 			ResolveStorage,
 			RejectStorage> {
-			using Callback = OnceCallback<void(CbArg)>;
+			using Callback = RepeatingCallback<void(CbArg)>;
 
-			static void Run(Callback&& executor,
+			static void Run(const Callback& executor,
 				AbstractPromise* arg,
 				AbstractPromise* result) {
 				static_assert(std::is_void<typename ResolveStorage::Type>::value, "");
-				std::move(executor).Run(
-					ArgMoveSemanticsHelper<CbArg, ArgStorageType>::Get(arg));
-				result->emplace(Resolved<void>());
+				executor.Run(ArgMoveSemanticsHelper<CbArg, ArgStorageType>::Get(arg));
+				result->EmplaceResolvedVoid();
 			}
 		};
 
@@ -471,17 +482,17 @@ namespace base {
 			typename ArgStorageType,
 			typename ResolveStorage,
 			typename RejectStorage>
-			struct RunHelper<OnceCallback<CbResult()>,
+			struct RunHelper<RepeatingCallback<CbResult()>,
 			ArgStorageType,
 			ResolveStorage,
 			RejectStorage> {
-			using Callback = OnceCallback<CbResult()>;
+			using Callback = RepeatingCallback<CbResult()>;
 
-			static void Run(Callback&& executor,
+			static void Run(const Callback& executor,
 				AbstractPromise* arg,
 				AbstractPromise* result) {
-				EmplaceHelper<ResolveStorage, RejectStorage>::Emplace(
-					result, std::move(executor).Run());
+				EmplaceHelper<ResolveStorage, RejectStorage>::Emplace(result, 
+																	  executor.Run());
 			}
 		};
 
@@ -489,16 +500,16 @@ namespace base {
 		template <typename ArgStorageType,
 			typename ResolveStorage,
 			typename RejectStorage>
-			struct RunHelper<OnceCallback<void()>,
+			struct RunHelper<RepeatingCallback<void()>,
 			ArgStorageType,
 			ResolveStorage,
 			RejectStorage> {
-			static void Run(OnceCallback<void()>&& executor,
+			static void Run(const RepeatingCallback<void()>& executor,
 				AbstractPromise* arg,
 				AbstractPromise* result) {
 				static_assert(std::is_void<typename ResolveStorage::Type>::value, "");
-				std::move(executor).Run();
-				result->emplace(Resolved<void>());
+				executor.Run();
+				result->EmplaceResolvedVoid();
 			}
 		};
 
@@ -537,79 +548,51 @@ namespace base {
 			typename... CbArgs,
 			typename ResolveStorage,
 			typename RejectStorage>
-			struct RunHelper<OnceCallback<CbResult(CbArgs...)>,
+			struct RunHelper<RepeatingCallback<CbResult(CbArgs...)>,
 			Resolved<std::tuple<CbArgs...>>,
 			ResolveStorage,
 			RejectStorage> {
-			using Callback = OnceCallback<CbResult(CbArgs...)>;
+			using Callback = RepeatingCallback<CbResult(CbArgs...)>;
 			using StorageType = Resolved<std::tuple<CbArgs...>>;
 			using IndexSequence = std::index_sequence_for<CbArgs...>;
 
-			static void Run(Callback&& executor,
+			static void Run(const Callback& executor,
 				AbstractPromise* arg,
 				AbstractPromise* result) {
 				AbstractPromise::ValueHandle value = arg->TakeValue();
     			std::tuple<CbArgs...>& tuple = value.value().Get<StorageType>()->value;
-				RunInternal(std::move(executor), tuple, result,
+				RunInternal(executor, tuple, result,
 					std::integral_constant<bool, std::is_void<CbResult>::value>(),
 					IndexSequence{});
 			}
 
 			private:
 				template <typename Callback, size_t... Indices>
-				static void RunInternal(Callback&& executor,
+				static void RunInternal(const Callback& executor,
 					std::tuple<CbArgs...>& tuple,
 					AbstractPromise* result,
 					std::false_type void_result,
 					std::index_sequence<Indices...>) {
-					EmplaceHelper<ResolveStorage, RejectStorage>::Emplace(
-						std::move(executor).Run(
+					EmplaceHelper<ResolveStorage, RejectStorage>::Emplace(executor.Run(
 							TupleArgMoveSemanticsHelper<Callback, std::tuple<CbArgs...>,
-							Indices>::Get(tuple)...));
+														Indices>::Get(tuple)...));
 				}
 
 				template <typename Callback, size_t... Indices>
-				static void RunInternal(Callback&& executor,
+				static void RunInternal(const Callback& executor,
 					std::tuple<CbArgs...>& tuple,
 					AbstractPromise* result,
 					std::true_type void_result,
 					std::index_sequence<Indices...>) {
-					std::move(executor).Run(
-						TupleArgMoveSemanticsHelper<Callback, std::tuple<CbArgs...>,
-						Indices>::Get(tuple)...);
-					result->emplace(Resolved<void>());
+				    executor.Run(TupleArgMoveSemanticsHelper<Callback, std::tuple<CbArgs...>,
+				                                             Indices>::Get(tuple)...);
+				    result->EmplaceResolvedVoid();
 				}
 		};
 
-		// For use with base::Bind*. Cancels the promise if the callback was not run by
-		// the time the callback is deleted.
-		class BASE_EXPORT PromiseHolder {
-		public:
-			explicit PromiseHolder(scoped_refptr<internal::AbstractPromise> promise);
-
-			~PromiseHolder();
-
-			PromiseHolder(PromiseHolder&& other) noexcept;
-
-			[[nodiscard]] scoped_refptr<AbstractPromise> Unwrap() const;
-
-		private:
-			mutable scoped_refptr<AbstractPromise> promise_;
-		};
-
-	}  // namespace internal
-
-	template <>
-	struct BindUnwrapTraits<internal::PromiseHolder> {
-		static scoped_refptr<internal::AbstractPromise> Unwrap(
-			const internal::PromiseHolder& o) {
-			return o.Unwrap();
-		}
-	};
-
-	namespace internal {
-
-		// Used by ManualPromiseResolver<> to generate callbacks.
+		// Used by ManualPromiseResolver<> to generate callbacks. Note the use of
+		// WrappedPromise, this is necessary because we want to cancel the promise (to
+		// release memory) if the callback gets deleted without having being run.
 		template <typename T, typename... Args>
 		class PromiseCallbackHelper {
 		public:
@@ -623,7 +606,7 @@ namespace base {
 			                           std::forward<Args>(args)...);
 					promise->OnResolved();
 				},
-					PromiseHolder(promise));
+				promise);
 			}
 
 			static RepeatingCallback GetRepeatingResolveCallback(
@@ -634,7 +617,7 @@ namespace base {
 			                           std::forward<Args>(args)...);
 					promise->OnResolved();
 				},
-					PromiseHolder(promise));
+				promise);
 			}
 
 			static Callback GetRejectCallback(scoped_refptr<AbstractPromise>& promise) {
@@ -644,7 +627,7 @@ namespace base {
 			                           std::forward<Args>(args)...);
 					promise->OnRejected();
 				},
-					PromiseHolder(promise));
+				promise);
 			}
 
 			static RepeatingCallback GetRepeatingRejectCallback(
@@ -655,7 +638,7 @@ namespace base {
 			                           std::forward<Args>(args)...);
 					promise->OnRejected();
 				},
-					PromiseHolder(promise));
+				promise);
 			}
 		};
 
@@ -678,8 +661,7 @@ namespace base {
 		// rejection storage type.
 		template <typename RejectT>
 		struct AllPromiseRejectHelper {
-			static void Reject(AbstractPromise* result,
-				const scoped_refptr<AbstractPromise>& prerequisite) {
+		static void Reject(AbstractPromise* result, AbstractPromise* prerequisite) {
 				result->emplace(scoped_refptr<AbstractPromise>(prerequisite));
 			}
 		};
@@ -708,18 +690,24 @@ namespace base {
 
 		// Helps reduce template bloat by moving AbstractPromise construction out of
 		// line.
-		scoped_refptr<AbstractPromise> BASE_EXPORT
-			ConstructAbstractPromiseWithSinglePrerequisite(
+		PassedPromise BASE_EXPORT ConstructAbstractPromiseWithSinglePrerequisite(
 				const scoped_refptr<TaskRunner>& task_runner,
 				const Location& from_here,
 				AbstractPromise* prerequsite,
 				PromiseExecutor::Data&& executor_data) noexcept;
 
-		scoped_refptr<AbstractPromise> BASE_EXPORT
-			ConstructManualPromiseResolverPromise(const Location& from_here,
-				RejectPolicy reject_policy,
-				bool can_resolve,
-				bool can_reject);
+		// Like ConstructAbstractPromiseWithSinglePrerequisite except tasks are posted
+		// onto SequencedTaskRunnerHandle::Get().
+		PassedPromise BASE_EXPORT ConstructHereAbstractPromiseWithSinglePrerequisite(
+		    const Location& from_here,
+		    AbstractPromise* prerequsite,
+		    PromiseExecutor::Data&& executor_data) noexcept;
+
+		PassedPromise BASE_EXPORT
+		ConstructManualPromiseResolverPromise(const Location& from_here,
+											  RejectPolicy reject_policy,
+											  bool can_resolve,
+											  bool can_reject);
 
 	}  // namespace internal
 }  // namespace base

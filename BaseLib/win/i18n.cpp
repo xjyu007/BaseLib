@@ -7,8 +7,8 @@
 #include <Windows.h>
 
 #include "logging.h"
-#include "strings/string_util.h"
 #include "strings/string_split.h"
+#include "strings/string_util.h"
 
 namespace {
 
@@ -28,17 +28,20 @@ namespace {
 		}
 
 		std::wstring buffer(buffer_length, '\0');
-		if (!function(call_flags, &language_count, base::as_writable_wcstr(buffer),
+		if (!function(call_flags, &language_count, base::data(buffer),
 			&buffer_length) ||
 			!language_count) {
 			DPCHECK(!language_count) << "Failed getting preferred UI languages.";
 			return false;
 		}
 
+		languages->clear();
 		// Split string on NUL characters.
-		*languages =
-			base::SplitString(buffer, std::wstring(1, '\0'), base::KEEP_WHITESPACE,
-				base::SPLIT_WANT_NONEMPTY);
+		for (const auto& token : SplitStringPiece(
+				buffer, std::wstring(1, '\0'),
+				base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY)) {
+			languages->push_back(token.data());
+		}
 		DCHECK_EQ(languages->size(), language_count);
 		return true;
 	}

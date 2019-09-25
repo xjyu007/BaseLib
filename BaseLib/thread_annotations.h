@@ -1,5 +1,3 @@
-#pragma once
-
 // Copyright (c) 2018 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -30,6 +28,8 @@
 // that evaluate to a concrete mutex object whenever possible. If the mutex
 // you want to refer to is not in scope, you may use a member pointer
 // (e.g. &MyClass::mutex_) to refer to a mutex in some (unknown) object.
+
+#pragma once
 
 #include "build_config.h"
 
@@ -220,22 +220,18 @@
 // but the compiler cannot confirm that.
 #define TS_UNCHECKED_READ(x) thread_safety_analysis::ts_unchecked_read(x)
 
-namespace thread_safety_analysis
-{
+namespace thread_safety_analysis {
 
 	// Takes a reference to a guarded data member, and returns an unguarded
 	// reference.
 	template <typename T>
-	inline const T& ts_unchecked_read(const T& v) NO_THREAD_SAFETY_ANALYSIS
-	{
+	inline const T& ts_unchecked_read(const T& v) NO_THREAD_SAFETY_ANALYSIS {
 		return v;
 	}
 
 	template <typename T>
-	inline T& ts_unchecked_read(T& v) NO_THREAD_SAFETY_ANALYSIS
-	{
+	inline T& ts_unchecked_read(T& v) NO_THREAD_SAFETY_ANALYSIS {
 		return v;
 	}
 
 }  // namespace thread_safety_analysis
-

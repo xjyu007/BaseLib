@@ -153,18 +153,4 @@ namespace base {
 		sequence_manager_->SetTaskRunner(task_runner);
 	}
 
-#if !defined(OS_NACL)
-
-	//------------------------------------------------------------------------------
-	// MessageLoopForUI
-	MessageLoopForUI::MessageLoopForUI(MessagePumpType type) : MessageLoop(type) {
-		DCHECK_EQ(type, MessagePumpType::UI);
-	}
-
-	void MessageLoopForUI::EnableWmQuit() const {
-		dynamic_cast<MessagePumpForUI*>(pump_)->EnableWmQuit();
-	}
-
-#endif  // !defined(OS_NACL)
-
 }  // namespace base

@@ -22,9 +22,16 @@ namespace base {
 	template <class, typename>
 	class RefCountedThreadSafe;
 	class SequencedTaskRunner;
+	class WrappedPromise;
 
 	template <typename T>
 	scoped_refptr<T> AdoptRef(T* obj);
+
+	namespace internal {
+
+		class BasePromise;
+
+	}  // namespace internal
 
 	namespace subtle {
 
@@ -59,7 +66,8 @@ namespace base {
 	template <typename T>
 	scoped_refptr<T> AdoptRef(T* obj) {
 		using Tag = std::decay_t<decltype(T::kRefCountPreference)>;
-		static_assert(std::is_same<subtle::StartRefCountFromOneTag, Tag>::value,"Use AdoptRef only if the reference count starts from one.");
+		static_assert(std::is_same<subtle::StartRefCountFromOneTag, Tag>::value,
+					  "Use AdoptRef only if the reference count starts from one.");
 
 		DCHECK(obj);
 		DCHECK(obj->HasOneRef());
@@ -255,6 +263,11 @@ private:
 	template <typename U>
 	friend scoped_refptr<U> base::AdoptRef(U*);
 	friend class ::base::SequencedTaskRunner;
+
+	// Friend access so these classes can use the constructor below as part of a
+	// binary size optimization.
+	friend class ::base::internal::BasePromise;
+	friend class ::base::WrappedPromise;
 
 	// Returns the owned pointer (if any), releasing ownership to the caller. The
 	// caller is responsible for managing the lifetime of the reference.

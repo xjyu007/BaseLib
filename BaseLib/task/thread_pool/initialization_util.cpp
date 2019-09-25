@@ -6,17 +6,18 @@
 
 #include <algorithm>
 
+#include "numerics/ranges.h"
 #include "system/sys_info.h"
 
 namespace base {
 
 	int RecommendedMaxNumberOfThreadsInThreadGroup(int min,
-		int max,
-		double cores_multiplier,
-		int offset) {
+												   int max,
+												   double cores_multiplier,
+												   int offset) {
 		const int num_of_cores = SysInfo::NumberOfProcessors();
-		const int threads = static_cast<int>(std::ceil(num_of_cores * cores_multiplier)) + offset;
-		return std::min(max, std::max(min, threads));
+		const int threads = std::ceil<int>(num_of_cores * cores_multiplier) + offset;
+		return ClampToRange(threads, min, max);
 	}
 
 }  // namespace base

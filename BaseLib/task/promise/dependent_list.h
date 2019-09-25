@@ -10,6 +10,7 @@
 
 #include "base_export.h"
 #include "logging.h"
+#include "compiler_specific.h"
 #include "memory/scoped_refptr.h"
 
 namespace base {
@@ -57,18 +58,20 @@ namespace base {
 
 			// Align Node on an 8-byte boundary to ensure the first 3 bits are 0 and can
 			// be used to store additional state (see static_asserts below).
-			class BASE_EXPORT alignas(8) Node {
+			class BASE_EXPORT ALIGNAS(8) Node {
 			public:
 				Node();
-				explicit Node(Node && other);// noexcept;
+				explicit Node(Node && other) noexcept;
 
 				// Constructs a Node, |prerequisite| will not be retained unless
 				// RetainSettledPrerequisite is called.
-				Node(AbstractPromise * prerequisite, const scoped_refptr<AbstractPromise>& dependent);
+			    Node(AbstractPromise* prerequisite,
+			         scoped_refptr<AbstractPromise> dependent);
 				~Node();
 
 				// Caution this is not thread safe.
-				void Reset(AbstractPromise * prerequisite, const scoped_refptr<AbstractPromise>&& dependent);
+			    void Reset(AbstractPromise* prerequisite,
+			               scoped_refptr<AbstractPromise> dependent);
 
 				// Expected prerequisite usage:
 				// 1. prerequisite = null on creation (or is constructed with a value)
@@ -250,8 +253,8 @@ namespace base {
 				return static_cast<State>(data & kStateMask);
 			}
 
-			static Node* ExtractHead(uintptr_t data) {
-				return reinterpret_cast<Node*>(data & kHeadMask);
+			static DependentList::Node* ExtractHead(uintptr_t data) {
+				return reinterpret_cast<DependentList::Node*>(data & kHeadMask);
 			}
 
 			static bool IsListEmpty(uintptr_t data) {
@@ -282,13 +285,13 @@ namespace base {
 			// already settled it does nothing and returns false, true otherwise.
 			bool SettleAndDispatchAllDependents(State settled_state, Visitor* visitor);
 
-			static Node* ReverseList(Node* list);
+			static DependentList::Node* ReverseList(DependentList::Node* list);
 
 			// Goes through the list starting at |head| consuming node->dependent and
 			// passing it to the provided |visitor|.
-			static void DispatchAll(Node* head,
-				Visitor* visitor,
-				bool retain_prerequsites);
+			static void DispatchAll(DependentList::Node* head,
+									DependentList::Visitor* visitor,
+									bool retain_prerequsites);
 
 			std::atomic<uintptr_t> data_;
 		};

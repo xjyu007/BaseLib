@@ -28,11 +28,13 @@ namespace base {
 			TaskRunner* destination_;
 		};
 
-		PostTaskAndReplyTaskRunner::PostTaskAndReplyTaskRunner(TaskRunner* destination) : destination_(destination) {
+		PostTaskAndReplyTaskRunner::PostTaskAndReplyTaskRunner(
+			TaskRunner* destination) : destination_(destination) {
 			DCHECK(destination_);
 		}
 
-		bool PostTaskAndReplyTaskRunner::PostTask(const Location& from_here, OnceClosure task) {
+		bool PostTaskAndReplyTaskRunner::PostTask(const Location& from_here, 
+												  OnceClosure task) {
 			return destination_->PostTask(from_here, std::move(task));
 		}
 
@@ -42,12 +44,21 @@ namespace base {
 		return PostDelayedTask(from_here, std::move(task), base::TimeDelta());
 	}
 
-	bool TaskRunner::PostTaskAndReply(const Location& from_here, OnceClosure task, OnceClosure reply) {
-		return PostTaskAndReplyTaskRunner(this).PostTaskAndReply(from_here, std::move(task), std::move(reply));
+	bool TaskRunner::PostTaskAndReply(const Location& from_here, 
+									  OnceClosure task, 
+									  OnceClosure reply) {
+		return PostTaskAndReplyTaskRunner(this).PostTaskAndReply(
+			from_here, std::move(task), std::move(reply));
 	}
 
-	bool TaskRunner::PostPromiseInternal(const scoped_refptr<internal::AbstractPromise>& promise, base::TimeDelta delay) {
-		return PostDelayedTask(promise->from_here(), BindOnce(&internal::AbstractPromise::Execute, internal::PromiseHolder(promise)), delay);
+	bool TaskRunner::PostPromiseInternal(WrappedPromise promise, 
+										 base::TimeDelta delay) {
+		Location from_here = promise.from_here();
+		return PostDelayedTask(
+			from_here,
+			BindOnce([](WrappedPromise promise) { promise.Execute(); },
+					 std::move(promise)),
+			delay);
 	}
 
 	TaskRunner::TaskRunner() = default;

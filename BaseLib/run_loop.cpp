@@ -11,7 +11,6 @@
 #include "no_destructor.h"
 #include "threading/thread_local.h"
 #include "threading/thread_task_runner_handle.h"
-#include "build_config.h"
 
 namespace base {
 

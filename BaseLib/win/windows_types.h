@@ -1,11 +1,11 @@
-#pragma once
-
 // Copyright (c) 2014 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 // This file contains defines and typedefs that allow popular Windows types to
 // be used without the overhead of including windows.h.
+
+#pragma once
 
 // Needed for function prototypes.
 #include <concurrencysal.h>
@@ -243,6 +243,8 @@ extern "C" {
 #define DeleteFile DeleteFileW
 #define DispatchMessage DispatchMessageW
 #define DrawText DrawTextW
+#define FindFirstFile FindFirstFileW
+#define FindNextFile FindNextFileW
 #define GetComputerName GetComputerNameW
 #define GetCurrentDirectory GetCurrentDirectoryW
 #define GetCurrentTime() GetTickCount()
@@ -252,6 +254,7 @@ extern "C" {
 #define LoadIcon LoadIconW
 #define LoadImage LoadImageW
 #define PostMessage PostMessageW
+#define RemoveDirectory RemoveDirectoryW
 #define ReplaceFile ReplaceFileW
 #define ReportEvent ReportEventW
 #define SendMessage SendMessageW

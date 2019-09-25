@@ -8,7 +8,7 @@
 #include <utility>
 
 #include "macros.h"
-#include "message_loop/message_loop.h"
+#include "message_loop/message_pump_type.h"
 #include "message_loop/timer_slack.h"
 #include "single_thread_task_runner.h"
 #include "task/sequence_manager/task_queue_impl.h"
@@ -101,6 +101,11 @@ namespace base {
 					kNone,
 					kEnabled,
 					kEnabledWithBacktrace,
+
+					// Logs high priority tasks and the lower priority tasks they skipped
+					// past.  Useful for debugging test failures caused by scheduler policy
+					// changes.
+					kReorderedOnly,
 				};
 				TaskLogging task_execution_logging = TaskLogging::kNone;
 

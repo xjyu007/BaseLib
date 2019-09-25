@@ -95,7 +95,8 @@ namespace base {
 											const std::wstring& command);
 		// Removes the command specified by |name| from the AutoRun key. |root_key|
 		// could be HKCU or HKLM or the root of any user hive.
-		BASE_EXPORT bool RemoveCommandFromAutoRun(HKEY root_key, const std::wstring& name);
+		BASE_EXPORT bool RemoveCommandFromAutoRun(HKEY root_key, 
+												  const std::wstring& name);
 
 		// Reads the command specified by |name| from the AutoRun key. |root_key|
 		// could be HKCU or HKLM or the root of any user hive. Used for unit-tests.

@@ -14,7 +14,6 @@
 #include "task/common/checked_lock.h"
 #include "task/thread_pool/task_source.h"
 #include "task/thread_pool/tracked_ref.h"
-#include "thread_annotations.h"
 #include "threading/platform_thread.h"
 #include "time/time.h"
 
@@ -197,11 +196,11 @@ namespace base {
 			mutable CheckedLock thread_lock_;
 
 			// Handle for the thread managed by |this|.
-			PlatformThreadHandle thread_handle_ GUARDED_BY(thread_lock_);
+			PlatformThreadHandle thread_handle_;
 
 			// The last time this worker was used by its owner (e.g. to process work or
 			// stand as a required idle thread).
-			TimeTicks last_used_time_ GUARDED_BY(thread_lock_);
+			TimeTicks last_used_time_;
 
 			// Event to wake up the thread managed by |this|.
 			WaitableEvent wake_up_event_{ WaitableEvent::ResetPolicy::AUTOMATIC,

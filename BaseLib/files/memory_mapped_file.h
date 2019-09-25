@@ -10,6 +10,7 @@
 #include "files/file.h"
 #include "macros.h"
 
+#include <windows.h>
 namespace base {
 
 	class FilePath;

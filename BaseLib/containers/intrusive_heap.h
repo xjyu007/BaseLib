@@ -148,7 +148,7 @@ namespace base {
 	// in place.
 	class BASE_EXPORT HeapHandle {
 	public:
-		enum : size_t { kInvalidIndex = 4294967295 };
+		enum : size_t { kInvalidIndex = std::numeric_limits<size_t>::max() };
 
 		constexpr HeapHandle() = default;
 		constexpr HeapHandle(const HeapHandle& other) = default;
@@ -589,13 +589,13 @@ namespace base {
 
 		// Implementation of IntrusiveHeap contract. Inlined to keep heap code as fast
 		// as possible.
-		void SetHeapHandle(HeapHandle handle) const	{
+		void SetHeapHandle(HeapHandle handle)	{
 			DCHECK(handle.IsValid());
 			if (handle_)
 				* handle_ = handle;
 		}
 		
-		void ClearHeapHandle() const {
+		void ClearHeapHandle() {
 			if (handle_)
 				handle_->reset();
 		}

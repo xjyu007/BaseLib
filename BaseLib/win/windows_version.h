@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <string>
 
@@ -110,30 +110,31 @@ namespace base {
 			static WOW64Status GetWOW64StatusForProcess(HANDLE process_handle);
 
 			[[nodiscard]] const Version& version() const { return version_; }
-			static Version Kernel32Version();
-			static base::Version Kernel32BaseVersion();
+			[[nodiscard]] Version Kernel32Version() const;
+			[[nodiscard]] base::Version Kernel32BaseVersion() const;
 			// The next two functions return arrays of values, [major, minor(, build)].
 			[[nodiscard]] const VersionNumber& version_number() const { return version_number_; }
 			[[nodiscard]] const VersionType& version_type() const { return version_type_; }
 			[[nodiscard]] const ServicePack& service_pack() const { return service_pack_; }
 			[[nodiscard]] const std::string& service_pack_str() const { return service_pack_str_; }
 			[[nodiscard]] const int& processors() const { return processors_; }
-
 			[[nodiscard]] const size_t& allocation_granularity() const {
 				return allocation_granularity_;
 			}
-
 			[[nodiscard]] const WOW64Status& wow64_status() const { return wow64_status_; }
 			std::string processor_model_name();
 			[[nodiscard]] const std::string& release_id() const { return release_id_; }
 
-			// Returns a Version value for a given OS version tuple.
-			static Version MajorMinorBuildToVersion(int major, int minor, int build);
 		private:
 			static OSInfo** GetInstanceStorage();
 
-			OSInfo(const _OSVERSIONINFOEXW& version_info, const _SYSTEM_INFO& system_info, int os_type);
+			OSInfo(const _OSVERSIONINFOEXW& version_info, 
+				   const _SYSTEM_INFO& system_info, 
+				   int os_type);
 			~OSInfo();
+
+			// Returns a Version value for a given OS version tuple.
+			static Version MajorMinorBuildToVersion(int major, int minor, int build);
 
 			Version version_;
 			VersionNumber version_number_{};

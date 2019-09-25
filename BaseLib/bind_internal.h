@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright (c) 2011 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -10,10 +10,13 @@
 #include <type_traits>
 #include <utility>
 
+#include "bind.h"
 #include "callback_internal.h"
+#include "compiler_specific.h"
 #include "memory/raw_scoped_refptr_mismatch_checker.h"
 #include "memory/weak_ptr.h"
 #include "template_util.h"
+#include "build_config.h"
 
 // See base/callback.h for user documentation.
 //
@@ -129,8 +132,10 @@ namespace base {
 		template <typename T>
 		class PassedWrapper {
 		public:
-			explicit PassedWrapper(T&& scoper) : is_valid_(true), scoper_(std::move(scoper)) {}
-			PassedWrapper(PassedWrapper&& other) noexcept : is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
+			explicit PassedWrapper(T&& scoper)
+				: is_valid_(true), scoper_(std::move(scoper)) {}
+			PassedWrapper(PassedWrapper&& other)
+				: is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
 			T Take() const {
 				CHECK(is_valid_);
 				is_valid_ = false;
@@ -173,8 +178,8 @@ namespace base {
 
 		// Do not use enable_if and SFINAE here to avoid MSVC2013 compile failure.
 		template <size_t n, typename T, typename... List>
-		struct DropTypeListItemImpl<n, TypeList<T, List...>> : DropTypeListItemImpl<n - 1, TypeList<List...>> {
-		};
+		struct DropTypeListItemImpl<n, TypeList<T, List...>>
+		    : DropTypeListItemImpl<n - 1, TypeList<List...>> {};
 
 		template <typename T, typename... List>
 		struct DropTypeListItemImpl<0, TypeList<T, List...>> {
@@ -197,8 +202,7 @@ namespace base {
 		// Do not use enable_if and SFINAE here to avoid MSVC2013 compile failure.
 		template <size_t n, typename T, typename... List, typename... Accum>
 		struct TakeTypeListItemImpl<n, TypeList<T, List...>, Accum...>
-			: TakeTypeListItemImpl<n - 1, TypeList<List...>, Accum..., T> {
-		};
+    		: TakeTypeListItemImpl<n - 1, TypeList<List...>, Accum..., T> {};
 
 		template <typename T, typename... List, typename... Accum>
 		struct TakeTypeListItemImpl<0, TypeList<T, List...>, Accum...> {
@@ -286,7 +290,8 @@ namespace base {
 		//   is evaluated to
 		//   double(int, char*);
 		template <typename Callable>
-		using ExtractCallableRunType = typename ExtractCallableRunTypeImpl<Callable>::Type;
+		using ExtractCallableRunType = 
+			typename ExtractCallableRunTypeImpl<Callable>::Type;
 
 		// IsCallableObject<Functor> is std::true_type if |Functor| has operator().
 		// Otherwise, it's std::false_type.
@@ -304,8 +309,7 @@ namespace base {
 
 		template <typename Callable>
 		struct IsCallableObject<Callable, void_t<decltype(&Callable::operator())>>
-			: std::true_type {
-		};
+			: std::true_type {};
 
 		// HasRefCountedTypeAsRawPtr selects true_type when any of the |Args| is a raw
 		// pointer to a RefCounted type.
@@ -341,10 +345,9 @@ namespace base {
 		struct FunctorTraits;
 
 		// For empty callable types.
-		// This specialization is intended to allow binding captureless lambdas by
-		// base::Bind(), based on the fact that captureless lambdas are empty while
-		// capturing lambdas are not. This also allows any functors as far as it's an
-		// empty class.
+		// This specialization is intended to allow binding captureless lambdas, based
+		// on the fact that captureless lambdas are empty while capturing lambdas are
+		// not. This also allows any functors as far as it's an empty class.
 		// Example:
 		//
 		//   // Captureless lambdas are allowed.
@@ -457,13 +460,11 @@ namespace base {
 
 		template <typename R, typename Receiver, typename... Args>
 		struct FunctorTraits<R(Receiver::*)(Args...) noexcept>
-			: FunctorTraits<R(Receiver::*)(Args...)> {
-		};
+			: FunctorTraits<R(Receiver::*)(Args...)> {};
 
 		template <typename R, typename Receiver, typename... Args>
 		struct FunctorTraits<R(Receiver::*)(Args...) const noexcept>
-			: FunctorTraits<R(Receiver::*)(Args...) const> {
-		};
+			: FunctorTraits<R(Receiver::*)(Args...) const> {};
 #endif
 
 		// For IgnoreResults.
@@ -726,10 +727,10 @@ namespace base {
 			//
 			//   scoped_refptr<Foo> oo = Foo::Create();
 			DCHECK(receiver->HasAtLeastOneRef())
-				<< "base::Bind() refuses to create the first reference to ref-counted "
-				"objects. That is typically happens around PostTask() in their "
-				"constructor, and such objects can be destroyed before `new` returns "
-				"if the task resolves fast enough.";
+				<< "base::Bind{Once,Repeating}() refuses to create the first reference "
+				   "to ref-counted objects. That typically happens around PostTask() in "
+				   "their constructor, and such objects can be destroyed before `new` "
+				   "returns if the task resolves fast enough.";
 		}
 
 		// BindState<>
@@ -764,9 +765,9 @@ namespace base {
 		private:
 			template <typename ForwardFunctor, typename... ForwardBoundArgs>
 			explicit BindState(std::true_type,
-				InvokeFuncStorage invoke_func,
-				ForwardFunctor&& functor,
-				ForwardBoundArgs&& ... bound_args)
+							   InvokeFuncStorage invoke_func,
+							   ForwardFunctor&& functor,
+							   ForwardBoundArgs&& ... bound_args)
 				: BindStateBase(invoke_func,
 					&Destroy,
 					&QueryCancellationTraits<BindState>),
@@ -777,9 +778,9 @@ namespace base {
 
 			template <typename ForwardFunctor, typename... ForwardBoundArgs>
 			explicit BindState(std::false_type,
-				InvokeFuncStorage invoke_func,
-				ForwardFunctor&& functor,
-				ForwardBoundArgs&& ... bound_args)
+							   InvokeFuncStorage invoke_func,
+							   ForwardFunctor&& functor,
+							   ForwardBoundArgs&& ... bound_args)
 				: BindStateBase(invoke_func, &Destroy),
 				functor_(std::forward<ForwardFunctor>(functor)),
 				bound_args_(std::forward<ForwardBoundArgs>(bound_args)...) {

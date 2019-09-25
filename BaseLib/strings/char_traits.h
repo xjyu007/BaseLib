@@ -28,8 +28,8 @@ namespace base {
 
 	template <typename T>
 	constexpr int CharTraits<T>::compare(const T* s1,
-		const T* s2,
-		size_t n) noexcept {
+										 const T* s2,
+										 size_t n) noexcept {
 		for (; n; --n, ++s1, ++s2) {
 			if (*s1 < *s2)
 				return -1;
@@ -52,14 +52,14 @@ namespace base {
 	template <>
 	struct CharTraits<char> {
 		static constexpr int compare(const char* s1,
-			const char* s2,
-			size_t n) noexcept;
+									 const char* s2,
+									 size_t n) noexcept;
 		static constexpr size_t length(const char* s) noexcept;
 	};
 
 	constexpr int CharTraits<char>::compare(const char* s1,
-		const char* s2,
-		size_t n) noexcept {
+											const char* s2,
+											size_t n) noexcept {
 #if HAS_FEATURE(cxx_constexpr_string_builtins)
 		return __builtin_memcmp(s1, s2, n);
 #else
@@ -74,14 +74,10 @@ namespace base {
 	}
 
 	constexpr size_t CharTraits<char>::length(const char* s) noexcept {
-#if defined(__clang__)
-		return __builtin_strlen(s);
-#else
 		size_t i = 0;
 		for (; *s; ++s)
 			++i;
 		return i;
-#endif
 	}
 
 }  // namespace base

@@ -319,10 +319,10 @@ namespace base::sequence_manager {
 		return impl_->BlockedByFence();
 	}
 
-	internal::EnqueueOrder TaskQueue::GetLastUnblockEnqueueOrder() const {
+	EnqueueOrder TaskQueue::GetLastUnblockEnqueueOrder() const {
 		DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
 		if (!impl_)
-			return internal::EnqueueOrder();
+			return EnqueueOrder();
 		return impl_->GetLastUnblockEnqueueOrder();
 	}
 

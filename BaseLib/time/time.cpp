@@ -22,9 +22,16 @@ namespace base {
 
 	namespace internal {
 		TimeNowFunction g_time_now_function = &subtle::TimeNowIgnoringOverride;
-		TimeNowFunction g_time_now_from_system_time_function = &subtle::TimeNowFromSystemTimeIgnoringOverride;
-		TimeTicksNowFunction g_time_ticks_now_function = &subtle::TimeTicksNowIgnoringOverride;
-		ThreadTicksNowFunction g_thread_ticks_now_function = &subtle::ThreadTicksNowIgnoringOverride;
+
+		TimeNowFunction g_time_now_from_system_time_function = 
+			&subtle::TimeNowFromSystemTimeIgnoringOverride;
+
+		TimeTicksNowFunction g_time_ticks_now_function = 
+			&subtle::TimeTicksNowIgnoringOverride;
+
+		ThreadTicksNowFunction g_thread_ticks_now_function = 
+			&subtle::ThreadTicksNowIgnoringOverride;
+
 	}  // namespace internal
 
 	// TimeDelta ------------------------------------------------------------------
@@ -127,57 +134,9 @@ namespace base {
 		return delta_ * Time::kNanosecondsPerMicrosecond;
 	}
 
-	namespace time_internal {
-
-		int64_t SaturatedAdd(int64_t value, TimeDelta delta) {
-			// Treat Min/Max() as +/- infinity (additions involving two infinities are
-			// only valid if signs match).
-			if (delta.is_max()) {
-				CHECK_GT(value, std::numeric_limits<int64_t>::min());
-				return std::numeric_limits<int64_t>::max();
-			}
-			else if (delta.is_min()) {
-				CHECK_LT(value, std::numeric_limits<int64_t>::max());
-				return std::numeric_limits<int64_t>::min();
-			}
-
-			CheckedNumeric<int64_t> rv(value);
-			rv += delta.delta_;
-			if (rv.IsValid())
-				return rv.ValueOrDie();
-			// Positive RHS overflows. Negative RHS underflows.
-			if (delta.delta_ < 0)
-				return std::numeric_limits<int64_t>::min();
-			return std::numeric_limits<int64_t>::max();
-		}
-
-		int64_t SaturatedSub(int64_t value, TimeDelta delta) {
-			// Treat Min/Max() as +/- infinity (subtractions involving two infinities are
-			// only valid if signs are opposite).
-			if (delta.is_max()) {
-				CHECK_LT(value, std::numeric_limits<int64_t>::max());
-				return std::numeric_limits<int64_t>::min();
-			}
-			else if (delta.is_min()) {
-				CHECK_GT(value, std::numeric_limits<int64_t>::min());
-				return std::numeric_limits<int64_t>::max();
-			}
-
-			CheckedNumeric<int64_t> rv(value);
-			rv -= delta.delta_;
-			if (rv.IsValid())
-				return rv.ValueOrDie();
-			// Negative RHS overflows. Positive RHS underflows.
-			if (delta.delta_ < 0)
-				return std::numeric_limits<int64_t>::max();
-			return std::numeric_limits<int64_t>::min();
-		}
-
-	}  // namespace time_internal
-
-	std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
-		return os << time_delta.InSecondsF() << " s";
-	}
+std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
+  return os << time_delta.InSecondsF() << " s";
+}
 
 	// Time -----------------------------------------------------------------------
 
@@ -218,7 +177,8 @@ namespace base {
 			return std::numeric_limits<time_t>::max();
 		}
 		if (std::numeric_limits<int64_t>::max() - kTimeTToMicrosecondsOffset <= us_) {
-			DLOG(WARNING) << "Overflow when converting base::Time with internal value " << us_ << " to time_t.";
+			DLOG(WARNING) << "Overflow when converting base::Time with internal " << 
+							 "value " << us_ << " to time_t.";
 			return std::numeric_limits<time_t>::max();
 		}
 		return (us_ - kTimeTToMicrosecondsOffset) / kMicrosecondsPerSecond;
@@ -246,7 +206,8 @@ namespace base {
 	Time Time::FromJsTime(double ms_since_epoch) {
 		// The epoch is a valid time, so this constructor doesn't interpret
 		// 0 as the null time.
-		return Time(kTimeTToMicrosecondsOffset) + TimeDelta::FromMillisecondsD(ms_since_epoch);
+		return Time(kTimeTToMicrosecondsOffset) + 
+			   TimeDelta::FromMillisecondsD(ms_since_epoch);
 	}
 
 	double Time::ToJsTime() const {
@@ -258,11 +219,13 @@ namespace base {
 			// Preserve max without offset to prevent overflow.
 			return std::numeric_limits<double>::infinity();
 		}
-		return (static_cast<double>(us_ - kTimeTToMicrosecondsOffset) / kMicrosecondsPerMillisecond);
+		return (static_cast<double>(us_ - kTimeTToMicrosecondsOffset) / 
+				kMicrosecondsPerMillisecond);
 	}
 
 	Time Time::FromJavaTime(int64_t ms_since_epoch) {
-		return base::Time::UnixEpoch() + base::TimeDelta::FromMilliseconds(ms_since_epoch);
+		return base::Time::UnixEpoch() + 
+			   base::TimeDelta::FromMilliseconds(ms_since_epoch);
 	}
 
 	int64_t Time::ToJavaTime() const {
@@ -274,7 +237,8 @@ namespace base {
 			// Preserve max without offset to prevent overflow.
 			return std::numeric_limits<int64_t>::max();
 		}
-		return ((us_ - kTimeTToMicrosecondsOffset) / kMicrosecondsPerMillisecond);
+		return ((us_ - kTimeTToMicrosecondsOffset) / 
+				kMicrosecondsPerMillisecond);
 	}
 
 	// static
@@ -300,14 +264,18 @@ namespace base {
 	}
 
 	// static
-	bool Time::FromStringInternal(const char* time_string, bool is_local, Time* parsed_time) {
+	bool Time::FromStringInternal(const char* time_string, 
+								  bool is_local, 
+								  Time* parsed_time) {
 		DCHECK((time_string != nullptr) && (parsed_time != nullptr));
 
 		if (time_string[0] == '\0')
 			return false;
 
 		PRTime result_time = 0;
-		PRStatus result = PR_ParseTimeString(time_string, is_local ? PR_FALSE : PR_TRUE, &result_time);
+		PRStatus result = PR_ParseTimeString(time_string, 
+											 is_local ? PR_FALSE : PR_TRUE, 
+											 &result_time);
 		if (PR_SUCCESS != result)
 			return false;
 
@@ -348,12 +316,14 @@ namespace base {
 	// static
 	TimeTicks TimeTicks::UnixEpoch() {
 		static const base::NoDestructor<base::TimeTicks> epoch([]() {
-			return subtle::TimeTicksNowIgnoringOverride() - (subtle::TimeNowIgnoringOverride() - Time::UnixEpoch());
+			return subtle::TimeTicksNowIgnoringOverride() - 
+					(subtle::TimeNowIgnoringOverride() - Time::UnixEpoch());
 		}());
 		return *epoch;
 	}
 
-	TimeTicks TimeTicks::SnappedToNextTick(TimeTicks tick_phase, TimeDelta tick_interval) const {
+	TimeTicks TimeTicks::SnappedToNextTick(TimeTicks tick_phase, 
+										   TimeDelta tick_interval) const {
 		// |interval_offset| is the offset from |this| to the next multiple of
 		// |tick_interval| after |tick_phase|, possibly negative if in the past.
 		TimeDelta interval_offset = (tick_phase - *this) % tick_interval;

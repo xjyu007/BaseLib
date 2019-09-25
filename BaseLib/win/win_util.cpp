@@ -332,7 +332,7 @@ namespace base::win {
 
 			// Get the device ID.
 			wchar_t device_id[MAX_DEVICE_ID_LEN];
-			const auto status = CM_Get_Device_ID(device_info_data.DevInst, as_writable_wcstr(device_id), 
+			const auto status = CM_Get_Device_ID(device_info_data.DevInst, device_id, 
 												 MAX_DEVICE_ID_LEN, 0);
 			if (status == CR_SUCCESS) {
 				// To reduce the scope of the hack we only look for ACPI and HID\\VID
@@ -377,7 +377,7 @@ namespace base::win {
 
 		DWORD size = sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE;
 		std::unique_ptr<BYTE[]> user_bytes(new BYTE[size]);
-		const auto user = reinterpret_cast<TOKEN_USER*>(user_bytes.get());
+		TOKEN_USER* user = reinterpret_cast<TOKEN_USER*>(user_bytes.get());
 
 		if (!::GetTokenInformation(token, TokenUser, user, size, &size))
 			return false;
@@ -390,7 +390,7 @@ namespace base::win {
 		if (!::ConvertSidToStringSid(user->User.Sid, &sid_string))
 			return false;
 
-		*user_sid = as_u16cstr(sid_string);
+		*user_sid = sid_string;
 
 		::LocalFree(sid_string);
 
@@ -403,7 +403,9 @@ namespace base::win {
 		//   http://code.google.com/p/chromium/issues/detail?id=61644
 		ThreadRestrictions::ScopedAllowIO allow_io;
 
-		const RegKey key(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", KEY_READ);
+		const RegKey key(HKEY_LOCAL_MACHINE, 
+						 L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", 
+						 KEY_READ);
 		DWORD uac_enabled;
 		if (key.ReadValueDW(L"EnableLUA", &uac_enabled) != ERROR_SUCCESS) {
 			return true;
@@ -431,7 +433,7 @@ namespace base::win {
 										const PROPERTYKEY& property_key, 
 										const wchar_t* property_string_value) {
 		ScopedPropVariant property_value;
-		if (FAILED(InitPropVariantFromString(as_wcstr(property_string_value), 
+		if (FAILED(InitPropVariantFromString(property_string_value, 
 											 property_value.Receive()))) {
 			return false;
 		}
@@ -459,17 +461,19 @@ namespace base::win {
 		// App id should be less than 64 chars and contain no space. And recommended
 		// format is CompanyName.ProductName[.SubProduct.ProductNumber].
 		// See http://msdn.microsoft.com/en-us/library/dd378459%28VS.85%29.aspx
-		DCHECK_LT(lstrlen(as_wcstr(app_id)), 64);
-		DCHECK_EQ(wcschr(as_wcstr(app_id), L' '), nullptr);
+		DCHECK_LT(lstrlen(app_id), 64);
+		DCHECK_EQ(wcschr(app_id, L' '), nullptr);
 
 		return SetStringValueForPropertyStore(property_store, 
 											  PKEY_AppUserModel_ID, 
 											  app_id);
 	}
 
-	static const wchar_t kAutoRunKeyPath[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+	static const wchar_t kAutoRunKeyPath[] = 
+		L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 
-	bool AddCommandToAutoRun(HKEY root_key, const std::wstring& name, 
+	bool AddCommandToAutoRun(HKEY root_key, 
+							 const std::wstring& name, 
 							 const std::wstring& command) {
 		const RegKey autorun_key(root_key, kAutoRunKeyPath, KEY_SET_VALUE);
 		return (autorun_key.WriteValue(name.c_str(), command.c_str()) == ERROR_SUCCESS);
@@ -557,7 +561,8 @@ namespace base::win {
 		// See
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/dn629263(v=vs.85).aspx
 		typedef decltype(GetAutoRotationState)* GetAutoRotationStateType;
-		static const auto get_auto_rotation_state_func = reinterpret_cast<GetAutoRotationStateType>(
+		static const auto get_auto_rotation_state_func = 
+			reinterpret_cast<GetAutoRotationStateType>(
 				GetUser32FunctionPointer("GetAutoRotationState"));
 		if (get_auto_rotation_state_func) {
 			AR_STATE rotation_state = AR_ENABLED;
@@ -717,13 +722,13 @@ namespace base::win {
 		// Fall back to per-monitor DPI for older versions of Win10 instead of
 		// Win8.1 since Win8.1 does not have EnableChildWindowDpiMessage,
 		// necessary for correct non-client area scaling across monitors.
-		const auto process_dpi_awareness = 
+		PROCESS_DPI_AWARENESS process_dpi_awareness = 
 			GetVersion() >= Version::WIN10 ? PROCESS_PER_MONITOR_DPI_AWARE
 			: PROCESS_SYSTEM_DPI_AWARE;
 		if (!SetProcessDpiAwarenessWrapper(process_dpi_awareness)) {
 			// For windows versions where SetProcessDpiAwareness is not available or
 			// failed, try its predecessor.
-			const auto result = ::SetProcessDPIAware();
+			BOOL result = ::SetProcessDPIAware();
 			DCHECK(result) << "SetProcessDPIAware failed.";
 		}
 	}
@@ -770,7 +775,7 @@ namespace base::win {
 
 		// Query the name of the object.
 		if (!::GetUserObjectInformation(
-			handle, UOI_NAME, WriteInto(&object_name, size / sizeof(wchar_t)),
+			handle, UOI_NAME, WriteIntoW(&object_name, size / sizeof(wchar_t)),
 			size, &size)) {
 			DPCHECK(false);
 		}

@@ -24,7 +24,7 @@ namespace base {
 		    // be in a consistent state. Further, task-runner only installs the
 		    // SequenceToken when running a task. For this reason, |sequence_token_| is
 		    // not checked during thread destruction.
-		    if (!SequenceCheckerImpl::HasThreadLocalStorageBeenDestroyed() &&
+		    if (!HasThreadLocalStorageBeenDestroyed() &&
 		        sequence_token_.IsValid()) {
 		      return sequence_token_ == SequenceToken::GetForCurrentThread();
 		    }
@@ -66,7 +66,7 @@ namespace base {
 
 		// Intentionally not using either |lock_| in this method to let TSAN catch
 		// racy assign.
-		TS_UNCHECKED_READ(core_) = std::move(TS_UNCHECKED_READ(other.core_));
+		core_ = std::move(other.core_);
 
 		return *this;
 	}

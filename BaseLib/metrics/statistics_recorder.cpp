@@ -8,12 +8,10 @@
 
 #include "at_exit.h"
 #include "debug_/leak_annotations.h"
-#include "json/string_escape.h"
 #include "logging.h"
 #include "memory/ptr_util.h"
 #include "metrics/histogram.h"
 #include "metrics/histogram_snapshot_manager.h"
-#include "metrics/metrics_hashes.h"
 #include "metrics/persistent_histogram_allocator.h"
 #include "metrics/record_histogram_checker.h"
 #include "stl_util.h"
@@ -52,7 +50,7 @@ namespace base {
 
 	StatisticsRecorder::~StatisticsRecorder() {
 		const AutoLock auto_lock(lock_.Get());
-		DCHECK_EQ(this, top_);
+		//DCHECK_EQ(this, top_);
 		top_ = previous_;
 	}
 
@@ -287,17 +285,17 @@ namespace base {
 		const AutoLock auto_lock(lock_.Get());
 		EnsureGlobalRecorderWhileLocked();
 
-		const HistogramMap::iterator found = top_->histograms_.find(name);
+		const auto found = top_->histograms_.find(name);
 		if (found == top_->histograms_.end())
 			return;
 
-		HistogramBase* const base = found->second;
+		const auto base = found->second;
 		if (base->GetHistogramType() != SPARSE_HISTOGRAM) {
 			// When forgetting a histogram, it's likely that other information is
 			// also becoming invalid. Clear the persistent reference that may no
 			// longer be valid. There's no danger in this as, at worst, duplicates
 			// will be created in persistent memory.
-			static_cast<Histogram*>(base)->bucket_ranges()->set_persistent_reference(0);
+			dynamic_cast<Histogram*>(base)->bucket_ranges()->set_persistent_reference(0);
 		}
 
 		top_->histograms_.erase(found);
@@ -353,10 +351,10 @@ namespace base {
 
 	// static
 	StatisticsRecorder::Histograms StatisticsRecorder::WithName(
-		Histograms histograms,
-		const std::string& query) {
+			Histograms histograms,
+			const std::string& query) {
 		// Need a C-string query for comparisons against C-string histogram name.
-		const char* const query_string = query.c_str();
+		const auto query_string = query.c_str();
 		histograms.erase(std::remove_if(histograms.begin(), histograms.end(),
 			[query_string](const HistogramBase* const h) {
 			return !strstr(h->histogram_name(),

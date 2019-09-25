@@ -115,7 +115,7 @@ namespace base::internal {
 					worker_awake_ = false;
 					return nullptr;
 				}
-			    auto run_status = task_source.WillRunTask();
+				const auto run_status = task_source.WillRunTask();
 			    DCHECK_NE(run_status, TaskSource::RunStatus::kDisallowed);
 			    return task_source;
 			}
@@ -181,8 +181,7 @@ namespace base::internal {
 			}
 
 		protected:
-			RegisteredTaskSource GetWorkLockRequired(WorkerThread* worker)
-				EXCLUSIVE_LOCKS_REQUIRED(lock_) {
+			RegisteredTaskSource GetWorkLockRequired(WorkerThread* worker) {
 				if (!CanRunNextTaskSource()) {
 					return nullptr;
 				}
@@ -192,7 +191,7 @@ namespace base::internal {
 			const TrackedRef<TaskTracker>& task_tracker() const { return task_tracker_; }
 
 			CheckedLock lock_;
-			bool worker_awake_ GUARDED_BY(lock_) = false;
+			bool worker_awake_ = false;
 
 			const TrackedRef<TaskTracker> task_tracker_;
 
@@ -211,7 +210,7 @@ namespace base::internal {
 				return false;
 			}
 
-			bool CanRunNextTaskSource() EXCLUSIVE_LOCKS_REQUIRED(lock_) const {
+			bool CanRunNextTaskSource() const {
 				return !priority_queue_.IsEmpty() &&
 					task_tracker_->CanRunPriority(
 						priority_queue_.PeekSortKey().priority());
@@ -225,7 +224,7 @@ namespace base::internal {
 			// OnMainEntry() and PostTaskNow().
 			WorkerThread* worker_ = nullptr;
 
-			PriorityQueue priority_queue_ GUARDED_BY(lock_);
+			PriorityQueue priority_queue_;
 
 			AtomicThreadRefChecker thread_ref_checker_;
 
@@ -307,7 +306,7 @@ namespace base::internal {
 					worker_awake_ = false;
 					return nullptr;
 				}
-			    auto run_status = task_source.WillRunTask();
+				const auto run_status = task_source.WillRunTask();
 			    DCHECK_NE(run_status, TaskSource::RunStatus::kDisallowed);
 			    return task_source;
 			}

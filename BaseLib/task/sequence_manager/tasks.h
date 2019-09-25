@@ -7,23 +7,19 @@
 #include "pending_task.h"
 #include "task/sequence_manager/enqueue_order.h"
 
-namespace base
-{
-	namespace sequence_manager
-	{
+namespace base {
+	namespace sequence_manager {
 
 		using TaskType = uint8_t;
 		constexpr TaskType kTaskTypeNone = 0;
 
-		namespace internal
-		{
+		namespace internal {
 
 			enum class WakeUpResolution { kLow, kHigh };
 
 			// Wrapper around PostTask method arguments and the assigned task type.
 			// Eventually it becomes a PendingTask once accepted by a TaskQueueImpl.
-			struct BASE_EXPORT PostedTask
-			{
+			struct BASE_EXPORT PostedTask {
 				explicit PostedTask(OnceClosure callback = OnceClosure(),
 					Location location = Location(),
 					TimeDelta delay = TimeDelta(),
@@ -45,23 +41,19 @@ namespace base
 
 			// Represents a time at which a task wants to run. Tasks scheduled for the
 			// same point in time will be ordered by their sequence numbers.
-			struct DelayedWakeUp
-			{
+			struct DelayedWakeUp {
 				TimeTicks time;
 				int sequence_num;
 
-				bool operator!=(const DelayedWakeUp& other) const
-				{
+				bool operator!=(const DelayedWakeUp& other) const {
 					return time != other.time || other.sequence_num != sequence_num;
 				}
 
-				bool operator==(const DelayedWakeUp& other) const
-				{
+				bool operator==(const DelayedWakeUp& other) const {
 					return !(*this != other);
 				}
 
-				bool operator<=(const DelayedWakeUp& other) const
-				{
+				bool operator<=(const DelayedWakeUp& other) const {
 					if (time == other.time) {
 						// Debug gcc builds can compare an element against itself.
 						DCHECK(sequence_num != other.sequence_num || this == &other);
@@ -76,30 +68,26 @@ namespace base
 		}  // namespace internal
 
 		// PendingTask with extra metadata for SequenceManager.
-		struct BASE_EXPORT Task : public PendingTask
-		{
+		struct BASE_EXPORT Task : public PendingTask {
 			Task(internal::PostedTask posted_task,
 				TimeTicks desired_run_time,
-				internal::EnqueueOrder sequence_order,
-				internal::EnqueueOrder enqueue_order = internal::EnqueueOrder(),
+				EnqueueOrder sequence_order,
+				EnqueueOrder enqueue_order = EnqueueOrder(),
 				internal::WakeUpResolution wake_up_resolution =
 				internal::WakeUpResolution::kLow);
 
-			internal::DelayedWakeUp delayed_wake_up() const
-			{
+			internal::DelayedWakeUp delayed_wake_up() const {
 				return internal::DelayedWakeUp{ delayed_run_time, sequence_num };
 			}
 
 			// SequenceManager is particularly sensitive to enqueue order,
 			// so we have accessors for safety.
-			internal::EnqueueOrder enqueue_order() const
-			{
+			EnqueueOrder enqueue_order() const {
 				DCHECK(enqueue_order_);
 				return enqueue_order_;
 			}
 
-			void set_enqueue_order(internal::EnqueueOrder enqueue_order)
-			{
+			void set_enqueue_order(EnqueueOrder enqueue_order) {
 				DCHECK(!enqueue_order_);
 				enqueue_order_ = enqueue_order;
 			}
@@ -118,7 +106,7 @@ namespace base
 			// is set when posted, but for delayed tasks it's not defined until they are
 			// enqueued. This is because otherwise delayed tasks could run before
 			// an immediate task posted after the delayed task.
-			internal::EnqueueOrder enqueue_order_;
+			EnqueueOrder enqueue_order_;
 		};
 
 	}  // namespace sequence_manager

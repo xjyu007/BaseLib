@@ -10,7 +10,6 @@
 #include "task/thread_pool/priority_queue.h"
 #include "task/thread_pool/task_source.h"
 #include "task/thread_pool/tracked_ref.h"
-#include "build_config.h"
 
 #include "win/scoped_windows_thread_environment.h"
 
@@ -173,35 +172,32 @@ namespace base {
 
 			// Returns the number of workers required of workers to run all queued
 			// BEST_EFFORT task sources allowed to run by the current CanRunPolicy.
-			size_t GetNumAdditionalWorkersForBestEffortTaskSourcesLockRequired() const
-				EXCLUSIVE_LOCKS_REQUIRED(lock_);
+			size_t GetNumAdditionalWorkersForBestEffortTaskSourcesLockRequired() const;
 
 			// Returns the number of workers required to run all queued
 			// USER_VISIBLE/USER_BLOCKING task sources allowed to run by the current
 			// CanRunPolicy.
-			size_t GetNumAdditionalWorkersForForegroundTaskSourcesLockRequired() const
-				EXCLUSIVE_LOCKS_REQUIRED(lock_);
+			size_t GetNumAdditionalWorkersForForegroundTaskSourcesLockRequired() const;
 
 			// Ensures that there are enough workers to run queued task sources.
 			// |executor| is forwarded from the one received in
 			// PushTaskSourceAndWakeUpWorkersImpl()
 			virtual void EnsureEnoughWorkersLockRequired(
-				BaseScopedWorkersExecutor* executor) EXCLUSIVE_LOCKS_REQUIRED(lock_) = 0;
+				BaseScopedWorkersExecutor* executor) = 0;
 
 			// Reenqueues a |transaction_with_task_source| from which a Task just ran in
 			// the current ThreadGroup into the appropriate ThreadGroup.
 			void ReEnqueueTaskSourceLockRequired(
 				BaseScopedWorkersExecutor* workers_executor,
 				ScopedReenqueueExecutor* reenqueue_executor,
-				TransactionWithRegisteredTaskSource transaction_with_task_source)
-				EXCLUSIVE_LOCKS_REQUIRED(lock_);
+				TransactionWithRegisteredTaskSource transaction_with_task_source);
 
 			// Returns the next task source from |priority_queue_| if permitted to run and
 			// pops |priority_queue_| if the task source returned no longer needs to be
 			// queued (reached its maximum concurrency). Otherwise returns nullptr and
 			// pops |priority_queue_| so this can be called again.
 			RegisteredTaskSource TakeRegisteredTaskSource(
-				BaseScopedWorkersExecutor* executor) EXCLUSIVE_LOCKS_REQUIRED(lock_);
+				BaseScopedWorkersExecutor* executor);
 
 			// Must be invoked by implementations of the corresponding non-Impl() methods.
 			void UpdateSortKeyImpl(BaseScopedWorkersExecutor* executor,
@@ -217,14 +213,14 @@ namespace base {
 			mutable CheckedLock lock_;
 
 			// PriorityQueue from which all threads of this ThreadGroup get work.
-			PriorityQueue priority_queue_ GUARDED_BY(lock_);
+			PriorityQueue priority_queue_;
 
 			// Minimum priority allowed to run below which tasks should yield. This is
 			// expected to be always kept up-to-date by derived classes when |lock_| is
 			// released. It is annotated as GUARDED_BY(lock_) because it is always updated
 			// under the lock (to avoid races with other state during the update) but it
 			// is nonetheless always safe to read it without the lock (since it's atomic).
-			std::atomic<TaskPriority> min_allowed_priority_ GUARDED_BY(lock_){
+			std::atomic<TaskPriority> min_allowed_priority_{
 				TaskPriority::BEST_EFFORT};
 
 			// If |replacement_thread_group_| is non-null, this ThreadGroup is invalid and

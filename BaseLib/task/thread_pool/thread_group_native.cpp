@@ -13,7 +13,7 @@
 namespace base::internal {
 
 	class ThreadGroupNative::ScopedWorkersExecutor
-	    : public ThreadGroup::BaseScopedWorkersExecutor {
+	    : public BaseScopedWorkersExecutor {
 	public:
 		ScopedWorkersExecutor(ThreadGroupNative* outer) : outer_(outer) {}
 		~ScopedWorkersExecutor() {
@@ -114,7 +114,7 @@ namespace base::internal {
 		--num_pending_threadpool_work_;
 
 		RegisteredTaskSource task_source;
-		TaskPriority priority;
+		
 		while (!task_source && !priority_queue_.IsEmpty()) {
 			const auto priority = priority_queue_.PeekSortKey().priority();
 			// Enforce the CanRunPolicy.

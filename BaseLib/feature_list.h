@@ -22,6 +22,8 @@ namespace base {
 	class FieldTrialList;
 
 	// Specifies whether a given feature is enabled or disabled by default.
+	// NOTE: The actual runtime state may be different, due to a field trial or a
+	// command line switch.
 	enum FeatureState {
 		FEATURE_DISABLED_BY_DEFAULT,
 		FEATURE_ENABLED_BY_DEFAULT,
@@ -40,6 +42,8 @@ namespace base {
 		const char* const name;
 
 		// The default state (i.e. enabled or disabled) for this feature.
+		// NOTE: The actual runtime state may be different, due to a field trial or a
+		// command line switch.
 		const FeatureState default_state;
 	};
 
@@ -117,7 +121,7 @@ namespace base {
 		// Must only be invoked during the initialization phase (before
 		// FinalizeInitialization() has been called).
 		void InitializeFromCommandLine(const std::string& enable_features,
-			const std::string& disable_features);
+									   const std::string& disable_features);
 
 		// Initializes feature overrides through the field trial allocator, which
 		// we're using to store the feature names, their override state, and the name
@@ -128,8 +132,8 @@ namespace base {
 		// |InitializeFromCommandLine()|. This includes features explicitly
 		// disabled/enabled with --disable-features and --enable-features, as well as
 		// any extra feature overrides that depend on command line switches.
-		bool IsFeatureOverriddenFromCommandLine(const std::string& feature_name,
-			OverrideState state) const;
+		[[nodiscard]] bool IsFeatureOverriddenFromCommandLine(const std::string& feature_name,
+															  OverrideState state) const;
 
 		// Associates a field trial for reporting purposes corresponding to the
 		// command-line setting the feature state to |for_overridden_state|. The trial
@@ -137,8 +141,8 @@ namespace base {
 		// should be called during registration, after InitializeFromCommandLine() has
 		// been called but before the instance is registered via SetInstance().
 		void AssociateReportingFieldTrial(const std::string& feature_name,
-			OverrideState for_overridden_state,
-			FieldTrial* field_trial);
+										  OverrideState for_overridden_state,
+										  FieldTrial* field_trial);
 
 		// Registers a field trial to override the enabled state of the specified
 		// feature to |override_state|. Command-line overrides still take precedence
@@ -148,8 +152,8 @@ namespace base {
 		// be called during registration, after InitializeFromCommandLine() has been
 		// called but before the instance is registered via SetInstance().
 		void RegisterFieldTrialOverride(const std::string& feature_name,
-			OverrideState override_state,
-			FieldTrial* field_trial);
+										OverrideState override_state,
+										FieldTrial* field_trial);
 
 		// Adds extra overrides (not associated with a field trial). Should be called
 		// before SetInstance().
@@ -172,12 +176,12 @@ namespace base {
 		// added to |enable_overrides| with a '*' character prefix. Must be called
 		// only after the instance has been initialized and registered.
 		void GetFeatureOverrides(std::string* enable_overrides,
-			std::string* disable_overrides);
+								 std::string* disable_overrides);
 
 		// Like GetFeatureOverrides(), but only returns overrides that were specified
 		// explicitly on the command-line, omitting the ones from field trials.
 		void GetCommandLineFeatureOverrides(std::string* enable_overrides,
-			std::string* disable_overrides);
+											std::string* disable_overrides);
 
 		// Returns whether the given |feature| is enabled. Must only be called after
 		// the singleton instance has been registered via SetInstance(). Additionally,
@@ -200,7 +204,7 @@ namespace base {
 		// not previously exist. See InitializeFromCommandLine() for more details
 		// about |enable_features| and |disable_features| parameters.
 		static bool InitializeInstance(const std::string& enable_features,
-			const std::string& disable_features);
+									   const std::string& disable_features);
 
 		// Like the above, but also adds extra overrides. If a feature appears in
 		// |extra_overrides| and also |enable_features| or |disable_features|, the
@@ -280,7 +284,7 @@ namespace base {
 		// associate an optional named field trial if the entry is of the format
 		// "FeatureName<TrialName".
 		void RegisterOverridesFromCommandLine(const std::string& feature_list,
-			OverrideState overridden_state);
+											  OverrideState overridden_state);
 
 		// Registers an override for feature |feature_name|. The override specifies
 		// whether the feature should be on or off (via |overridden_state|), which
@@ -290,15 +294,15 @@ namespace base {
 		// queried. If an override is already registered for the given feature, it
 		// will not be changed.
 		void RegisterOverride(std::string_view feature_name,
-			OverrideState overridden_state,
-			FieldTrial* field_trial);
+							  OverrideState overridden_state,
+							  FieldTrial* field_trial);
 
 		// Implementation of GetFeatureOverrides() with a parameter that specifies
 		// whether only command-line enabled overrides should be emitted. See that
 		// function's comments for more details.
 		void GetFeatureOverridesImpl(std::string* enable_overrides,
-			std::string* disable_overrides,
-			bool command_line_only);
+									 std::string* disable_overrides,
+									 bool command_line_only);
 
 		// Verifies that there's only a single definition of a Feature struct for a
 		// given feature name. Keeps track of the first seen Feature struct for each

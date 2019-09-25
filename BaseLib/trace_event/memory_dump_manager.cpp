@@ -5,7 +5,6 @@
 #include "trace_event/memory_dump_manager.h"
 
 #include <cinttypes>
-#include <cstdio>
 
 #include <algorithm>
 #include <memory>
@@ -262,20 +261,18 @@ namespace base::trace_event {
 		return dump_thread_->task_runner();
 	}
 
-	void MemoryDumpManager::CreateProcessDump(
-		const MemoryDumpRequestArgs& args,
-		const ProcessMemoryDumpCallback& callback) {
+	void MemoryDumpManager::CreateProcessDump(const MemoryDumpRequestArgs& args,
+	                                          ProcessMemoryDumpCallback callback) {
 		char guid_str[20];
-		//sprintf(guid_str, "0x%" PRIx64, args.dump_guid);
 		sprintf_s(guid_str, 20, "0x%" PRIx64, args.dump_guid);
 		/*TRACE_EVENT_NESTABLE_ASYNC_BEGIN1(kTraceCategory, "ProcessMemoryDump",
-			TRACE_ID_LOCAL(args.dump_guid), "dump_guid",
-			TRACE_STR_COPY(guid_str));*/
+											TRACE_ID_LOCAL(args.dump_guid), "dump_guid",
+											TRACE_STR_COPY(guid_str));*/
 
-			// If argument filter is enabled then only background mode dumps should be
-			// allowed. In case the trace config passed for background tracing session
-			// missed the allowed modes argument, it crashes here instead of creating
-			// unexpected dumps.
+		// If argument filter is enabled then only background mode dumps should be
+		// allowed. In case the trace config passed for background tracing session
+		// missed the allowed modes argument, it crashes here instead of creating
+		// unexpected dumps.
 		if (TraceLog::GetInstance()
 			->GetCurrentTraceConfig()
 			.IsArgumentFilterEnabled()) {
@@ -287,7 +284,8 @@ namespace base::trace_event {
 			AutoLock lock(lock_);
 
 			pmd_async_state.reset(new ProcessMemoryDumpAsyncState(
-				args, dump_providers_, callback, GetOrCreateBgTaskRunnerLocked()));
+		        args, dump_providers_, std::move(callback),
+		        GetOrCreateBgTaskRunnerLocked()));
 		}
 
 		// Start the process dump. This involves task runner hops as specified by the
@@ -383,12 +381,13 @@ namespace base::trace_event {
 	// MDP did not specify task runner. Invokes the dump provider's OnMemoryDump()
 	// (unless disabled).
 	void MemoryDumpManager::InvokeOnMemoryDump(MemoryDumpProviderInfo* mdpinfo,
-		ProcessMemoryDump* pmd) {
+											   ProcessMemoryDump* pmd) {
 		HEAP_PROFILER_SCOPED_IGNORE;
 		DCHECK(!mdpinfo->task_runner ||
 			mdpinfo->task_runner->RunsTasksInCurrentSequence());
 
-		//TRACE_EVENT1(kTraceCategory, "MemoryDumpManager::InvokeOnMemoryDump", "dump_provider.name", mdpinfo->name);
+		/*TRACE_EVENT1(kTraceCategory, "MemoryDumpManager::InvokeOnMemoryDump",
+		             "dump_provider.name", mdpinfo->name);*/
 
 		// Do not add any other TRACE_EVENT macro (or function that might have them)
 		// below this point. Under some rare circunstances, they can re-initialize
@@ -422,7 +421,8 @@ namespace base::trace_event {
 		// in safe way.
 		char provider_name_for_debugging[16];
 		//strncpy(provider_name_for_debugging, mdpinfo->name, sizeof(provider_name_for_debugging) - 1);
-		strncpy_s(provider_name_for_debugging, 16, mdpinfo->name, sizeof(provider_name_for_debugging) - 1);
+		strncpy_s(provider_name_for_debugging, 16, mdpinfo->name, 
+				  sizeof(provider_name_for_debugging) - 1);
 		provider_name_for_debugging[sizeof(provider_name_for_debugging) - 1] = '\0';
 		debug::Alias(provider_name_for_debugging);
 
@@ -452,13 +452,13 @@ namespace base::trace_event {
 		//TRACE_EVENT0(kTraceCategory, "MemoryDumpManager::FinishAsyncProcessDump");
 
 		if (!pmd_async_state->callback.is_null()) {
-			pmd_async_state->callback.Run(
-				true /* success */, dump_guid,
-				std::move(pmd_async_state->process_memory_dump));
-			pmd_async_state->callback.Reset();
+			std::move(pmd_async_state->callback)
+			    .Run(true /* success */, dump_guid,
+			         std::move(pmd_async_state->process_memory_dump));
 		}
 
-		//TRACE_EVENT_NESTABLE_ASYNC_END0(kTraceCategory, "ProcessMemoryDump", TRACE_ID_LOCAL(dump_guid));
+		/*TRACE_EVENT_NESTABLE_ASYNC_END0(kTraceCategory, "ProcessMemoryDump",
+		                              TRACE_ID_LOCAL(dump_guid));*/
 	}
 
 	void MemoryDumpManager::SetupForTracing(
@@ -503,12 +503,13 @@ namespace base::trace_event {
 			ProcessMemoryDumpCallback callback,
 			scoped_refptr<SequencedTaskRunner> dump_thread_task_runner)
 				: req_args(req_args),
-				callback(callback),
+				callback(std::move(callback)),
 				callback_task_runner(ThreadTaskRunnerHandle::Get()),
 				dump_thread_task_runner(std::move(dump_thread_task_runner)) {
 		pending_dump_providers.reserve(dump_providers.size());
 		pending_dump_providers.assign(dump_providers.rbegin(), dump_providers.rend());
-		MemoryDumpArgs args = { req_args.level_of_detail, req_args.dump_guid };
+		MemoryDumpArgs args = {req_args.level_of_detail, req_args.determinism,
+		                       req_args.dump_guid};
 		process_memory_dump = std::make_unique<ProcessMemoryDump>(args);
 	}
 

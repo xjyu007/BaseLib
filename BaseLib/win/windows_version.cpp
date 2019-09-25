@@ -22,9 +22,8 @@
 #error VS 2017 Update 3.2 or higher is required
 #endif
 
-#define NTDDI_WIN10_19H1
 #if !defined(NTDDI_WIN10_19H1)
-#error Windows 10.0.18362.0 SDK or higher required.
+//#error Windows 10.0.18362.0 SDK or higher required.
 #endif
 
 namespace base::win {
@@ -69,9 +68,9 @@ namespace base::win {
 	OSInfo** OSInfo::GetInstanceStorage() {
 		// Note: we don't use the Singleton class because it depends on AtExitManager,
 		// and it's convenient for other modules to use this class without it.
+#pragma warning(disable : 4996)
 		static OSInfo* info = []() {
 			_OSVERSIONINFOEXW version_info = { sizeof(version_info) };
-#pragma warning(disable:4996)
 			::GetVersionEx(reinterpret_cast<_OSVERSIONINFOW*>(&version_info));
 
 			DWORD os_type = 0;
@@ -106,10 +105,10 @@ namespace base::win {
 	}
 
 	OSInfo::OSInfo(const _OSVERSIONINFOEXW& version_info,
-		const _SYSTEM_INFO& system_info,
-		int os_type)
-		: version_(Version::PRE_XP),
-		wow64_status_(GetWOW64StatusForProcess(GetCurrentProcess())) {
+				   const _SYSTEM_INFO& system_info,
+				   int os_type)
+			: version_(Version::PRE_XP),
+			wow64_status_(GetWOW64StatusForProcess(GetCurrentProcess())) {
 		version_number_.major = version_info.dwMajorVersion;
 		version_number_.minor = version_info.dwMinorVersion;
 		version_number_.build = version_info.dwBuildNumber;
@@ -168,7 +167,7 @@ namespace base::win {
 				break;
 			}
 		} else if (version_info.dwMajorVersion == 5 &&
-			version_info.dwMinorVersion == 2) {
+				   version_info.dwMinorVersion == 2) {
 			if (version_info.wProductType == VER_NT_WORKSTATION &&
 				system_info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
 				version_type_ = SUITE_PROFESSIONAL;
@@ -178,7 +177,7 @@ namespace base::win {
 				version_type_ = SUITE_SERVER;
 			}
 		} else if (version_info.dwMajorVersion == 5 &&
-			version_info.dwMinorVersion == 1) {
+				   version_info.dwMinorVersion == 1) {
 			if (version_info.wSuiteMask & VER_SUITE_PERSONAL)
 				version_type_ = SUITE_HOME;
 			else
@@ -191,7 +190,7 @@ namespace base::win {
 
 	OSInfo::~OSInfo() = default;
 
-	Version OSInfo::Kernel32Version() {
+	Version OSInfo::Kernel32Version() const {
 		static const auto kernel32_version =
 			MajorMinorBuildToVersion(Kernel32BaseVersion().components()[0],
 				Kernel32BaseVersion().components()[1],
@@ -202,9 +201,9 @@ namespace base::win {
 	// Retrieve a version from kernel32. This is useful because when running in
 	// compatibility mode for a down-level version of the OS, the file version of
 	// kernel32 will still be the "real" version.
-	base::Version OSInfo::Kernel32BaseVersion()	{
+	base::Version OSInfo::Kernel32BaseVersion() const	{
 		static const NoDestructor<base::Version> version([] {
-			std::unique_ptr<FileVersionInfoWin> file_version_info =
+			auto file_version_info =
 				FileVersionInfoWin::CreateFileVersionInfoWin(
 					FilePath(FILE_PATH_LITERAL("kernel32.dll")));
 			if (!file_version_info) {

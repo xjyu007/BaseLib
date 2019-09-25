@@ -10,8 +10,6 @@
 #include <cstddef>
 #include <tuple>
 
-#include "build_config.h"
-
 namespace base {
 
 	// Checks if any of the elements in |ilist| is true.
@@ -87,14 +85,7 @@ namespace base {
 
 		// Helper for extracting the Nth type from a parameter pack.
 		template <size_t N>
-#if defined(__clang__) && !defined(OS_NACL)
-		// A clang extension which efficiently returns the Nth type from a pack. This
-		// is faster to compile than std::tuple_element<>.
-		// See: https://ldionne.com/2015/11/29/efficient-parameter-pack-indexing/
-		using NthType = __type_pack_element<N, Ts...>;
-#else
 		using NthType = typename std::tuple_element<N, std::tuple<Ts...>>::type;
-#endif
 
 		// Checks if every type in the parameter pack is the same.
 		static constexpr bool IsAllSameType() {

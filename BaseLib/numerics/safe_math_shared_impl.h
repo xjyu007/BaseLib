@@ -4,29 +4,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-#include <stdint.h>
-
-#include <cassert>
-#include <climits>
-#include <cmath>
-#include <cstdlib>
-#include <limits>
 #include <type_traits>
-
 #include "numerics/safe_conversions.h"
 
-// Where available use builtin math overflow support on Clang and GCC.
-#if !defined(__native_client__) &&                         \
-    ((defined(__clang__) &&                                \
-      ((__clang_major__ > 3) ||                            \
-       (__clang_major__ == 3 && __clang_minor__ >= 4))) || \
-     (defined(__GNUC__) && __GNUC__ >= 5))
-#include "numerics/safe_math_clang_gcc_impl.h"
-#define BASE_HAS_OPTIMIZED_SAFE_MATH (1)
-#else
 #define BASE_HAS_OPTIMIZED_SAFE_MATH (0)
-#endif
 
 namespace base {
 	namespace internal {
@@ -40,7 +21,7 @@ namespace base {
 			template <typename V>
 			static constexpr bool Do(T, U, V*) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<bool>();
+				return CheckOnFailure::HandleFailure<bool>();
 			}
 		};
 
@@ -50,7 +31,7 @@ namespace base {
 			template <typename V>
 			static constexpr bool Do(T, U, V*) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<bool>();
+				return CheckOnFailure::HandleFailure<bool>();
 			}
 		};
 
@@ -60,7 +41,7 @@ namespace base {
 			template <typename V>
 			static constexpr bool Do(T, U, V*) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<bool>();
+				return CheckOnFailure::HandleFailure<bool>();
 			}
 		};
 
@@ -70,7 +51,7 @@ namespace base {
 			template <typename V>
 			static constexpr V Do(T, U) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<V>();
+				return CheckOnFailure::HandleFailure<V>();
 			}
 		};
 
@@ -80,7 +61,7 @@ namespace base {
 			template <typename V>
 			static constexpr V Do(T, U) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<V>();
+				return CheckOnFailure::HandleFailure<V>();
 			}
 		};
 
@@ -90,7 +71,7 @@ namespace base {
 			template <typename V>
 			static constexpr V Do(T, U) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<V>();
+				return CheckOnFailure::HandleFailure<V>();
 			}
 		};
 
@@ -99,7 +80,7 @@ namespace base {
 			static const bool is_supported = false;
 			static constexpr T Do(T) {
 				// Force a compile failure if instantiated.
-				return CheckOnFailure::template HandleFailure<T>();
+				return CheckOnFailure::HandleFailure<T>();
 			}
 		};
 #endif  // BASE_HAS_OPTIMIZED_SAFE_MATH

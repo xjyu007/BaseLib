@@ -26,8 +26,9 @@ namespace base
 	{
 		const SequencedTaskRunnerHandle* current =
 			sequenced_task_runner_tls.Pointer()->Get();
-		CHECK(current) << "Error: This caller requires a sequenced context (i.e. the "
-			"current task needs to run from a SequencedTaskRunner).";
+		CHECK(current) 
+			<< "Error: This caller requires a sequenced context (i.e. the current "
+			"task needs to run from a SequencedTaskRunner).";
 		return current->task_runner_;
 	}
 

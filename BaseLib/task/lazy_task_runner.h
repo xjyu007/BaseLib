@@ -13,7 +13,6 @@
 #include "task/common/checked_lock.h"
 #include "task/single_thread_task_runner_thread_mode.h"
 #include "task/task_traits.h"
-#include "thread_annotations.h"
 
 // Lazy(Sequenced|SingleThread|COMSTA)TaskRunner lazily creates a TaskRunner.
 //
@@ -200,7 +199,7 @@ namespace base {
 			CheckedLock lock_;
 
 			// List of callbacks to run on destruction.
-			std::vector<OnceClosure> callbacks_ GUARDED_BY(lock_);
+			std::vector<OnceClosure> callbacks_;
 
 			DISALLOW_COPY_AND_ASSIGN(ScopedLazyTaskRunnerListForTesting);
 		};

@@ -49,6 +49,7 @@
 #elif defined(_WIN32)
 #define OS_WIN 1
 #define WIN32_LEAN_AND_MEAN             // 从 Windows 头文件中排除极少使用的内容
+#define NOMINMAX
 #elif defined(__Fuchsia__)
 #define OS_FUCHSIA 1
 #elif defined(__FreeBSD__)

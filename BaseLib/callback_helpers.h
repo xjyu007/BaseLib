@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <type_traits>
 #include <utility>
 
 #include "atomicops.h"
@@ -67,7 +68,7 @@ namespace base {
 
 		private:
 			volatile subtle::Atomic32 has_run_ = 0;
-			base::OnceCallback<void(Args...)> callback_;
+			OnceCallback<void(Args...)> callback_;
 
 			DISALLOW_COPY_AND_ASSIGN(AdaptCallbackForRepeatingHelper);
 		};
@@ -97,11 +98,11 @@ namespace base {
 		explicit ScopedClosureRunner(OnceClosure closure);
 		~ScopedClosureRunner();
 
-		ScopedClosureRunner(ScopedClosureRunner&& other);
+		ScopedClosureRunner(ScopedClosureRunner&& other) noexcept;
 
 		// Releases the current closure if it's set and replaces it with the closure
 		// from |other|.
-		ScopedClosureRunner& operator=(ScopedClosureRunner&& other);
+		ScopedClosureRunner& operator=(ScopedClosureRunner&& other) noexcept;
 
 		// Calls the current closure and resets it, so it wont be called again.
 		void RunAndReset();
@@ -111,6 +112,8 @@ namespace base {
 
 		// Releases the Closure without calling.
 		OnceClosure Release() WARN_UNUSED_RESULT;
+
+		bool is_null() const { return closure_.is_null(); }
 
 	private:
 		OnceClosure closure_;

@@ -15,10 +15,11 @@ namespace base {
 			std::move(closure_).Run();
 	}
 
-	ScopedClosureRunner::ScopedClosureRunner(ScopedClosureRunner&& other) : closure_(other.Release()) {}
+	ScopedClosureRunner::ScopedClosureRunner(ScopedClosureRunner&& other) noexcept : closure_(other.Release()) {}
 
 	ScopedClosureRunner& ScopedClosureRunner::operator=(
-		ScopedClosureRunner&& other) {
+		ScopedClosureRunner&& other) noexcept
+	{
 		ReplaceClosure(other.Release());
 		return *this;
 	}

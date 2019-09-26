@@ -33,7 +33,8 @@ namespace base::sequence_manager::internal {
 		log_runloop_quit_and_quit_when_idle_(
 			settings.log_runloop_quit_and_quit_when_idle),
 #endif
-		time_source_(settings.clock) {}
+		time_source_(settings.clock) {
+		}
 
 	ThreadControllerWithMessagePumpImpl::ThreadControllerWithMessagePumpImpl(
 		std::unique_ptr<MessagePump> message_pump,
@@ -333,7 +334,7 @@ namespace base::sequence_manager::internal {
 		DCHECK(main_thread_only().task_source);
 
 		for (int i = 0; i < main_thread_only().work_batch_size; i++) {
-			std::optional<PendingTask> task = main_thread_only().task_source->TakeTask();
+			Task* task = main_thread_only().task_source->SelectNextTask();
 			if (!task)
 				break;
 
@@ -352,8 +353,8 @@ namespace base::sequence_manager::internal {
 			{
 				// Trace events should finish before we call DidRunTask to ensure that
 				// SequenceManager trace events do not interfere with them.
-				//TRACE_TASK_EXECUTION("ThreadController::Task", *task);
-				task_annotator_.RunTask("ThreadController::Task", &*task);
+				//TRACE_TASK_EXECUTION("ThreadController::RunTask", *task);
+				task_annotator_.RunTask("SequenceManager RunTask", task);
 			}
 
 #if DCHECK_IS_ON()

@@ -50,6 +50,7 @@
   X("cma")                                                               \
   X("compositor")                                                        \
   X("content")                                                           \
+  X("content-capture")                                                   \
   X("devtools")                                                          \
   X("devtools.timeline")                                                 \
   X("devtools.timeline.async")                                           \

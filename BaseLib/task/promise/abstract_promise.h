@@ -354,7 +354,7 @@ namespace internal {
 				scoped_refptr<AbstractPromise> promise = subtle::AdoptRefIfNeeded(
 		        new AbstractPromise(task_runner, from_here, std::move(prerequisites),
 		                            reject_policy, tag, std::move(executor_data)),
-					AbstractPromise::kRefCountPreference);
+					kRefCountPreference);
 				// It's important this is called after |promise| has been initialized
 				// because otherwise it could trigger a scoped_refptr destructor on another
 				// thread before this thread has had a chance to increment the refcount.
@@ -369,10 +369,10 @@ namespace internal {
 				ConstructType tag,
 				PromiseExecutor::Data&& executor_data) noexcept {
 			    return subtle::AdoptRefIfNeeded(
-			        new internal::AbstractPromise(nullptr, from_here, nullptr,
+			        new AbstractPromise(nullptr, from_here, nullptr,
 			                                      reject_policy, tag,
 			                                      std::move(executor_data)),
-			        AbstractPromise::kRefCountPreference);
+			        kRefCountPreference);
 			}
 
 			AbstractPromise(const AbstractPromise&) = delete;
@@ -532,12 +532,12 @@ namespace internal {
 			void OnCanceled();
 
 		private:
-			friend base::RefCountedThreadSafe<AbstractPromise>;
+			friend RefCountedThreadSafe<AbstractPromise>;
 
 			friend class AbstractPromiseTest;
 
 			template <typename ResolveType, typename RejectType>
-			friend class base::ManualPromiseResolver;
+			friend class ManualPromiseResolver;
 
 			template <typename T, typename... Args>
 			friend class PromiseCallbackHelper;
@@ -805,17 +805,17 @@ namespace internal {
 			struct InlineConstructor {};
 
 			explicit BasePromise(
-				scoped_refptr<internal::AbstractPromise> abstract_promise);
+				scoped_refptr<AbstractPromise> abstract_promise);
 
 			// We want this to be inlined to reduce binary size for the Promise<>
 			// constructor. Its a template to bypass ChromiumStyle plugin which otherwise
 			// insists this is out of line.
 			template <typename T>
-			explicit BasePromise(internal::PassedPromise&& passed_promise,
+			explicit BasePromise(PassedPromise&& passed_promise,
 			                     T InlineConstructor)
 			  : abstract_promise_(passed_promise.Release(), subtle::kAdoptRefTag) {}
 
-			scoped_refptr<internal::AbstractPromise> abstract_promise_;
+			scoped_refptr<AbstractPromise> abstract_promise_;
 		};
 
 	}  // namespace internal

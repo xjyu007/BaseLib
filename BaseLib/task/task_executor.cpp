@@ -6,8 +6,10 @@
 
 #include <type_traits>
 
+#include "no_destructor.h"
 #include "task/task_traits.h"
 #include "task/task_traits_extension.h"
+#include "threading/thread_local.h"
 
 namespace base {
 
@@ -29,6 +31,21 @@ namespace base {
 			"TaskExecutorMap depends on 0 being an invalid TaskTraits extension ID");
 
 	}  // namespace
+
+	ThreadLocalPointer<TaskExecutor>* GetTLSForCurrentTaskExecutor() {
+		static NoDestructor<ThreadLocalPointer<TaskExecutor>> instance;
+		return instance.get();
+	}
+
+	void SetTaskExecutorForCurrentThread(TaskExecutor* task_executor) {
+		DCHECK(!task_executor || !GetTLSForCurrentTaskExecutor()->Get() ||
+		     GetTLSForCurrentTaskExecutor()->Get() == task_executor);
+		GetTLSForCurrentTaskExecutor()->Set(task_executor);
+	}
+
+	TaskExecutor* GetTaskExecutorForCurrentThread() {
+		return GetTLSForCurrentTaskExecutor()->Get();
+	}
 
 	void RegisterTaskExecutor(uint8_t extension_id, TaskExecutor* task_executor) {
 		DCHECK_NE(extension_id, TaskTraitsExtensionStorage::kInvalidExtensionId);

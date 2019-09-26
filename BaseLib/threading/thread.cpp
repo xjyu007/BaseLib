@@ -11,8 +11,13 @@
 #include "location.h"
 #include "logging.h"
 #include "memory/ptr_util.h"
+#include "memory/scoped_refptr.h"
+#include "message_loop/message_loop_current.h"
+#include "message_loop/message_pump.h"
 #include "run_loop.h"
 #include "synchronization/waitable_event.h"
+#include "task/sequence_manager/sequence_manager_impl.h"
+#include "task/sequence_manager/task_queue.h"
 #include "third_party/dynamic_annotations/dynamic_annotations.h"
 #include "threading/thread_id_name_manager.h"
 #include "threading/thread_local.h"
@@ -32,6 +37,56 @@ namespace base {
 		// using a Thread to setup and run a MessageLoop.
 		base::LazyInstance<base::ThreadLocalBoolean>::Leaky lazy_tls_bool =
 			LAZY_INSTANCE_INITIALIZER;
+
+		class SequenceManagerThreadDelegate : public Thread::Delegate {
+		public:
+			explicit SequenceManagerThreadDelegate(
+				MessagePumpType message_pump_type,
+				OnceCallback<std::unique_ptr<MessagePump>()> message_pump_factory)
+				: sequence_manager_(
+					sequence_manager::internal::SequenceManagerImpl::CreateUnbound(
+						sequence_manager::SequenceManager::Settings::Builder()
+						.SetMessagePumpType(message_pump_type)
+						.Build())),
+				default_task_queue_(sequence_manager_->CreateTaskQueue(
+					sequence_manager::TaskQueue::Spec("default_tq"))),
+				message_pump_factory_(std::move(message_pump_factory)) {
+				sequence_manager_->SetDefaultTaskRunner(default_task_queue_->task_runner());
+			}
+
+			~SequenceManagerThreadDelegate() override = default;
+
+			scoped_refptr<SingleThreadTaskRunner> GetDefaultTaskRunner() override {
+				// Surprisingly this might not be default_task_queue_->task_runner() which
+				// we set in the constructor. The Thread::Init() method could create a
+				// SequenceManager on top of the current one and call
+				// SequenceManager::SetDefaultTaskRunner which would propagate the new
+				// TaskRunner down to our SequenceManager. Turns out, code actually relies
+				// on this and somehow relies on
+				// SequenceManagerThreadDelegate::GetDefaultTaskRunner returning this new
+				// TaskRunner. So instead of returning default_task_queue_->task_runner() we
+				// need to query the SequenceManager for it.
+				// The underlying problem here is that Subclasses of Thread can do crazy
+				// stuff in Init() but they are not really in control of what happens in the
+				// Thread::Delegate, as this is passed in on calling StartWithOptions which
+				// could happen far away from where the Thread is created. We should
+				// consider getting rid of StartWithOptions, and pass them as a constructor
+				// argument instead.
+				return sequence_manager_->GetTaskRunner();
+			}
+
+			void BindToCurrentThread(TimerSlack timer_slack) override {
+				sequence_manager_->BindToMessagePump(
+					std::move(message_pump_factory_).Run());
+				sequence_manager_->SetTimerSlack(timer_slack);
+			}
+
+		private:
+			std::unique_ptr<sequence_manager::internal::SequenceManagerImpl>
+				sequence_manager_;
+			scoped_refptr<sequence_manager::TaskQueue> default_task_queue_;
+			OnceCallback<std::unique_ptr<MessagePump>()> message_pump_factory_;
+		};
 
 	}  // namespace
 
@@ -91,11 +146,13 @@ namespace base {
 			DCHECK(!options.message_pump_factory);
 			delegate_ = WrapUnique(options.delegate);
 		} else if (options.message_pump_factory) {
-			delegate_ = std::make_unique<internal::MessageLoopThreadDelegate>(
-				MessageLoop::CreateUnbound(options.message_pump_factory.Run()));
+		    delegate_ = std::make_unique<SequenceManagerThreadDelegate>(
+		        MessagePumpType::CUSTOM, options.message_pump_factory);
 		} else {
-			delegate_ = std::make_unique<internal::MessageLoopThreadDelegate>(
-				MessageLoop::CreateUnbound(options.message_pump_type));
+		    delegate_ = std::make_unique<SequenceManagerThreadDelegate>(
+		        options.message_pump_type,
+		        BindOnce([](MessagePumpType type) { return MessagePump::Create(type); },
+		                 options.message_pump_type));
 		}
 
 		start_event_.Reset();
@@ -105,7 +162,7 @@ namespace base {
 		// fixed).
 		{
 			AutoLock lock(thread_lock_);
-			const auto success =
+			bool success =
 				options.joinable
 				? PlatformThread::CreateWithPriority(options.stack_size, this,
 					&thread_, options.priority)
@@ -124,10 +181,11 @@ namespace base {
 
 	bool Thread::StartAndWaitForTesting() {
 		DCHECK(owning_sequence_checker_.CalledOnValidSequence());
-		const auto result = Start();
+		bool result = Start();
 		if (!result)
 			return false;
-		return WaitUntilThreadStarted();
+		WaitUntilThreadStarted();
+		return true;
 	}
 
 	bool Thread::WaitUntilThreadStarted() const {
@@ -239,7 +297,7 @@ namespace base {
 
 	// static
 	bool Thread::GetThreadWasQuitProperly() {
-		auto quit_properly = true;
+		bool quit_properly = true;
 #if DCHECK_IS_ON()
 		quit_properly = lazy_tls_bool.Pointer()->Get();
 #endif
@@ -259,7 +317,7 @@ namespace base {
 		id_event_.Signal();
 
 		// Complete the initialization of our Thread object.
-		PlatformThread::SetName(name_);
+		PlatformThread::SetName(name_.c_str());
 		ANNOTATE_THREAD_NAME(name_.c_str());  // Tell the name to race detector.
 
 		// Lazily initialize the |message_loop| so that it can run on this thread.
@@ -271,9 +329,10 @@ namespace base {
 
 		std::unique_ptr<win::ScopedCOMInitializer> com_initializer;
 		if (com_status_ != NONE) {
-			com_initializer.reset((com_status_ == STA) ?
-				new win::ScopedCOMInitializer() :
-				new win::ScopedCOMInitializer(win::ScopedCOMInitializer::kMTA));
+		    com_initializer.reset(
+		        (com_status_ == STA)
+		            ? new win::ScopedCOMInitializer()
+		            : new win::ScopedCOMInitializer(win::ScopedCOMInitializer::kMTA));
 		}
 
 		// Let the thread do extra initialization.
@@ -313,25 +372,5 @@ namespace base {
 		run_loop_->QuitWhenIdle();
 		SetThreadWasQuitProperly(true);
 	}
-
-	namespace internal {
-
-		MessageLoopThreadDelegate::MessageLoopThreadDelegate(
-			std::unique_ptr<MessageLoop> message_loop)
-			: message_loop_(std::move(message_loop)) {}
-
-		MessageLoopThreadDelegate::~MessageLoopThreadDelegate() = default;
-
-		scoped_refptr<SingleThreadTaskRunner>
-			MessageLoopThreadDelegate::GetDefaultTaskRunner() {
-			return message_loop_->task_runner();
-		}
-
-		void MessageLoopThreadDelegate::BindToCurrentThread(TimerSlack timer_slack) {
-			message_loop_->BindToCurrentThread();
-			message_loop_->SetTimerSlack(timer_slack);
-		}
-
-	}  // namespace internal
 
 }  // namespace base

@@ -76,18 +76,20 @@ namespace base::sequence_manager {
 		TaskQueueImpl::TaskRunner::~TaskRunner() = default;
 
 		bool TaskQueueImpl::TaskRunner::PostDelayedTask(const Location& location,
-			OnceClosure callback,
-			TimeDelta delay) {
-			return task_poster_->PostTask(PostedTask(std::move(callback), location, delay,
-				Nestable::kNestable, task_type_));
+														OnceClosure callback,
+														TimeDelta delay) {
+			return task_poster_->PostTask(PostedTask(this, std::move(callback), location,
+													 delay, Nestable::kNestable,
+													 task_type_));
 		}
 
 		bool TaskQueueImpl::TaskRunner::PostNonNestableDelayedTask(
 			const Location& location,
 			OnceClosure callback,
 			TimeDelta delay) {
-			return task_poster_->PostTask(PostedTask(std::move(callback), location, delay,
-				Nestable::kNonNestable, task_type_));
+			return task_poster_->PostTask(PostedTask(this, std::move(callback), location,
+			                                         delay, Nestable::kNonNestable,
+			                                         task_type_));
 		}
 
 		bool TaskQueueImpl::TaskRunner::RunsTasksInCurrentSequence() const {
@@ -420,11 +422,13 @@ namespace base::sequence_manager {
 #endif
 
 			// TODO(altimin): Add a copy method to Task to capture metadata here.
+			auto task_runner = pending_task.task_runner;
 			PostImmediateTaskImpl(
-				PostedTask(BindOnce(&TaskQueueImpl::ScheduleDelayedWorkTask,
-					Unretained(this), std::move(pending_task)),
-					FROM_HERE, TimeDelta(), Nestable::kNonNestable,
-					pending_task.task_type),
+				PostedTask(std::move(task_runner),
+				           BindOnce(&TaskQueueImpl::ScheduleDelayedWorkTask,
+									Unretained(this), std::move(pending_task)),
+						   FROM_HERE, TimeDelta(), Nestable::kNonNestable,
+						   pending_task.task_type),
 				CurrentThread::kNotMainThread);
 		}
 
@@ -1088,7 +1092,8 @@ namespace base::sequence_manager {
 			return UpdateDelayedWakeUpImpl(lazy_now, GetNextScheduledWakeUpImpl());
 		}
 
-		void TaskQueueImpl::UpdateDelayedWakeUpImpl(LazyNow* lazy_now, std::optional<DelayedWakeUp> wake_up) {
+		void TaskQueueImpl::UpdateDelayedWakeUpImpl(LazyNow* lazy_now, 
+													std::optional<DelayedWakeUp> wake_up) {
 			if (main_thread_only().scheduled_wake_up == wake_up)
 				return;
 			main_thread_only().scheduled_wake_up = wake_up;
@@ -1102,10 +1107,12 @@ namespace base::sequence_manager {
 			const auto resolution = has_pending_high_resolution_tasks()
 				? WakeUpResolution::kHigh
 				: WakeUpResolution::kLow;
-			main_thread_only().time_domain->SetNextWakeUpForQueue(this, wake_up, resolution, lazy_now);
+			main_thread_only().time_domain->SetNextWakeUpForQueue(this, wake_up, 
+																  resolution, lazy_now);
 		}
 
-		void TaskQueueImpl::SetDelayedWakeUpForTesting(std::optional<DelayedWakeUp> wake_up) {
+		void TaskQueueImpl::SetDelayedWakeUpForTesting(
+				std::optional<DelayedWakeUp> wake_up) {
 			auto lazy_now = main_thread_only().time_domain->CreateLazyNow();
 			UpdateDelayedWakeUpImpl(&lazy_now, wake_up);
 		}

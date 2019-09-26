@@ -17,9 +17,6 @@
 #include "threading/thread_checker.h"
 
 namespace base {
-	namespace internal {
-		class MessageLoopThreadDelegate;
-	}  // namespace internal
 
 	class MessageLoopImpl;
 	class MessagePump;
@@ -154,7 +151,6 @@ namespace base {
 		friend class MessageLoopTypedTest;
 		friend class ScheduleWorkTest;
 		friend class Thread;
-		friend class internal::MessageLoopThreadDelegate;
 		friend class sequence_manager::internal::SequenceManagerImpl;
 		//FRIEND_TEST_ALL_PREFIXES(MessageLoopTest, DeleteUnboundLoop);
 

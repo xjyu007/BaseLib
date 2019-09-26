@@ -1,14 +1,15 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <cstdint>
 
 #include <string>
 
 #include "base_export.h"
+#include "containers/span.h"
 #include "files/file_path.h"
 #include "files/file_tracing.h"
 #include "files/platform_file.h"
@@ -39,10 +40,12 @@ namespace base {
 		// creation on POSIX; for existing files, consider using Lock().
 		enum Flags {
 			FLAG_OPEN = 1 << 0,            // Opens a file, only if it exists.
-			FLAG_CREATE = 1 << 1,          // Creates a new file, only if it does not already exist.
+			FLAG_CREATE = 1 << 1,          // Creates a new file, only if it does not
+                                   		   // already exist.
 			FLAG_OPEN_ALWAYS = 1 << 2,     // May create a new file.
 			FLAG_CREATE_ALWAYS = 1 << 3,   // May overwrite an old file.
-			FLAG_OPEN_TRUNCATED = 1 << 4,  // Opens a file and truncates it, only if it exists.
+			FLAG_OPEN_TRUNCATED = 1 << 4,  // Opens a file and truncates it, only if it
+                                   		   // exists.
 			FLAG_READ = 1 << 5,
 			FLAG_WRITE = 1 << 6,
 			FLAG_APPEND = 1 << 7,
@@ -58,7 +61,9 @@ namespace base {
 			FLAG_BACKUP_SEMANTICS = 1 << 17,     // Used on Windows only.
 			FLAG_EXECUTE = 1 << 18,              // Used on Windows only.
 			FLAG_SEQUENTIAL_SCAN = 1 << 19,      // Used on Windows only.
-			FLAG_CAN_DELETE_ON_CLOSE = 1 << 20,  // Requests permission to delete a file via DeleteOnClose() (Windows only). See DeleteOnClose() for details.
+			FLAG_CAN_DELETE_ON_CLOSE = 1 << 20,  // Requests permission to delete a file
+		                                         // via DeleteOnClose() (Windows only).
+		                                         // See DeleteOnClose() for details.
 		};
 
 		// This enum has been recorded in multiple histograms using PlatformFileError
@@ -179,6 +184,14 @@ namespace base {
 		// defined by |whence|. Returns the resultant current position in the file
 		// (relative to the start) or -1 in case of error.
 		[[nodiscard]] int64_t Seek(Whence whence, int64_t offset) const;
+
+		// Simplified versions of Read() and friends (see below) that check the int
+		// return value and just return a boolean. They return true if and only if
+		// the function read in / wrote out exactly |size| bytes of data.
+		bool ReadAndCheck(int64_t offset, span<uint8_t> data);
+		bool ReadAtCurrentPosAndCheck(span<uint8_t> data);
+		bool WriteAndCheck(int64_t offset, span<const uint8_t> data);
+		bool WriteAtCurrentPosAndCheck(span<const uint8_t> data);
 
 		// Reads the given number of bytes (or until EOF is reached) starting with the
 		// given offset. Returns the number of bytes read, or -1 on error. Note that

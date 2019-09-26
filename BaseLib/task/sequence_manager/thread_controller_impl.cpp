@@ -26,13 +26,19 @@ namespace base::sequence_manager::internal {
 		: funneled_sequence_manager_(funneled_sequence_manager),
 		task_runner_(task_runner),
 		associated_thread_(AssociatedThreadId::CreateUnbound()),
-		message_loop_task_runner_(funneled_sequence_manager ? funneled_sequence_manager->GetTaskRunner() : nullptr),
+		message_loop_task_runner_(funneled_sequence_manager 
+									? funneled_sequence_manager->GetTaskRunner() 
+									: nullptr),
 		time_source_(time_source),
 		work_deduplicator_(associated_thread_) {
 		if (task_runner_ || funneled_sequence_manager_)
 			work_deduplicator_.BindToCurrentThread();
-		immediate_do_work_closure_ = BindRepeating(&ThreadControllerImpl::DoWork, weak_factory_.GetWeakPtr(), WorkType::kImmediate);
-		delayed_do_work_closure_ = BindRepeating(&ThreadControllerImpl::DoWork, weak_factory_.GetWeakPtr(), WorkType::kDelayed);
+		immediate_do_work_closure_ = 
+			BindRepeating(&ThreadControllerImpl::DoWork, weak_factory_.GetWeakPtr(), 
+						  WorkType::kImmediate);
+		delayed_do_work_closure_ = 
+			BindRepeating(&ThreadControllerImpl::DoWork, weak_factory_.GetWeakPtr(), 
+						  WorkType::kDelayed);
 	}
 
 	ThreadControllerImpl::~ThreadControllerImpl() = default;
@@ -52,7 +58,9 @@ namespace base::sequence_manager::internal {
 	}
 
 	std::unique_ptr<ThreadControllerImpl>
-		ThreadControllerImpl::CreateSequenceFunneled(scoped_refptr<SingleThreadTaskRunner> task_runner, const TickClock* time_source) {
+		ThreadControllerImpl::CreateSequenceFunneled(
+			scoped_refptr<SingleThreadTaskRunner> task_runner, 
+			const TickClock* time_source) {
 		return WrapUnique(
 			new ThreadControllerImpl(nullptr, std::move(task_runner), time_source));
 	}
@@ -75,11 +83,13 @@ namespace base::sequence_manager::internal {
 		TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("sequence_manager"),
 			"ThreadControllerImpl::ScheduleWork::PostTask");
 
-		if (work_deduplicator_.OnWorkRequested() == ShouldScheduleWork::kScheduleImmediate)
+		if (work_deduplicator_.OnWorkRequested() == 
+			ShouldScheduleWork::kScheduleImmediate)
 			task_runner_->PostTask(FROM_HERE, immediate_do_work_closure_);
 	}
 
-	void ThreadControllerImpl::SetNextDelayedDoWork(LazyNow* lazy_now, TimeTicks run_time) {
+	void ThreadControllerImpl::SetNextDelayedDoWork(LazyNow* lazy_now, 
+													TimeTicks run_time) {
 		DCHECK_CALLED_ON_VALID_SEQUENCE(associated_thread_->sequence_checker);
 		DCHECK(sequence_);
 
@@ -99,7 +109,9 @@ namespace base::sequence_manager::internal {
 		}
 
 		const auto delay = std::max(TimeDelta(), run_time - lazy_now->Now());
-		//TRACE_EVENT1(TRACE_DISABLED_BY_DEFAULT("sequence_manager"), "ThreadControllerImpl::SetNextDelayedDoWork::PostDelayedTask", "delay_ms", delay.InMillisecondsF());
+		//TRACE_EVENT1(TRACE_DISABLED_BY_DEFAULT("sequence_manager"),
+		//             "ThreadControllerImpl::SetNextDelayedDoWork::PostDelayedTask",
+		//             "delay_ms", delay.InMillisecondsF());
 
 		main_sequence_only().next_delayed_do_work = run_time;
 		// Reset also causes cancellation of the previous DoWork task.
@@ -116,7 +128,8 @@ namespace base::sequence_manager::internal {
 		return time_source_;
 	}
 
-	void ThreadControllerImpl::SetDefaultTaskRunner(scoped_refptr<SingleThreadTaskRunner> task_runner) {
+	void ThreadControllerImpl::SetDefaultTaskRunner(
+		scoped_refptr<SingleThreadTaskRunner> task_runner) {
 #if DCHECK_IS_ON()
 		default_task_runner_set_ = true;
 #endif
@@ -125,7 +138,8 @@ namespace base::sequence_manager::internal {
 		funneled_sequence_manager_->SetTaskRunner(task_runner);
 	}
 
-	scoped_refptr<SingleThreadTaskRunner> ThreadControllerImpl::GetDefaultTaskRunner() {
+	scoped_refptr<SingleThreadTaskRunner> 
+	ThreadControllerImpl::GetDefaultTaskRunner() {
 		return funneled_sequence_manager_->GetTaskRunner();
 	}
 
@@ -140,8 +154,10 @@ namespace base::sequence_manager::internal {
 		NOTREACHED();
 	}
 
-	void ThreadControllerImpl::WillQueueTask(PendingTask* pending_task, const char* task_queue_name) {
-		task_annotator_.WillQueueTask("SequenceManager PostTask", pending_task, task_queue_name);
+	void ThreadControllerImpl::WillQueueTask(PendingTask* pending_task, 
+											 const char* task_queue_name) {
+		task_annotator_.WillQueueTask("SequenceManager PostTask", pending_task, 
+									  task_queue_name);
 	}
 
 	void ThreadControllerImpl::DoWork(WorkType work_type) {
@@ -156,7 +172,7 @@ namespace base::sequence_manager::internal {
 		const auto weak_ptr = weak_factory_.GetWeakPtr();
 		// TODO(scheduler-dev): Consider moving to a time based work batch instead.
 		for (int i = 0; i < main_sequence_only().work_batch_size_; i++) {
-			std::optional<PendingTask> task = sequence_->TakeTask();
+			Task* task = sequence_->SelectNextTask();
 			if (!task)
 				break;
 
@@ -171,7 +187,7 @@ namespace base::sequence_manager::internal {
 				// Trace events should finish before we call DidRunTask to ensure that
 				// SequenceManager trace events do not interfere with them.
 				//TRACE_TASK_EXECUTION("ThreadControllerImpl::RunTask", *task);
-				task_annotator_.RunTask("SequenceManager RunTask", &*task);
+				task_annotator_.RunTask("SequenceManager RunTask", task);
 			}
 
 			if (!weak_ptr)
@@ -203,7 +219,9 @@ namespace base::sequence_manager::internal {
 		if (delay_till_next_task <= TimeDelta() || sequence_->OnSystemIdle()) {
 			// The next task needs to run immediately, post a continuation if
 			// another thread didn't get there first.
-			if (work_deduplicator_.DidCheckForMoreWork(WorkDeduplicator::NextTask::kIsImmediate) == ShouldScheduleWork::kScheduleImmediate) {
+			if (work_deduplicator_.DidCheckForMoreWork(
+					WorkDeduplicator::NextTask::kIsImmediate) == 
+					ShouldScheduleWork::kScheduleImmediate) {
 				task_runner_->PostTask(FROM_HERE, immediate_do_work_closure_);
 			}
 			return;
@@ -211,7 +229,9 @@ namespace base::sequence_manager::internal {
 
 		// It looks like we have a non-zero delay, however another thread may have
 		// posted an immediate task while we computed the delay.
-		if (work_deduplicator_.DidCheckForMoreWork(WorkDeduplicator::NextTask::kIsDelayed) == ShouldScheduleWork::kScheduleImmediate) {
+		if (work_deduplicator_.DidCheckForMoreWork(
+				WorkDeduplicator::NextTask::kIsDelayed) == 
+				ShouldScheduleWork::kScheduleImmediate) {
 			task_runner_->PostTask(FROM_HERE, immediate_do_work_closure_);
 			return;
 		}
@@ -237,20 +257,23 @@ namespace base::sequence_manager::internal {
 			delay_till_next_task);
 	}
 
-	void ThreadControllerImpl::AddNestingObserver(NestingObserver* observer) {
+	void ThreadControllerImpl::AddNestingObserver(
+			NestingObserver* observer) {
 		DCHECK_CALLED_ON_VALID_SEQUENCE(associated_thread_->sequence_checker);
 		nesting_observer_ = observer;
 		RunLoop::AddNestingObserverOnCurrentThread(this);
 	}
 
-	void ThreadControllerImpl::RemoveNestingObserver(NestingObserver* observer) {
+	void ThreadControllerImpl::RemoveNestingObserver(
+			NestingObserver* observer) {
 		DCHECK_CALLED_ON_VALID_SEQUENCE(associated_thread_->sequence_checker);
 		DCHECK_EQ(observer, nesting_observer_);
 		nesting_observer_ = nullptr;
 		RunLoop::RemoveNestingObserverOnCurrentThread(this);
 	}
 
-	const scoped_refptr<AssociatedThreadId>& ThreadControllerImpl::GetAssociatedThread() const {
+	const scoped_refptr<AssociatedThreadId>& 
+	ThreadControllerImpl::GetAssociatedThread() const {
 		return associated_thread_;
 	}
 

@@ -6,6 +6,8 @@
 #include "files/file_path.h"
 #include "files/file_tracing.h"
 #include "metrics/histogram.h"
+#include "numerics/safe_conversions.h"
+#include "timer/elapsed_timer.h"
 #include "build_config.h"
 
 namespace base {
@@ -13,14 +15,16 @@ namespace base {
 	File::Info::Info()
 		: size(0),
 		is_directory(false),
-		is_symbolic_link(false) {}
+		is_symbolic_link(false) {
+		}
 
 	File::Info::~Info() = default;
 
 	File::File()
 		: error_details_(FILE_ERROR_FAILED),
 		created_(false),
-		async_(false) {}
+		async_(false) {
+		}
 
 #if !defined(OS_NACL)
 	File::File(const FilePath& path, uint32_t flags)
@@ -35,12 +39,14 @@ namespace base {
 		: file_(platform_file),
 		error_details_(FILE_OK),
 		created_(false),
-      async_(async) {}
+      async_(async) {
+	  }
 
 	File::File(Error error_details)
 		: error_details_(error_details),
 		created_(false),
-		async_(false) {}
+		async_(false) {
+		}
 
 	File::File(File&& other) noexcept
 		: file_(other.TakePlatformFile()),
@@ -76,6 +82,29 @@ namespace base {
 		DoInitialize(path, flags);
 	}
 
+	bool File::ReadAndCheck(int64_t offset, span<uint8_t> data) {
+		int size = checked_cast<int>(data.size());
+		return Read(offset, reinterpret_cast<char*>(data.data()), size) == size;
+	}
+
+	bool File::ReadAtCurrentPosAndCheck(span<uint8_t> data) {
+		int size = checked_cast<int>(data.size());
+		return ReadAtCurrentPos(reinterpret_cast<char*>(data.data()), size) == size;
+	}
+
+	bool File::WriteAndCheck(int64_t offset, span<const uint8_t> data) {
+		int size = checked_cast<int>(data.size());
+		return Write(offset, reinterpret_cast<const char*>(data.data()), size) ==
+				size;
+	}
+
+	bool File::WriteAtCurrentPosAndCheck(span<const uint8_t> data) {
+		int size = checked_cast<int>(data.size());
+		return WriteAtCurrentPos(reinterpret_cast<const char*>(data.data()), size) ==
+				size;
+	}
+
+	// static
 	std::string File::ErrorToString(Error error) {
 		switch (error) {
 		case FILE_OK:

@@ -320,22 +320,4 @@ namespace base {
 		DISALLOW_COPY_AND_ASSIGN(Thread);
 	};
 
-	namespace internal {
-
-		class BASE_EXPORT MessageLoopThreadDelegate : public Thread::Delegate {
-		public:
-			explicit MessageLoopThreadDelegate(std::unique_ptr<MessageLoop> message_loop);
-
-			~MessageLoopThreadDelegate() override;
-
-			// Thread::Delegate:
-			scoped_refptr<SingleThreadTaskRunner> GetDefaultTaskRunner() override;
-			void BindToCurrentThread(TimerSlack timer_slack) override;
-
-		private:
-			std::unique_ptr<MessageLoop> message_loop_{};
-		};
-
-	}  // namespace internal
-
 }  // namespace base

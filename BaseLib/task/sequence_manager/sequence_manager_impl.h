@@ -103,6 +103,7 @@ namespace base {
 
 				// SequenceManager implementation:
 				void BindToCurrentThread() override;
+				scoped_refptr<SequencedTaskRunner> GetTaskRunnerForCurrentTask() override;
 				void BindToMessagePump(std::unique_ptr<MessagePump> message_pump) override;
 				void SetObserver(Observer* observer) override;
 				void AddTaskTimeObserver(TaskTimeObserver* task_time_observer) override;
@@ -128,7 +129,7 @@ namespace base {
 					TaskQueue::QueuePriority priority) override;
 
 				// SequencedTaskSource implementation:
-				std::optional<Task> TakeTask() override;
+				Task* SelectNextTask() override;
 				void DidRunTask() override;
 				TimeDelta DelayTillNextTask(LazyNow* lazy_now) const override;
 				bool HasPendingHighResolutionTasks() override;
@@ -230,7 +231,8 @@ namespace base {
 
 				// We have to track rentrancy because we support nested runloops but the
 				// selector interface is unaware of those.  This struct keeps track off all
-				// task related state needed to make pairs of TakeTask() / DidRunTask() work.
+				// task related state needed to make pairs of SelectNextTask() / DidRunTask()
+				// work.
 				struct ExecutingTask {
 					ExecutingTask(Task&& task,
 						internal::TaskQueueImpl* task_queue,
@@ -377,8 +379,8 @@ namespace base {
 				void RecordCrashKeys(const PendingTask&);
 
 				// Helper to terminate all scoped trace events to allow starting new ones
-				// in TakeTask().
-				std::optional<Task> TakeTaskImpl();
+				// in SelectNextTask().
+				Task* SelectNextTaskImpl();
 
 				// Check if a task of priority |priority| should run given the pending set of
 				// native work.

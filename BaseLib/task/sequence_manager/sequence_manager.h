@@ -10,6 +10,7 @@
 #include "macros.h"
 #include "message_loop/message_pump_type.h"
 #include "message_loop/timer_slack.h"
+#include "sequenced_task_runner.h"
 #include "single_thread_task_runner.h"
 #include "task/sequence_manager/task_queue_impl.h"
 #include "task/sequence_manager/task_time_observer.h"
@@ -143,6 +144,10 @@ namespace base {
 			// only be called once. Note that CreateSequenceManagerOnCurrentThread()
 			// performs this initialization automatically.
 			virtual void BindToCurrentThread() = 0;
+
+			// Returns the task runner the current task was posted on. Returns null if no
+			// task is currently running. Must be called on the bound thread.
+			virtual scoped_refptr<SequencedTaskRunner> GetTaskRunnerForCurrentTask() = 0;
 
 			// Finishes the initialization for a SequenceManager created via
 			// CreateUnboundSequenceManagerWithPump(). Must not be called in any other

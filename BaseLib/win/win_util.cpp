@@ -229,7 +229,7 @@ namespace base::win {
 	// if the keyboard count is 1 or more.. While this will work in most cases
 	// it won't work if there are devices which expose keyboard interfaces which
 	// are attached to the machine.
-	bool IsKeyboardPresentOnSlate(std::string* reason, HWND hwnd) {
+	bool IsKeyboardPresentOnSlate(HWND hwnd, std::string* reason) {
 		auto result = false;
 
 		if (GetVersion() < Version::WIN8) {
@@ -239,19 +239,20 @@ namespace base::win {
 		}
 
 		// This function is only supported for Windows 8 and up.
-		if (CommandLine::ForCurrentProcess()->HasSwitch(switches::kDisableUsbKeyboardDetect)) {
+		if (CommandLine::ForCurrentProcess()->HasSwitch(
+				switches::kDisableUsbKeyboardDetect)) {
 			if (reason)
 				* reason = "Detection disabled";
 			return false;
 		}
 
 		// This function should be only invoked for machines with touch screens.
-		if ((GetSystemMetrics(SM_DIGITIZER) & NID_INTEGRATED_TOUCH) != NID_INTEGRATED_TOUCH) {
+		if ((GetSystemMetrics(SM_DIGITIZER) & NID_INTEGRATED_TOUCH) 
+				!= NID_INTEGRATED_TOUCH) {
 			if (reason) {
 				*reason += "NID_INTEGRATED_TOUCH\n";
 				result = true;
-			}
-			else {
+			} else {
 				return true;
 			}
 		}
@@ -262,13 +263,12 @@ namespace base::win {
 				* reason += "Tablet device.\n";
 			return false;
 		}
-		if (reason) {
-			*reason += "Not a tablet device";
-			result = true;
-		}
-		else {
+
+		if (!reason)
 			return true;
-		}
+
+		*reason += "Not a tablet device";
+		result = true;
 
 		// To determine whether a keyboard is present on the device, we do the
 		// following:-
@@ -298,14 +298,12 @@ namespace base::win {
 				// If there is no auto rotation sensor or rotation is not supported in
 				// the current configuration, then we can assume that this is a desktop
 				// or a traditional laptop.
-				if (reason) {
-					*reason += (auto_rotation_state & AR_NOSENSOR) ? "AR_NOSENSOR\n" 
-																   : "AR_NOT_SUPPORTED\n";
-					result = true;
-				}
-				else {
+				if (!reason)
 					return true;
-				}
+
+				*reason += (auto_rotation_state & AR_NOSENSOR) ? "AR_NOSENSOR\n" 
+															   : "AR_NOT_SUPPORTED\n";
+				result = true;
 			}
 		}
 
@@ -540,8 +538,7 @@ namespace base::win {
 		if (GetSystemMetrics(SM_MAXIMUMTOUCHES) == 0) {
 			if (reason) {
 				*reason += "Device does not support touch.\n";
-			}
-			else {
+			} else {
 				return false;
 			}
 		}
@@ -550,8 +547,7 @@ namespace base::win {
 		if (GetSystemMetrics(SM_SYSTEMDOCKED) != 0) {
 			if (reason) {
 				*reason += "SM_SYSTEMDOCKED\n";
-			}
-			else {
+			} else {
 				return false;
 			}
 		}
@@ -579,19 +575,16 @@ namespace base::win {
 			if (!is_tablet) {
 				if (reason) {
 					*reason += "Not in slate mode.\n";
-				}
-				else {
+				} else {
 					return false;
 				}
-			}
-			else {
+			} else {
 				if (reason) {
 					*reason += (role == PlatformRoleMobile) ? "PlatformRoleMobile\n"
 						: "PlatformRoleSlate\n";
 				}
 			}
-		}
-		else {
+		} else {
 			if (reason)
 				* reason += "Device role is not mobile or slate.\n";
 		}
@@ -662,15 +655,15 @@ namespace base::win {
 				// Buffer size was too big, presumably because a module was unloaded.
 				snapshot->erase(snapshot->begin() + num_modules, snapshot->end());
 				return true;
-			}
-			if (num_modules == 0) {
+			} else if (num_modules == 0) {
 				DLOG(ERROR) << "Can't determine the module list size.";
 				return false;
+			} else {
+				// Buffer size was too small. Try again with a larger buffer. A little
+				// more room is given to avoid multiple expensive calls to
+				// ::EnumProcessModules() just because one module has been added.
+				snapshot->resize(num_modules + 8, NULL);
 			}
-			// Buffer size was too small. Try again with a larger buffer. A little
-			// more room is given to avoid multiple expensive calls to
-			// ::EnumProcessModules() just because one module has been added.
-			snapshot->resize(num_modules + 8, NULL);
 		} while (--retries_remaining);
 
 		DLOG(ERROR) << "Failed to enumerate modules.";

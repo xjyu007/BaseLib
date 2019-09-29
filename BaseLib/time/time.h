@@ -267,9 +267,9 @@ namespace base {
 
 	private:
 		friend constexpr int64_t time_internal::SaturatedAdd(int64_t value, 
-												   TimeDelta delta);
+															 TimeDelta delta);
 		friend constexpr int64_t time_internal::SaturatedSub(int64_t value, 
-												   TimeDelta delta);
+															 TimeDelta delta);
 
 		// Constructs a delta given the duration in microseconds. This is private
 		// to avoid confusion by callers with an integer constructor. Use
@@ -770,7 +770,7 @@ namespace base {
 
 	// static
 	constexpr TimeDelta TimeDelta::FromProduct(int64_t value,
-		int64_t positive_value) {
+											   int64_t positive_value) {
 		DCHECK(positive_value > 0);  // NOLINT, DCHECK_GT isn't constexpr.
 		return value > std::numeric_limits<int64_t>::max() / positive_value
 			? Max()

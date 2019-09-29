@@ -77,7 +77,7 @@ namespace base::trace_event {
 
 		ThreadTicks ThreadNow() {
 			return ThreadTicks::IsSupported() 
-						? base::subtle::ThreadTicksNowIgnoringOverride() 
+						? subtle::ThreadTicksNowIgnoringOverride() 
 						: ThreadTicks();
 		}
 
@@ -340,7 +340,7 @@ namespace base::trace_event {
 
 	// static
 	TraceLog* TraceLog::GetInstance() {
-		static base::NoDestructor<TraceLog> instance;
+		static NoDestructor<TraceLog> instance;
 		return instance.get();
 	}
 
@@ -361,7 +361,7 @@ namespace base::trace_event {
 		num_traces_recorded_(0),
 		process_sort_index_(0),
 		process_id_hash_(0),
-		process_id_(0),
+		process_id_(base::kNullProcessId),
 		trace_options_(kInternalRecordUntilFull),
 		trace_config_(TraceConfig()),
 		thread_shared_chunk_index_(0),
@@ -846,7 +846,7 @@ namespace base::trace_event {
 	//    - The message loop will be removed from thread_message_loops_;
 	//    If this is the last message loop, finish the flush;
 	// 4. If any thread hasn't finish its flush in time, finish the flush.
-	void TraceLog::Flush(const TraceLog::OutputCallback& cb,
+	void TraceLog::Flush(const OutputCallback& cb,
 		bool use_worker_thread) {
 		FlushInternal(cb, use_worker_thread, false);
 	}
@@ -856,7 +856,7 @@ namespace base::trace_event {
 		FlushInternal(cb, false, true);
 	}
 
-	void TraceLog::FlushInternal(const TraceLog::OutputCallback& cb,
+	void TraceLog::FlushInternal(const OutputCallback& cb,
 		bool use_worker_thread,
 		bool discard_events) {
 		use_worker_thread_ = use_worker_thread;
@@ -965,7 +965,7 @@ namespace base::trace_event {
 				// use the safe default filtering predicate.
 				if (argument_filter_predicate_.is_null()) {
 					argument_filter_predicate =
-						base::BindRepeating(&DefaultIsTraceEventArgsWhitelisted);
+						BindRepeating(&DefaultIsTraceEventArgsWhitelisted);
 				} else {
 					argument_filter_predicate = argument_filter_predicate_;
 				}
@@ -981,7 +981,7 @@ namespace base::trace_event {
 		}
 
 		if (use_worker_thread_) {
-			base::PostTask(FROM_HERE,
+			PostTask(FROM_HERE,
 				{ ThreadPool(), MayBlock(), TaskPriority::BEST_EFFORT,
 				TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN },
 				BindOnce(&TraceLog::ConvertTraceEventsToTraceFormat,
@@ -1066,7 +1066,7 @@ namespace base::trace_event {
 		unsigned long long id,
 		TraceArguments* args,
 		unsigned int flags) {
-		const auto thread_id = static_cast<int>(base::PlatformThread::CurrentId());
+		const auto thread_id = static_cast<int>(PlatformThread::CurrentId());
 		const auto now = TRACE_TIME_TICKS_NOW();
 		return AddTraceEventWithThreadIdAndTimestamp(
 			phase, category_group_enabled, name, scope, id,
@@ -1083,7 +1083,7 @@ namespace base::trace_event {
 		unsigned long long bind_id,
 		TraceArguments* args,
 		unsigned int flags) {
-		const auto thread_id = static_cast<int>(base::PlatformThread::CurrentId());
+		const auto thread_id = static_cast<int>(PlatformThread::CurrentId());
 		const auto now = TRACE_TIME_TICKS_NOW();
 		return AddTraceEventWithThreadIdAndTimestamp(
 			phase, category_group_enabled, name, scope, id, bind_id, thread_id, now,
@@ -1207,7 +1207,7 @@ namespace base::trace_event {
 		// acquiring the lock, which is not needed for ETW as it's already threadsafe.
 		/*if (*category_group_enabled & TraceCategory::ENABLED_FOR_ETW_EXPORT)
 			TraceEventETWExport::AddEvent(phase, category_group_enabled, name, id,
-				args);*/
+										  args);*/
 
 		if (*category_group_enabled & RECORDING_MODE) {
 			const auto trace_event_override =
@@ -1249,7 +1249,7 @@ namespace base::trace_event {
 			!disabled_by_filters) {
 			OptionalAutoLock lock(&lock_);
 
-			TraceEvent* trace_event = nullptr;
+			TraceEvent* trace_event;
 			if (thread_local_event_buffer) {
 				trace_event = thread_local_event_buffer->AddTraceEvent(&handle);
 			} else {
@@ -1287,7 +1287,7 @@ namespace base::trace_event {
 		TraceArguments* args,
 		unsigned int flags) {
 		HEAP_PROFILER_SCOPED_IGNORE;
-		int thread_id = static_cast<int>(base::PlatformThread::CurrentId());
+		int thread_id = static_cast<int>(PlatformThread::CurrentId());
 		ThreadTicks thread_now = ThreadNow();
 		TimeTicks now = OffsetNow();
 		ThreadInstructionCount thread_instruction_now = ThreadInstructionNow();
@@ -1305,8 +1305,8 @@ namespace base::trace_event {
 	// May be called when a COMPELETE event ends and the unfinished event has been
 	// recycled (phase == TRACE_EVENT_PHASE_END and trace_event == NULL).
 	std::string TraceLog::EventToConsoleMessage(unsigned char phase,
-		const TimeTicks& timestamp,
-		TraceEvent* trace_event) {
+												const TimeTicks& timestamp,
+												TraceEvent* trace_event) {
 		HEAP_PROFILER_SCOPED_IGNORE;
 		AutoLock thread_info_lock(thread_info_lock_);
 
@@ -1315,21 +1315,21 @@ namespace base::trace_event {
 		DCHECK(phase != TRACE_EVENT_PHASE_COMPLETE);
 
 		TimeDelta duration;
-		int thread_id =
+		const int thread_id =
 			trace_event ? trace_event->thread_id() : PlatformThread::CurrentId();
 		if (phase == TRACE_EVENT_PHASE_END) {
 			duration = timestamp - thread_event_start_times_[thread_id].top();
 			thread_event_start_times_[thread_id].pop();
 		}
 
-		std::string thread_name = thread_names_[thread_id];
+		const auto thread_name = thread_names_[thread_id];
 		if (thread_colors_.find(thread_name) == thread_colors_.end()) {
 			const size_t next_color = (thread_colors_.size() % 6) + 1;
 			thread_colors_[thread_name] = next_color;
 		}
 
 		std::ostringstream log;
-		log << base::StringPrintf("%s: \x1b[0;3%dm", thread_name.c_str(),
+		log << StringPrintf("%s: \x1b[0;3%dm", thread_name.c_str(),
 			thread_colors_[thread_name]);
 
 		size_t depth = 0;
@@ -1343,7 +1343,7 @@ namespace base::trace_event {
 		if (trace_event)
 			trace_event->AppendPrettyPrinted(&log);
 		if (phase == TRACE_EVENT_PHASE_END)
-			log << base::StringPrintf(" (%.3f ms)", duration.InMillisecondsF());
+			log << StringPrintf(" (%.3f ms)", duration.InMillisecondsF());
 
 		log << "\x1b[0;m";
 
@@ -1354,8 +1354,8 @@ namespace base::trace_event {
 	}
 
 	void TraceLog::EndFilteredEvent(const unsigned char* category_group_enabled,
-		const char* name,
-		TraceEventHandle handle) {
+									const char* name,
+									TraceEventHandle handle) {
 		auto category_name = GetCategoryGroupName(category_group_enabled);
 		ForEachCategoryFilter(
 			category_group_enabled,
@@ -1438,9 +1438,9 @@ namespace base::trace_event {
 
 	template <typename T>
 	void TraceLog::AddMetadataEventWhileLocked(int thread_id,
-		const char* metadata_name,
-		const char* arg_name,
-		const T& value) {
+											   const char* metadata_name,
+											   const char* arg_name,
+											   const T& value) {
 		const auto trace_event_override = 
 			add_trace_event_override_.load(std::memory_order_relaxed);
 		if (trace_event_override) {
@@ -1478,9 +1478,9 @@ namespace base::trace_event {
 		}
 
 		AddMetadataEventWhileLocked(0, "num_cpus", "number", 
-									base::SysInfo::NumberOfProcessors());
+									SysInfo::NumberOfProcessors());
 
-		const auto current_thread_id = static_cast<int>(base::PlatformThread::CurrentId());
+		const auto current_thread_id = static_cast<int>(PlatformThread::CurrentId());
 		if (process_sort_index_ != 0) {
 			AddMetadataEventWhileLocked(current_thread_id, "process_sort_index", 
 										"sort_index", process_sort_index_);
@@ -1500,7 +1500,7 @@ namespace base::trace_event {
 			for (const auto& it : process_labels_)
 				labels.push_back(it.second);
 			AddMetadataEventWhileLocked(current_thread_id, "process_labels", "labels",
-				base::JoinString(labels, ","));
+				JoinString(labels, ","));
 		}
 
 		// Thread sort indices.
@@ -1637,18 +1637,18 @@ namespace base::trace_event {
 			: kTraceEventVectorBufferChunks);
 	}
 
-	/*void TraceLog::UpdateETWCategoryGroupEnabledFlags() {
+	void TraceLog::UpdateETWCategoryGroupEnabledFlags() {
 		// Go through each category and set/clear the ETW bit depending on whether the
 		// category is enabled.
 		for (TraceCategory& category : CategoryRegistry::GetAllCategories()) {
-			if (trace_event::TraceEventETWExport::IsCategoryGroupEnabled(
+			/*if (trace_event::TraceEventETWExport::IsCategoryGroupEnabled(
 				category.name())) {
 				category.set_state_flag(TraceCategory::ENABLED_FOR_ETW_EXPORT);
 			} else {
 				category.clear_state_flag(TraceCategory::ENABLED_FOR_ETW_EXPORT);
-			}
+			}*/
 		}
-	}*/
+	}
 
 	void TraceLog::SetTraceBufferForTesting(
 			std::unique_ptr<TraceBuffer> trace_buffer) {
@@ -1782,8 +1782,8 @@ namespace trace_event_internal {
 			event_handle_ =
 				TRACE_EVENT_API_ADD_TRACE_EVENT_WITH_THREAD_ID_AND_TIMESTAMP(
 					TRACE_EVENT_PHASE_COMPLETE, category_group_enabled_, name,
-					trace_event_internal::kGlobalScope,                   // scope
-					trace_event_internal::kNoId,                          // id
+					kGlobalScope,                   // scope
+					kNoId,                          // id
 					static_cast<int>(base::PlatformThread::CurrentId()),  // thread_id
 					TRACE_TIME_TICKS_NOW(), nullptr, TRACE_EVENT_FLAG_NONE);
 		}

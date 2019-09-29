@@ -35,12 +35,12 @@ namespace base {
 		// Like DCHECK except observable via
 		// AbstractPromise::SetApiErrorObserverForTesting. Exists to avoid DEATH_TESTs
 		// which are flaky with promises.
-#define PROMISE_API_DCHECK(condition)                 \
-  if (!(condition) && GetPromiseApiErrorCallback()) { \
-    GetPromiseApiErrorCallback().Run();               \
-    return;                                           \
-  }                                                   \
-  DCHECK(condition)
+#define PROMISE_API_DCHECK(condition)                     \
+	if (!(condition) && GetPromiseApiErrorCallback()) {	  \
+		GetPromiseApiErrorCallback().Run();               \
+		return;                                           \
+	}                                                     \
+	DCHECK(condition)
 
 #endif  // DCHECK_IS_ON()
 

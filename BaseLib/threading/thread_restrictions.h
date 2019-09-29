@@ -52,8 +52,8 @@
 // Avoid using allowances outside of unit tests. In unit tests, use allowances
 // with the suffix "ForTesting".
 //
-// Prefer making blocking calls from tasks posted to base::ThreadPool with
-// base::MayBlock().
+// Prefer making blocking calls from tasks posted to base::ThreadPoolInstance
+// with base::MayBlock().
 //
 // Instead of waiting on a WaitableEvent or a ConditionVariable, prefer putting
 // the work that should happen after the wait in a continuation callback and
@@ -177,9 +177,6 @@ namespace history_report {
 }
 namespace gpu {
 	class GpuChannelHost;
-}
-namespace leveldb {
-	class LevelDBMojoProxy;
 }
 namespace leveldb_env {
 	class DBTracker;
@@ -406,7 +403,6 @@ namespace base {
 		friend class functions::ExecScriptScopedAllowBaseSyncPrimitives;
 		friend class history_report::HistoryReportJniBridge;
 		friend class internal::TaskTracker;
-		friend class leveldb::LevelDBMojoProxy;
 		friend class leveldb_env::DBTracker;
 		friend class media::BlockingUrlProtocol;
 		friend class mojo::core::ScopedIPCSupport;

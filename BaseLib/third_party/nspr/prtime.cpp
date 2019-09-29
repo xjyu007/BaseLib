@@ -1061,7 +1061,7 @@ PR_ParseTimeString(
 	if (zone_offset == -1) {
 		/* no zone was specified, and we're to assume that everything
 		  is local. */
-		struct tm localTime;
+		struct tm localTime{};
 		time_t secs;
 
 		PR_ASSERT(result->tm_month > -1 &&

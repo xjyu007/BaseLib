@@ -5,18 +5,14 @@
 #include "time/time.h"
 
 #include <cmath>
-#include <ios>
 #include <limits>
 #include <ostream>
-#include <sstream>
 
 #include "logging.h"
-#include "macros.h"
 #include "no_destructor.h"
 #include "strings/stringprintf.h"
 #include "third_party/nspr/prtime.h"
 #include "time/time_override.h"
-#include "build_config.h"
 
 namespace base {
 
@@ -134,9 +130,9 @@ namespace base {
 		return delta_ * Time::kNanosecondsPerMicrosecond;
 	}
 
-std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
-  return os << time_delta.InSecondsF() << " s";
-}
+	std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
+	  return os << time_delta.InSecondsF() << " s";
+	}
 
 	// Time -----------------------------------------------------------------------
 
@@ -224,8 +220,8 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 	}
 
 	Time Time::FromJavaTime(int64_t ms_since_epoch) {
-		return base::Time::UnixEpoch() + 
-			   base::TimeDelta::FromMilliseconds(ms_since_epoch);
+		return UnixEpoch() + 
+			   TimeDelta::FromMilliseconds(ms_since_epoch);
 	}
 
 	int64_t Time::ToJavaTime() const {
@@ -249,7 +245,7 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 	}
 
 	Time Time::Midnight(bool is_local) const {
-		Exploded exploded;
+		Exploded exploded{};
 		Explode(is_local, &exploded);
 		exploded.hour = 0;
 		exploded.minute = 0;
@@ -273,9 +269,9 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 			return false;
 
 		PRTime result_time = 0;
-		PRStatus result = PR_ParseTimeString(time_string, 
-											 is_local ? PR_FALSE : PR_TRUE, 
-											 &result_time);
+		const auto result = PR_ParseTimeString(time_string, 
+											   is_local ? PR_FALSE : PR_TRUE, 
+											   &result_time);
 		if (PR_SUCCESS != result)
 			return false;
 
@@ -287,13 +283,13 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 	// static
 	bool Time::ExplodedMostlyEquals(const Exploded& lhs, const Exploded& rhs) {
 		return lhs.year == rhs.year && lhs.month == rhs.month &&
-			lhs.day_of_month == rhs.day_of_month && lhs.hour == rhs.hour &&
-			lhs.minute == rhs.minute && lhs.second == rhs.second &&
-			lhs.millisecond == rhs.millisecond;
+			   lhs.day_of_month == rhs.day_of_month && lhs.hour == rhs.hour &&
+			   lhs.minute == rhs.minute && lhs.second == rhs.second &&
+			   lhs.millisecond == rhs.millisecond;
 	}
 
 	std::ostream& operator<<(std::ostream& os, Time time) {
-		Time::Exploded exploded;
+		Time::Exploded exploded{};
 		time.UTCExplode(&exploded);
 		// Use StringPrintf because iostreams formatting is painful.
 		return os << StringPrintf("%04d-%02d-%02d %02d:%02d:%02d.%03d UTC",
@@ -315,7 +311,7 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 
 	// static
 	TimeTicks TimeTicks::UnixEpoch() {
-		static const base::NoDestructor<base::TimeTicks> epoch([]() {
+		static const NoDestructor<TimeTicks> epoch([]() {
 			return subtle::TimeTicksNowIgnoringOverride() - 
 					(subtle::TimeNowIgnoringOverride() - Time::UnixEpoch());
 		}());
@@ -326,7 +322,7 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 										   TimeDelta tick_interval) const {
 		// |interval_offset| is the offset from |this| to the next multiple of
 		// |tick_interval| after |tick_phase|, possibly negative if in the past.
-		TimeDelta interval_offset = (tick_phase - *this) % tick_interval;
+		auto interval_offset = (tick_phase - *this) % tick_interval;
 		// If |this| is exactly on the interval (i.e. offset==0), don't adjust.
 		// Otherwise, if |tick_phase| was in the past, adjust forward to the next
 		// tick after |this|.
@@ -341,7 +337,7 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 		// from run to run. Although bogo-microseconds usually roughly correspond to
 		// real microseconds, the only real guarantee is that the number never goes
 		// down during a single run.
-		const TimeDelta as_time_delta = time_ticks - TimeTicks();
+		const auto as_time_delta = time_ticks - TimeTicks();
 		return os << as_time_delta.InMicroseconds() << " bogo-microseconds";
 	}
 
@@ -353,7 +349,7 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 	}
 
 	std::ostream& operator<<(std::ostream& os, ThreadTicks thread_ticks) {
-		const TimeDelta as_time_delta = thread_ticks - ThreadTicks();
+		const auto as_time_delta = thread_ticks - ThreadTicks();
 		return os << as_time_delta.InMicroseconds() << " bogo-thread-microseconds";
 	}
 

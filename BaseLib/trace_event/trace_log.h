@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright 2015 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <cstdint>
 
@@ -287,11 +287,12 @@ namespace base {
 				const ThreadTicks& thread_now,
 				ThreadInstructionCount thread_instruction_now);
 
-			static void EndFilteredEvent(const unsigned char* category_group_enabled,
+			void EndFilteredEvent(const unsigned char* category_group_enabled,
 				const char* name,
 				TraceEventHandle handle);
 
 			int process_id() const { return process_id_; }
+			const std::string& process_name() const { return process_name_; }
 
 			uint64_t MangleEventId(uint64_t id) const;
 
@@ -349,7 +350,7 @@ namespace base {
 			// This function is called by the ETW exporting module whenever the ETW
 			// keyword (flags) changes. This keyword indicates which categories should be
 			// exported, so whenever it changes, we adjust accordingly.
-			//void UpdateETWCategoryGroupEnabledFlags();
+			void UpdateETWCategoryGroupEnabledFlags();
 
 			// Replaces |logged_events_| with a new TraceBuffer for testing.
 			void SetTraceBufferForTesting(std::unique_ptr<TraceBuffer> trace_buffer);
@@ -357,12 +358,17 @@ namespace base {
 		private:
 			typedef unsigned int InternalTraceOptions;
 
-			/*FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, TraceBufferRingBufferGetReturnChunk);
-			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, TraceBufferRingBufferHalfIteration);
-			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, TraceBufferRingBufferFullIteration);
+			/*FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, 
+									   TraceBufferRingBufferGetReturnChunk);
+			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, 
+									 TraceBufferRingBufferHalfIteration);
+			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, 
+									 TraceBufferRingBufferFullIteration);
 			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, TraceBufferVectorReportFull);
-			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, ConvertTraceConfigToInternalOptions);
-			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, TraceRecordAsMuchAsPossibleMode);
+			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, 
+									 ConvertTraceConfigToInternalOptions);
+			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, 
+									 TraceRecordAsMuchAsPossibleMode);
 			FRIEND_TEST_ALL_PREFIXES(TraceEventTestFixture, ConfigTraceBufferLimit);*/
 
 			friend class base::NoDestructor<TraceLog>;
@@ -381,7 +387,7 @@ namespace base {
 
 			void CreateFiltersForTraceConfig();
 
-			static InternalTraceOptions GetInternalOptionsFromTraceConfig(
+			InternalTraceOptions GetInternalOptionsFromTraceConfig(
 				const TraceConfig& config);
 
 			class ThreadLocalEventBuffer;
@@ -415,7 +421,7 @@ namespace base {
 			void SetDisabledWhileLocked(uint8_t modes);
 
 			TraceEvent* GetEventByHandleInternal(TraceEventHandle handle,
-				OptionalAutoLock* lock) const;
+												 OptionalAutoLock* lock) const;
 
 			void FlushInternal(const OutputCallback& cb,
 				bool use_worker_thread,

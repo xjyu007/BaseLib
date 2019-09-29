@@ -23,7 +23,7 @@
     <ProjectGuid>{E91B0DC7-6643-4AB3-A638-8CCCF59622FD}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>BaseLib</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -95,6 +95,7 @@
       <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -255,6 +256,9 @@
     <ClInclude Include="i18n\base_i18n_switches.h" />
     <ClInclude Include="i18n\icu_util.h" />
     <ClInclude Include="i18n\rtl.h" />
+    <ClInclude Include="i18n\timezone.h" />
+    <ClInclude Include="i18n\time_formatting.h" />
+    <ClInclude Include="i18n\unicodestring.h" />
     <ClInclude Include="immediate_crash.h" />
     <ClInclude Include="json\json_file_value_serializer.h" />
     <ClInclude Include="json\json_parser.h" />
@@ -731,6 +735,8 @@
     <ClCompile Include="i18n\base_i18n_switches.cpp" />
     <ClCompile Include="i18n\icu_util.cpp" />
     <ClCompile Include="i18n\rtl.cpp" />
+    <ClCompile Include="i18n\timezone.cpp" />
+    <ClCompile Include="i18n\time_formatting.cpp" />
     <ClCompile Include="json\json_file_value_serializer.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>

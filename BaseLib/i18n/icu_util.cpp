@@ -163,30 +163,7 @@ namespace base::i18n
 #endif
 
 			bool result;
-#if (ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_SHARED)
-			FilePath data_path;
-			PathService::Get(DIR_ASSETS, &data_path);
-			data_path = data_path.AppendASCII(ICU_UTIL_DATA_SHARED_MODULE_NAME);
-
-			HMODULE module = LoadLibrary(data_path.value().c_str());
-			if (!module) {
-				LOG(ERROR) << "Failed to load " << ICU_UTIL_DATA_SHARED_MODULE_NAME;
-				return false;
-			}
-
-			FARPROC addr = GetProcAddress(module, ICU_UTIL_DATA_SYMBOL);
-			if (!addr) {
-				LOG(ERROR) << ICU_UTIL_DATA_SYMBOL << ": not found in "
-					<< ICU_UTIL_DATA_SHARED_MODULE_NAME;
-				return false;
-			}
-
-			UErrorCode err = U_ZERO_ERROR;
-			udata_setCommonData(reinterpret_cast<void*>(addr), &err);
-			// Never try to load ICU data from files.
-			udata_setFileAccess(UDATA_ONLY_PACKAGES, &err);
-			result = (err == U_ZERO_ERROR);
-#elif (ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_STATIC)
+#if (ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_STATIC)
 			// The ICU data is statically linked.
 			result = true;
 #elif (ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE)

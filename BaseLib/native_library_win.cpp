@@ -45,7 +45,8 @@ namespace base {
 
 		// A helper method to log library loading result to UMA.
 		void LogLibrarayLoadResultToUMA(LoadLibraryResult result) {
-			UMA_HISTOGRAM_ENUMERATION("LibraryLoader.LoadNativeLibraryWindows", result, LoadLibraryResult::END);
+			UMA_HISTOGRAM_ENUMERATION("LibraryLoader.LoadNativeLibraryWindows", result, 
+									  LoadLibraryResult::END);
 		}
 
 		// A helper method to check if AddDllDirectory method is available, thus
@@ -68,7 +69,7 @@ namespace base {
 		// A helper method to encode the library loading result to enum
 		// LoadLibraryResult.
 		LoadLibraryResult GetLoadLibraryResult(bool are_search_flags_available,
-			bool has_load_library_succeeded) {
+											   bool has_load_library_succeeded) {
 			LoadLibraryResult result;
 			if (are_search_flags_available) {
 				if (has_load_library_succeeded)
@@ -84,7 +85,7 @@ namespace base {
 		}
 
 		NativeLibrary LoadNativeLibraryHelper(const FilePath& library_path,
-			NativeLibraryLoadError* error) {
+											  NativeLibraryLoadError* error) {
 			// LoadLibrary() opens the file off disk and acquires the LoaderLock, hence
 			// must not be called from DllMain.
 			ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
@@ -144,7 +145,7 @@ namespace base {
 		}
 
 		NativeLibrary LoadSystemLibraryHelper(const FilePath& library_path,
-			NativeLibraryLoadError* error) {
+											  NativeLibraryLoadError* error) {
 			// GetModuleHandleEx and subsequently LoadLibraryEx acquire the LoaderLock,
 			// hence must not be called from Dllmain.
 			ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
@@ -167,12 +168,12 @@ namespace base {
 			return module;
 		}
 
-		std::optional<FilePath> GetSystemLibraryName(FilePath::StringPieceType name) {
+		FilePath GetSystemLibraryName(FilePath::StringPieceType name) {
 			FilePath library_path;
 			// Use an absolute path to load the DLL to avoid DLL preloading attacks.
-			if (!PathService::Get(DIR_SYSTEM, &library_path))
-				return std::nullopt;
-			return std::make_optional(library_path.Append(name));
+			if (PathService::Get(DIR_SYSTEM, &library_path))
+				library_path = library_path.Append(name);
+			return library_path;
 		}
 
 	}  // namespace
@@ -181,7 +182,9 @@ namespace base {
 		return StringPrintf("%lu", code);
 	}
 
-	NativeLibrary LoadNativeLibraryWithOptions(const FilePath& library_path, const NativeLibraryOptions& options, NativeLibraryLoadError* error) {
+	NativeLibrary LoadNativeLibraryWithOptions(const FilePath& library_path, 
+											   const NativeLibraryOptions& options, 
+											   NativeLibraryLoadError* error) {
 		return LoadNativeLibraryHelper(library_path, error);
 	}
 
@@ -189,7 +192,8 @@ namespace base {
 		FreeLibrary(library);
 	}
 
-	void* GetFunctionPointerFromNativeLibrary(NativeLibrary library, std::string_view name) {
+	void* GetFunctionPointerFromNativeLibrary(NativeLibrary library, 
+											  std::string_view name) {
 		return reinterpret_cast<void*>(GetProcAddress(library, name.data()));
 	}
 
@@ -202,18 +206,21 @@ namespace base {
 		return GetNativeLibraryName(name);
 	}
 
-	NativeLibrary LoadSystemLibrary(FilePath::StringPieceType name, NativeLibraryLoadError* error) {
-		auto library_path = GetSystemLibraryName(name);
-		if (library_path)
-			return LoadSystemLibraryHelper(library_path.value(), error);
-		if (error)
-			error->code = ERROR_NOT_FOUND;
-		return nullptr;
+	NativeLibrary LoadSystemLibrary(FilePath::StringPieceType name, 
+									NativeLibraryLoadError* error) {
+		const auto library_path = GetSystemLibraryName(name);
+		if (library_path.empty()) {
+			if (error)
+				error->code = ERROR_NOT_FOUND;
+			return nullptr;
+		}
+		return LoadSystemLibraryHelper(library_path, error);
 	}
 
-	NativeLibrary PinSystemLibrary(FilePath::StringPieceType name, NativeLibraryLoadError* error) {
-		auto library_path = GetSystemLibraryName(name);
-		if (!library_path) {
+	NativeLibrary PinSystemLibrary(FilePath::StringPieceType name, 
+								   NativeLibraryLoadError* error) {
+		const auto library_path = GetSystemLibraryName(name);
+		if (library_path.empty()) {
 			if (error)
 				error->code = ERROR_NOT_FOUND;
 			return nullptr;
@@ -223,25 +230,28 @@ namespace base {
 		// Dllmain.
 		ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 		ScopedNativeLibrary module;
-		if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN,
-			as_wcstr(library_path.value().value()),
-			ScopedNativeLibrary::Receiver(module).get())) {
-			// Load and pin the library since it wasn't already loaded.
-			module = ScopedNativeLibrary(
-				LoadSystemLibraryHelper(library_path.value(), error));
-			if (module.is_valid()) {
-				ScopedNativeLibrary temp;
-				if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN,
-					as_wcstr(library_path.value().value()),
-					ScopedNativeLibrary::Receiver(temp).get())) {
-					if (error)
-						error->code = ::GetLastError();
-					// Return nullptr since we failed to pin the module.
-					return nullptr;
-				}
-			}
+		if (::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN,
+								 as_wcstr(library_path.value()),
+								 ScopedNativeLibrary::Receiver(module).get())) {
+			return module.release();
 		}
-		return module.release();
+
+		// Load and pin the library since it wasn't already loaded.
+		module = ScopedNativeLibrary(LoadSystemLibraryHelper(library_path, error));
+		if (!module.is_valid())
+			return nullptr;
+
+		ScopedNativeLibrary temp;
+		if (::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN,
+								 as_wcstr(library_path.value()),
+								 ScopedNativeLibrary::Receiver(temp).get())) {
+			return module.release();
+		}
+
+		if (error)
+			error->code = ::GetLastError();
+		// Return nullptr since we failed to pin the module.
+		return nullptr;
 	}
 
 }  // namespace base

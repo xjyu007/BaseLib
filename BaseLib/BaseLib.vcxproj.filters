@@ -1476,6 +1476,15 @@
     <ClInclude Include="numerics\ranges.h">
       <Filter>numerics</Filter>
     </ClInclude>
+    <ClInclude Include="i18n\time_formatting.h">
+      <Filter>i18n</Filter>
+    </ClInclude>
+    <ClInclude Include="i18n\unicodestring.h">
+      <Filter>i18n</Filter>
+    </ClInclude>
+    <ClInclude Include="i18n\timezone.h">
+      <Filter>i18n</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="strings\sys_string_conversions.cpp">
@@ -2476,6 +2485,12 @@
     </ClCompile>
     <ClCompile Include="task\sequence_manager\enqueue_order_generator.cpp">
       <Filter>task\sequence_manager</Filter>
+    </ClCompile>
+    <ClCompile Include="i18n\time_formatting.cpp">
+      <Filter>i18n</Filter>
+    </ClCompile>
+    <ClCompile Include="i18n\timezone.cpp">
+      <Filter>i18n</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

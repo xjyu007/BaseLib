@@ -1,11 +1,11 @@
-#pragma once
-
 // Copyright 2018 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdlib.h>
-#include <string.h>
+#pragma once
+
+#include <cstdlib>
+#include <cstring>
 
 #include <algorithm>
 #include <memory>
@@ -163,7 +163,7 @@ namespace base {
 
 			virtual void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead);
 
-			std::string ToString() const {
+			[[nodiscard]] std::string ToString() const {
 				std::string result;
 				AppendAsTraceFormat(&result);
 				return result;
@@ -436,7 +436,7 @@ namespace base {
 		class TraceStringWithCopy {
 		public:
 			explicit TraceStringWithCopy(const char* str) : str_(str) {}
-			const char* str() const { return str_; }
+			[[nodiscard]] const char* str() const { return str_; }
 
 		private:
 			const char* str_;
@@ -489,17 +489,17 @@ namespace base {
 			void Reset(size_t alloc_size = 0);
 
 			// Accessors.
-			constexpr size_t size() const { return data_ ? data_->size : 0u; }
-			constexpr const char* data() const { return data_ ? data_->chars : nullptr; }
+			[[nodiscard]] constexpr size_t size() const { return data_ ? data_->size : 0u; }
+			[[nodiscard]] constexpr const char* data() const { return data_ ? data_->chars : nullptr; }
 			constexpr char* data() { return data_ ? data_->chars : nullptr; }
 
-			constexpr const char* begin() const { return data(); }
-			constexpr const char* end() const { return data() + size(); }
+			[[nodiscard]] constexpr const char* begin() const { return data(); }
+			[[nodiscard]] constexpr const char* end() const { return data() + size(); }
 			inline char* begin() { return data(); }
 			inline char* end() { return data() + size(); }
 
 			// True iff storage is empty.
-			constexpr bool empty() const { return size() == 0; }
+			[[nodiscard]] constexpr bool empty() const { return size() == 0; }
 
 			// Returns true if |ptr| is inside the storage area, false otherwise.
 			// Used during unit-testing.
@@ -510,11 +510,11 @@ namespace base {
 
 			// Returns true if all string pointers in |args| are contained in this
 			// storage area.
-			bool Contains(const TraceArguments& args) const;
+			[[nodiscard]] bool Contains(const TraceArguments& args) const;
 
 			// Return an estimate of the memory overhead of this instance. This doesn't
 			// count the size of |data_| itself.
-			constexpr size_t EstimateTraceMemoryOverhead() const {
+			[[nodiscard]] constexpr size_t EstimateTraceMemoryOverhead() const {
 				return data_ ? sizeof(size_t) + data_->size : 0u;
 			}
 
@@ -526,7 +526,7 @@ namespace base {
 			//     strings referenced from a TraceArguments instance.
 			struct Data {
 				size_t size = 0;
-				char chars[1];  // really |size| character items in storage.
+				char chars[1]{};  // really |size| character items in storage.
 			};
 
 			// This is an owning pointer. Normally, using a std::unique_ptr<> would be
@@ -642,10 +642,10 @@ namespace base {
 			TraceArguments& operator=(TraceArguments&&) noexcept;
 
 			// Accessors
-			size_t size() const { return size_; }
-			const unsigned char* types() const { return types_; }
-			const char* const* names() const { return names_; }
-			const TraceValue* values() const { return values_; }
+			[[nodiscard]] size_t size() const { return size_; }
+			[[nodiscard]] const unsigned char* types() const { return types_; }
+			[[nodiscard]] const char* const* names() const { return names_; }
+			[[nodiscard]] const TraceValue* values() const { return values_; }
 
 			// Reset to empty arguments list.
 			void Reset();
@@ -662,13 +662,13 @@ namespace base {
 			                 const char** extra_string2);
 
 			// Append debug string representation to |*out|.
-			void AppendDebugString(std::string* out);
+			void AppendDebugString(std::string* out) const;
 
 		private:
 			unsigned char size_;
-			unsigned char types_[kMaxSize];
-			const char* names_[kMaxSize];
-			TraceValue values_[kMaxSize];
+			unsigned char types_[kMaxSize]{};
+			const char* names_[kMaxSize]{};
+			TraceValue values_[kMaxSize]{};
 		};
 
 	}  // namespace trace_event

@@ -146,14 +146,14 @@ namespace base {
 		// A slate is a touch device that may have a keyboard attached. This function
 		// returns true if a keyboard is attached and optionally will set the |reason|
 		// parameter to the detection method that was used to detect the keyboard.
-		BASE_EXPORT bool IsKeyboardPresentOnSlate(std::string* reason, HWND hwnd);
+		BASE_EXPORT bool IsKeyboardPresentOnSlate(HWND hwnd, std::string* reason);
 
 		// Get the size of a struct up to and including the specified member.
 		// This is necessary to set compatible struct sizes for different versions
 		// of certain Windows APIs (e.g. SystemParametersInfo).
 #define SIZEOF_STRUCT_WITH_SPECIFIED_LAST_MEMBER(struct_name, member) \
     offsetof(struct_name, member) + \
-    (sizeof static_cast<(struct_name)*>(NULL)->member)
+    (sizeof static_cast<struct_name*>(NULL)->member)
 
 // Returns true if the machine is enrolled to a domain.
 		BASE_EXPORT bool IsEnrolledToDomain();

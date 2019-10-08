@@ -1485,6 +1485,9 @@
     <ClInclude Include="i18n\timezone.h">
       <Filter>i18n</Filter>
     </ClInclude>
+    <ClInclude Include="task\simple_task_executor.h">
+      <Filter>task</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="strings\sys_string_conversions.cpp">
@@ -2491,6 +2494,9 @@
     </ClCompile>
     <ClCompile Include="i18n\timezone.cpp">
       <Filter>i18n</Filter>
+    </ClCompile>
+    <ClCompile Include="task\simple_task_executor.cpp">
+      <Filter>task</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

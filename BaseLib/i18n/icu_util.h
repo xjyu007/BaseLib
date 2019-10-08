@@ -21,7 +21,29 @@ namespace base {
 		// function should be called before ICU is used.
 		BASE_I18N_EXPORT bool InitializeICU();
 
-#if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
+		#if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
+		// Loads ICU's extra data tables from disk for the current process. If used must
+		// be called before InitializeICU().
+		BASE_I18N_EXPORT bool InitializeExtraICU();
+		// Returns the PlatformFile and Region that was initialized by InitializeICU()
+		// or InitializeExtraICU(). Use with InitializeICUWithFileDescriptor() or
+		// InitializeExtraICUWithFileDescriptor().
+		BASE_I18N_EXPORT PlatformFile GetIcuDataFileHandle(
+		    MemoryMappedFile::Region* out_region);
+		BASE_I18N_EXPORT PlatformFile
+		GetIcuExtraDataFileHandle(MemoryMappedFile::Region* out_region);
+
+		// Loads ICU extra data file from file descriptor passed by browser process to
+		// initialize ICU in render processes. If used must be called before
+		// InitializeICUWithFileDescriptor().
+		BASE_I18N_EXPORT bool InitializeExtraICUWithFileDescriptor(
+		    PlatformFile data_fd,
+		    const MemoryMappedFile::Region& data_region);
+		// Loads ICU data file from file descriptor passed by browser process to
+		// initialize ICU in render processes.
+		BASE_I18N_EXPORT bool InitializeICUWithFileDescriptor(
+		    PlatformFile data_fd,
+		    const MemoryMappedFile::Region& data_region);
 
 		// Returns a void pointer to the memory mapped ICU data file.
 		//
@@ -46,6 +68,12 @@ namespace base {
 
 		// In a test binary, the call above might occur twice.
 		BASE_I18N_EXPORT void AllowMultipleInitializeCallsForTesting();
+
+		#if !defined(OS_NACL)
+		#if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
+		BASE_I18N_EXPORT void ResetGlobalsForTesting();
+		#endif  // ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
+		#endif  // !defined(OS_NACL)
 
 	}  // namespace i18n
 }  // namespace base

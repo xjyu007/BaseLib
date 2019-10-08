@@ -15,6 +15,7 @@
 #include "base_export.h"
 #include "file_version_info.h"
 #include "macros.h"
+#include "version.h"
 
 struct tagVS_FIXEDFILEINFO;
 typedef tagVS_FIXEDFILEINFO VS_FIXEDFILEINFO;
@@ -36,15 +37,16 @@ public:
 	std::wstring file_description() override;
 	std::wstring file_version() override;
 
-	// Lets you access other properties not covered above.
+	// Lets you access other properties not covered above. |value| is only
+	// modified if GetValue() returns true.
 	bool GetValue(const wchar_t* name, std::wstring* value) const;
 
 	// Similar to GetValue but returns a string16 (empty string if the property
 	// does not exist).
 	std::wstring GetStringValue(const wchar_t* name) const;
 
-	// Get the fixed file info if it exists. Otherwise NULL
-	[[nodiscard]] const VS_FIXEDFILEINFO* fixed_file_info() const { return fixed_file_info_; }
+	// Get file version number in dotted version format.
+	base::Version GetFileVersion() const;
 
 	// Behaves like CreateFileVersionInfo, but returns a FileVersionInfoWin.
 	static std::unique_ptr<FileVersionInfoWin> CreateFileVersionInfoWin(
@@ -65,8 +67,8 @@ private:
 	const WORD language_;
 	const WORD code_page_;
 
-	// This is a pointer into |data_| if it exists. Otherwise nullptr.
-	const VS_FIXEDFILEINFO* const fixed_file_info_;
+	// This is a reference for a portion of |data_|.
+	const VS_FIXEDFILEINFO& fixed_file_info_;
 
 	DISALLOW_COPY_AND_ASSIGN(FileVersionInfoWin);
 };

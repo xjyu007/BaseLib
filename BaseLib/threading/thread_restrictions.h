@@ -185,12 +185,16 @@ namespace media {
 	class AudioInputDevice;
 	class AudioOutputDevice;
 	class BlockingUrlProtocol;
+	class PaintCanvasVideoRenderer;
 }
 namespace memory_instrumentation {
 	class OSMetrics;
 }
 namespace midi {
 	class TaskService;  // https://crbug.com/796830
+}
+namespace module_installer {
+	class ScopedAllowModulePakLoad;
 }
 namespace mojo {
 	class CoreLibraryInitializer;
@@ -345,6 +349,7 @@ namespace base {
 		friend class cronet::CronetPrefsManager;
 		friend class cronet::CronetURLRequestContext;
 		friend class memory_instrumentation::OSMetrics;
+		friend class module_installer::ScopedAllowModulePakLoad;
 		friend class mojo::CoreLibraryInitializer;
 		friend class resource_coordinator::TabManagerDelegate;  // crbug.com/778703
 		friend class ui::MaterialDesignController;
@@ -470,6 +475,7 @@ namespace base {
 		friend class content::SynchronousCompositorSyncCallBridge;
 		friend class media::AudioInputDevice;
 		friend class media::AudioOutputDevice;
+		friend class media::PaintCanvasVideoRenderer;
 		friend class mojo::SyncCallRestrictions;
 		friend class net::NetworkConfigWatcherMacThread;
 		friend class viz::HostGpuMemoryBufferManager;

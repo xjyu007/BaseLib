@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <ctime>
 #include <cwchar>
 
 #include <algorithm>

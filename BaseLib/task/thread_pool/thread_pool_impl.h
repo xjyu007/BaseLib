@@ -45,7 +45,7 @@ namespace base {
 			using TaskTrackerImpl =
 				TaskTracker;
 
-			// Creates a ThreadPoolImpl with a production TaskTracker.
+			// Creates a ThreadPoolImpl with a production TaskTracker. |histogram_label|
 			// is used to label histograms, No histograms are recorded if it is empty.
 			explicit ThreadPoolImpl(std::string_view histogram_label);
 
@@ -86,6 +86,7 @@ namespace base {
 
 			// PooledTaskRunnerDelegate:
 			bool EnqueueJobTaskSource(scoped_refptr<JobTaskSource> task_source) override;
+			void RemoveJobTaskSource(scoped_refptr<JobTaskSource> task_source) override;
 			void UpdatePriority(scoped_refptr<TaskSource> task_source,
 								TaskPriority priority) override;
 

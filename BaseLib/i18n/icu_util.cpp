@@ -14,7 +14,6 @@
 #include "logging.h"
 #include "path_service.h"
 #include "strings/string_util.h"
-#include "strings/sys_string_conversions.h"
 #include "build_config.h"
 #include "unicode/putil.h"
 #include "unicode/udata.h"
@@ -49,6 +48,7 @@ namespace base::i18n
 			// build pkg configurations, etc). 'l' stands for Little Endian.
 			// This variable is exported through the header file.
 			const char kIcuDataFileName[] = "icudtl.dat";
+			const char kIcuExtraDataFileName[] = "icudtl_extra.dat";
 
 			// File handle intentionally never closed. Not using File here because its
 			// Windows implementation guards against two instances owning the same
@@ -56,21 +56,28 @@ namespace base::i18n
 			PlatformFile g_icudtl_pf = kInvalidPlatformFile;
 			MemoryMappedFile* g_icudtl_mapped_file = nullptr;
 			MemoryMappedFile::Region g_icudtl_region;
+			PlatformFile g_icudtl_extra_pf = kInvalidPlatformFile;
+			MemoryMappedFile* g_icudtl_extra_mapped_file = nullptr;
+			MemoryMappedFile::Region g_icudtl_extra_region;
 
-			void LazyInitIcuDataFile() {
-				if (g_icudtl_pf != kInvalidPlatformFile) {
-					return;
-				}
+			struct PfRegion {
+			 public:
+			  PlatformFile pf;
+			  MemoryMappedFile::Region region;
+			};
+
+			std::unique_ptr<PfRegion> OpenIcuDataFile(const std::string& filename) {
+				auto result = std::make_unique<PfRegion>();
 				FilePath data_path;
 				if (!PathService::Get(DIR_ASSETS, &data_path)) {
-					LOG(ERROR) << "Can't find " << kIcuDataFileName;
-					return;
+					LOG(ERROR) << "Can't find " << filename;
+					return nullptr;
 				}
 				// TODO(brucedawson): http://crbug.com/445616
 				wchar_t tmp_buffer[_MAX_PATH] = { 0 };
 				wcscpy_s(tmp_buffer, as_wcstr(data_path.value()));
 				debug::Alias(tmp_buffer);
-				data_path = data_path.AppendASCII(kIcuDataFileName);
+				data_path = data_path.AppendASCII(filename);
 
 				// TODO(brucedawson): http://crbug.com/445616
 				wchar_t tmp_buffer2[_MAX_PATH] = { 0 };
@@ -84,8 +91,8 @@ namespace base::i18n
 					g_debug_icu_pf_error_details = 0;
 					g_debug_icu_pf_filename[0] = 0;
 
-					g_icudtl_pf = file.TakePlatformFile();
-					g_icudtl_region = MemoryMappedFile::Region::kWholeFile;
+					result->pf = file.TakePlatformFile();
+					result->region = MemoryMappedFile::Region::kWholeFile;
 				}
 				else {
 					// TODO(brucedawson): http://crbug.com/445616.
@@ -93,45 +100,119 @@ namespace base::i18n
 					g_debug_icu_pf_error_details = file.error_details();
 					wcscpy_s(g_debug_icu_pf_filename, as_wcstr(data_path.value()));
 				}
+
+				return result;
+			}
+
+			void LazyOpenIcuDataFile() {
+				if (g_icudtl_pf != kInvalidPlatformFile) {
+				return;
+				}
+				const auto pf_region = OpenIcuDataFile(kIcuDataFileName);
+				if (!pf_region) {
+				return;
+				}
+				g_icudtl_pf = pf_region->pf;
+				g_icudtl_region = pf_region->region;
+			}
+
+			int LoadIcuData(PlatformFile data_fd,
+			                const MemoryMappedFile::Region& data_region,
+			                std::unique_ptr<MemoryMappedFile>* out_mapped_data_file,
+			                UErrorCode* out_error_code) {
+				if (data_fd == kInvalidPlatformFile) {
+					LOG(ERROR) << "Invalid file descriptor to ICU data received.";
+					return 1;  // To debug http://crbug.com/445616.
+				}
+
+				out_mapped_data_file->reset(new MemoryMappedFile());
+				if (!(*out_mapped_data_file)->Initialize(File(data_fd), data_region)) {
+					LOG(ERROR) << "Couldn't mmap icu data file";
+					return 2;  // To debug http://crbug.com/445616.
+				}
+
+				(*out_error_code) = U_ZERO_ERROR;
+				udata_setCommonData(const_cast<uint8_t*>((*out_mapped_data_file)->data()),
+									out_error_code);
+				if (U_FAILURE(*out_error_code)) {
+					LOG(ERROR) << "Failed to initialize ICU with data file: "
+							   << u_errorName(*out_error_code);
+					return 3;  // To debug http://crbug.com/445616.
+				}
+
+				return 0;
 			}
 
 			bool InitializeICUWithFileDescriptorInternal(
-				PlatformFile data_fd,
-				const MemoryMappedFile::Region& data_region) {
+			    PlatformFile data_fd,
+			    const MemoryMappedFile::Region& data_region) {
 				// This can be called multiple times in tests.
 				if (g_icudtl_mapped_file) {
 					g_debug_icu_load = 0;  // To debug http://crbug.com/445616.
 					return true;
 				}
-				if (data_fd == kInvalidPlatformFile) {
-					g_debug_icu_load = 1;  // To debug http://crbug.com/445616.
-					LOG(ERROR) << "Invalid file descriptor to ICU data received.";
+
+				std::unique_ptr<MemoryMappedFile> mapped_file;
+				UErrorCode err;
+				g_debug_icu_load = LoadIcuData(data_fd, data_region, &mapped_file, &err);
+				if (g_debug_icu_load == 1 || g_debug_icu_load == 2) {
 					return false;
 				}
+				g_icudtl_mapped_file = mapped_file.release();
 
-				std::unique_ptr<MemoryMappedFile> icudtl_mapped_file(new MemoryMappedFile());
-				if (!icudtl_mapped_file->Initialize(File(data_fd), data_region)) {
-					g_debug_icu_load = 2;  // To debug http://crbug.com/445616.
-					LOG(ERROR) << "Couldn't mmap icu data file";
-					return false;
-				}
-				g_icudtl_mapped_file = icudtl_mapped_file.release();
-
-				UErrorCode err = U_ZERO_ERROR;
-				udata_setCommonData(const_cast<uint8_t*>(g_icudtl_mapped_file->data()), &err);
-				if (err != U_ZERO_ERROR) {
-					g_debug_icu_load = 3;  // To debug http://crbug.com/445616.
+				if (g_debug_icu_load == 3) {
 					g_debug_icu_last_error = err;
 				}
 				// Never try to load ICU data from files.
 				udata_setFileAccess(UDATA_ONLY_PACKAGES, &err);
-				return err == U_ZERO_ERROR;
+				return U_SUCCESS(err);
 			}
 #endif  // ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
 
 		}  // namespace
 
 #if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
+		bool InitializeExtraICUWithFileDescriptor(
+		    PlatformFile data_fd,
+		    const MemoryMappedFile::Region& data_region) {
+			if (g_icudtl_pf != kInvalidPlatformFile) {
+				// Must call InitializeExtraICUWithFileDescriptor() before
+				// InitializeICUWithFileDescriptor().
+				return false;
+			}
+			std::unique_ptr<MemoryMappedFile> mapped_file;
+			UErrorCode err;
+			if (LoadIcuData(data_fd, data_region, &mapped_file, &err) != 0) {
+				return false;
+			}
+			g_icudtl_extra_mapped_file = mapped_file.release();
+			return true;
+		}
+
+		bool InitializeICUWithFileDescriptor(
+		    PlatformFile data_fd,
+		    const MemoryMappedFile::Region& data_region) {
+#if DCHECK_IS_ON()
+			DCHECK(!g_check_called_once || !g_called_once);
+			g_called_once = true;
+#endif
+			return InitializeICUWithFileDescriptorInternal(data_fd, data_region);
+		}
+
+		PlatformFile GetIcuDataFileHandle(MemoryMappedFile::Region* out_region) {
+			CHECK_NE(g_icudtl_pf, kInvalidPlatformFile);
+			*out_region = g_icudtl_region;
+			return g_icudtl_pf;
+		}
+
+		PlatformFile GetIcuExtraDataFileHandle(MemoryMappedFile::Region* out_region) {
+			if (g_icudtl_extra_pf == kInvalidPlatformFile) {
+				return kInvalidPlatformFile;
+			}
+			*out_region = g_icudtl_extra_region;
+			return g_icudtl_extra_pf;
+		}
+
 		const uint8_t* GetRawIcuMemory() {
 			CHECK(g_icudtl_mapped_file);
 			return g_icudtl_mapped_file->data();
@@ -154,6 +235,27 @@ namespace base::i18n
 #endif
 		}
 
+		bool InitializeExtraICU() {
+			if (g_icudtl_pf != kInvalidPlatformFile) {
+				// Must call InitializeExtraICU() before InitializeICU().
+				return false;
+			}
+			const auto pf_region = OpenIcuDataFile(kIcuExtraDataFileName);
+			if (!pf_region) {
+				return false;
+			}
+			g_icudtl_extra_pf = pf_region->pf;
+			g_icudtl_extra_region = pf_region->region;
+			std::unique_ptr<MemoryMappedFile> mapped_file;
+			UErrorCode err;
+			if (LoadIcuData(g_icudtl_extra_pf, g_icudtl_extra_region, &mapped_file,
+							&err) != 0) {
+				return false;
+			}
+			g_icudtl_extra_mapped_file = mapped_file.release();
+			return true;
+		}
+
 #endif  // ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
 
 		bool InitializeICU() {
@@ -171,15 +273,16 @@ namespace base::i18n
 			// it is needed.  This can fail if the process is sandboxed at that time.
 			// Instead, we map the file in and hand off the data so the sandbox won't
 			// cause any problems.
-			LazyInitIcuDataFile();
-			result = InitializeICUWithFileDescriptorInternal(g_icudtl_pf, g_icudtl_region);
-			int debug_icu_load = g_debug_icu_load;
+			LazyOpenIcuDataFile();
+			result =
+				InitializeICUWithFileDescriptorInternal(g_icudtl_pf, g_icudtl_region);
+			auto debug_icu_load = g_debug_icu_load;
 			debug::Alias(&debug_icu_load);
-			int debug_icu_last_error = g_debug_icu_last_error;
+			auto debug_icu_last_error = g_debug_icu_last_error;
 			debug::Alias(&debug_icu_last_error);
-			int debug_icu_pf_last_error = g_debug_icu_pf_last_error;
+			auto debug_icu_pf_last_error = g_debug_icu_pf_last_error;
 			debug::Alias(&debug_icu_pf_last_error);
-			int debug_icu_pf_error_details = g_debug_icu_pf_error_details;
+			auto debug_icu_pf_error_details = g_debug_icu_pf_error_details;
 			debug::Alias(&debug_icu_pf_error_details);
 			wchar_t debug_icu_pf_filename[_MAX_PATH] = { 0 };
 			wcscpy_s(debug_icu_pf_filename, g_debug_icu_pf_filename);
@@ -200,4 +303,13 @@ namespace base::i18n
 			g_check_called_once = false;
 #endif
 		}
+
+#if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
+	void ResetGlobalsForTesting() {
+		g_icudtl_pf = kInvalidPlatformFile;
+		g_icudtl_mapped_file = nullptr;
+		g_icudtl_extra_pf = kInvalidPlatformFile;
+		g_icudtl_extra_mapped_file = nullptr;
+	}
+#endif  // ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
 } // namespace base

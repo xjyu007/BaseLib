@@ -186,6 +186,12 @@ namespace base {
 		cursor = 0;
 	}
 
+	std::array<uint8_t, kSHA1Length> SHA1HashSpan(span<const uint8_t> data) {
+		std::array<uint8_t, kSHA1Length> hash;
+		SHA1HashBytes(data.data(), data.size(), hash.data());
+		return hash;
+	}
+
 	std::string SHA1HashString(const std::string& str) {
 		char hash[SecureHashAlgorithm::kDigestSizeBytes];
 		SHA1HashBytes(reinterpret_cast<const unsigned char*>(str.c_str()),

@@ -89,11 +89,11 @@ namespace base {
 			public:
 				ProcessFilterConfig();
 				explicit ProcessFilterConfig(
-					const std::unordered_set<base::ProcessId>& included_process_ids);
+					const std::unordered_set<ProcessId>& included_process_ids);
 				ProcessFilterConfig(const ProcessFilterConfig&);
 				~ProcessFilterConfig();
 
-				bool empty() const { return included_process_ids_.empty(); }
+				[[nodiscard]] bool empty() const { return included_process_ids_.empty(); }
 
 				void Clear();
 				void Merge(const ProcessFilterConfig&);
@@ -101,8 +101,8 @@ namespace base {
 				void InitializeFromConfigDict(const Value&);
 				void ToDict(Value*) const;
 
-				bool IsEnabled(base::ProcessId) const;
-				const std::unordered_set<base::ProcessId>& included_process_ids() const {
+				[[nodiscard]] bool IsEnabled(ProcessId) const;
+				[[nodiscard]] const std::unordered_set<ProcessId>& included_process_ids() const {
 					return included_process_ids_;
 				}
 
@@ -111,7 +111,7 @@ namespace base {
 				}
 
 			private:
-				std::unordered_set<base::ProcessId> included_process_ids_{};
+				std::unordered_set<ProcessId> included_process_ids_{};
 			};
 
 			class BASE_EXPORT EventFilterConfig {
@@ -131,11 +131,11 @@ namespace base {
 
 				bool GetArgAsSet(const char* key, std::unordered_set<std::string>*) const;
 
-				bool IsCategoryGroupEnabled(const std::string_view& category_group_name) const;
+				[[nodiscard]] bool IsCategoryGroupEnabled(const std::string_view& category_group_name) const;
 
-				const std::string& predicate_name() const { return predicate_name_; }
-				const Value& filter_args() const { return args_; }
-				const TraceConfigCategoryFilter& category_filter() const {
+				[[nodiscard]] const std::string& predicate_name() const { return predicate_name_; }
+				[[nodiscard]] const Value& filter_args() const { return args_; }
+				[[nodiscard]] const TraceConfigCategoryFilter& category_filter() const {
 					return category_filter_;
 				}
 
@@ -225,13 +225,15 @@ namespace base {
 
 			TraceConfig& operator=(const TraceConfig& rhs);
 
-			TraceRecordMode GetTraceRecordMode() const { return record_mode_; }
-			size_t GetTraceBufferSizeInEvents() const {
+			[[nodiscard]] TraceRecordMode GetTraceRecordMode() const { return record_mode_; }
+
+			[[nodiscard]] size_t GetTraceBufferSizeInEvents() const {
 				return trace_buffer_size_in_events_;
 			}
-			size_t GetTraceBufferSizeInKb() const { return trace_buffer_size_in_kb_; }
-			bool IsSystraceEnabled() const { return enable_systrace_; }
-			bool IsArgumentFilterEnabled() const { return enable_argument_filter_; }
+
+			[[nodiscard]] size_t GetTraceBufferSizeInKb() const { return trace_buffer_size_in_kb_; }
+			[[nodiscard]] bool IsSystraceEnabled() const { return enable_systrace_; }
+			[[nodiscard]] bool IsArgumentFilterEnabled() const { return enable_argument_filter_; }
 
 			void SetTraceRecordMode(TraceRecordMode mode) { record_mode_ = mode; }
 			void SetTraceBufferSizeInEvents(size_t size) {
@@ -245,18 +247,23 @@ namespace base {
 
 			// Writes the string representation of the TraceConfig. The string is JSON
 			// formatted.
-			std::string ToString() const;
+			[[nodiscard]] std::string ToString() const;
 
 			// Returns a copy of the TraceConfig wrapped in a ConvertableToTraceFormat
-			std::unique_ptr<ConvertableToTraceFormat> AsConvertableToTraceFormat() const;
+			[[nodiscard]] std::unique_ptr<ConvertableToTraceFormat> AsConvertableToTraceFormat() const;
 
 			// Write the string representation of the CategoryFilter part.
-			std::string ToCategoryFilterString() const;
+			[[nodiscard]] std::string ToCategoryFilterString() const;
+
+			// Write the string representation of the trace options part (record mode,
+			// systrace, argument filtering). Does not include category filters, event
+			// filters, or memory dump configs.
+			[[nodiscard]] std::string ToTraceOptionsString() const;
 
 			// Returns true if at least one category in the list is enabled by this
 			// trace config. This is used to determine if the category filters are
 			// enabled in the TRACE_* macros.
-			bool IsCategoryGroupEnabled(const std::string_view& category_group_name) const;
+			[[nodiscard]] bool IsCategoryGroupEnabled(const std::string_view& category_group_name) const;
 
 			// Merges config with the current TraceConfig
 			void Merge(const TraceConfig& config);
@@ -266,29 +273,29 @@ namespace base {
 			// Clears and resets the memory dump config.
 			void ResetMemoryDumpConfig(const MemoryDumpConfig& memory_dump_config);
 
-			const TraceConfigCategoryFilter& category_filter() const {
+			[[nodiscard]] const TraceConfigCategoryFilter& category_filter() const {
 				return category_filter_;
 			}
 
-			const MemoryDumpConfig& memory_dump_config() const {
+			[[nodiscard]] const MemoryDumpConfig& memory_dump_config() const {
 				return memory_dump_config_;
 			}
 
-			const ProcessFilterConfig& process_filter_config() const {
+			[[nodiscard]] const ProcessFilterConfig& process_filter_config() const {
 				return process_filter_config_;
 			}
 			void SetProcessFilterConfig(const ProcessFilterConfig&);
 
-			const EventFilters& event_filters() const { return event_filters_; }
+			[[nodiscard]] const EventFilters& event_filters() const { return event_filters_; }
 			void SetEventFilters(const EventFilters& filter_configs) {
 				event_filters_ = filter_configs;
 			}
 
-			const std::unordered_set<std::string>& systrace_events() const {
+			[[nodiscard]] const std::unordered_set<std::string>& systrace_events() const {
 				return systrace_events_;
 			}
 
-			const std::unordered_set<std::string>& histogram_names() const {
+			[[nodiscard]] const std::unordered_set<std::string>& histogram_names() const {
 				return histogram_names_;
 			}
 
@@ -318,9 +325,7 @@ namespace base {
 
 			void SetHistogramNamesFromConfigList(const Value& histogram_names);
 			void SetEventFiltersFromConfigList(const Value& event_filters);
-			Value ToValue() const;
-
-			std::string ToTraceOptionsString() const;
+			[[nodiscard]] Value ToValue() const;
 
 			TraceRecordMode record_mode_;
 			size_t trace_buffer_size_in_events_ = 0;  // 0 specifies default size

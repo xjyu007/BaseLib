@@ -434,6 +434,7 @@
     <ClInclude Include="task\sequence_manager\work_deduplicator.h" />
     <ClInclude Include="task\sequence_manager\work_queue.h" />
     <ClInclude Include="task\sequence_manager\work_queue_sets.h" />
+    <ClInclude Include="task\simple_task_executor.h" />
     <ClInclude Include="task\single_thread_task_runner_thread_mode.h" />
     <ClInclude Include="task\task_executor.h" />
     <ClInclude Include="task\task_features.h" />
@@ -1017,6 +1018,7 @@
     <ClCompile Include="task\sequence_manager\work_deduplicator.cpp" />
     <ClCompile Include="task\sequence_manager\work_queue.cpp" />
     <ClCompile Include="task\sequence_manager\work_queue_sets.cpp" />
+    <ClCompile Include="task\simple_task_executor.cpp" />
     <ClCompile Include="task\task_executor.cpp" />
     <ClCompile Include="task\task_features.cpp" />
     <ClCompile Include="task\task_traits.cpp" />

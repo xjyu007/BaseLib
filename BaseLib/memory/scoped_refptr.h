@@ -25,7 +25,7 @@ namespace base {
 	class WrappedPromise;
 
 	template <typename T>
-	scoped_refptr<T> AdoptRef(T* obj);
+	scoped_refptr<T> AdoptRef(T* t);
 
 	namespace internal {
 

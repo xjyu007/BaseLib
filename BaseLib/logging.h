@@ -466,7 +466,7 @@ namespace logging {
 	class CheckOpResult {
 	public:
 		// |message| must be non-null if and only if the check failed.
-		CheckOpResult(std::string* message) : message_(message) {}
+		constexpr CheckOpResult(std::string* message) : message_(message) {}
 		// Returns true if the check succeeded.
 		operator bool() const { return !message_; }
 		// Returns the message.

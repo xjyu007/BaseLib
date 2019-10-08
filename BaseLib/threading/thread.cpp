@@ -18,6 +18,7 @@
 #include "synchronization/waitable_event.h"
 #include "task/sequence_manager/sequence_manager_impl.h"
 #include "task/sequence_manager/task_queue.h"
+#include "task/simple_task_executor.h"
 #include "third_party/dynamic_annotations/dynamic_annotations.h"
 #include "threading/thread_id_name_manager.h"
 #include "threading/thread_local.h"
@@ -79,6 +80,7 @@ namespace base {
 				sequence_manager_->BindToMessagePump(
 					std::move(message_pump_factory_).Run());
 				sequence_manager_->SetTimerSlack(timer_slack);
+				simple_task_executor_.emplace(GetDefaultTaskRunner());
 			}
 
 		private:
@@ -86,6 +88,7 @@ namespace base {
 				sequence_manager_;
 			scoped_refptr<sequence_manager::TaskQueue> default_task_queue_;
 			OnceCallback<std::unique_ptr<MessagePump>()> message_pump_factory_;
+			std::optional<SimpleTaskExecutor> simple_task_executor_;
 		};
 
 	}  // namespace

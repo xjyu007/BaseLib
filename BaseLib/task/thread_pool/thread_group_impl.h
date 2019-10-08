@@ -33,7 +33,7 @@ namespace base {
 
 		class TaskTracker;
 
-		// A group of workers that run Tasks.
+		// A group of workers that run Tasks.	
 		//
 		// The thread group doesn't create threads until Start() is called. Tasks can be
 		// posted at any time but will not run until after Start() is called.
@@ -103,7 +103,8 @@ namespace base {
 			void WaitForWorkersIdleForTesting(size_t n);
 
 			// Waits until at least |n| workers are idle.
-			void WaitForWorkersIdleLockRequiredForTesting(size_t n);
+			void WaitForWorkersIdleLockRequiredForTesting(size_t n)
+				EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Waits until all workers are idle.
 			void WaitForAllWorkersIdleForTesting();
@@ -136,26 +137,29 @@ namespace base {
 			void PushTaskSourceAndWakeUpWorkers(
 				TransactionWithRegisteredTaskSource transaction_with_task_source)
 				override;
-			void EnsureEnoughWorkersLockRequired(BaseScopedWorkersExecutor* executor);
+			void EnsureEnoughWorkersLockRequired(BaseScopedWorkersExecutor* executor)
+				override EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Creates a worker and schedules its start, if needed, to maintain one idle
 			// worker, |max_tasks_| permitting.
-			void MaintainAtLeastOneIdleWorkerLockRequired(ScopedWorkersExecutor* executor);
+			void MaintainAtLeastOneIdleWorkerLockRequired(ScopedWorkersExecutor* executor)
+				EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Returns true if worker cleanup is permitted.
-			bool CanWorkerCleanupForTestingLockRequired();
+			bool CanWorkerCleanupForTestingLockRequired() EXCLUSIVE_LOCKS_REQUIRED(lock_);;
 
 			// Creates a worker, adds it to the thread group, schedules its start and
 			// returns it. Cannot be called before Start().
 			scoped_refptr<WorkerThread> CreateAndRegisterWorkerLockRequired(
-				ScopedWorkersExecutor* executor);
+				ScopedWorkersExecutor* executor) EXCLUSIVE_LOCKS_REQUIRED(lock_);;
 
 			// Returns the number of workers that are awake (i.e. not on the idle stack).
-			size_t GetNumAwakeWorkersLockRequired() const;
+			size_t GetNumAwakeWorkersLockRequired() const EXCLUSIVE_LOCKS_REQUIRED(lock_);;
 
 			// Returns the desired number of awake workers, given current workload and
 			// concurrency limits.
-			size_t GetDesiredNumAwakeWorkersLockRequired() const;
+			size_t GetDesiredNumAwakeWorkersLockRequired() const
+				EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Examines the list of WorkerThreads and increments |max_tasks_| for each
 			// worker that has been within the scope of a MAY_BLOCK ScopedBlockingCall for
@@ -180,27 +184,33 @@ namespace base {
 			void ScheduleAdjustMaxTasks();
 
 			// Schedules AdjustMaxTasks() through |executor| if required.
-			void MaybeScheduleAdjustMaxTasksLockRequired(ScopedWorkersExecutor* executor);
+			void MaybeScheduleAdjustMaxTasksLockRequired(ScopedWorkersExecutor* executor)
+				 EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Returns true if AdjustMaxTasks() should periodically be called on
 			// |service_thread_task_runner_|.
-			bool ShouldPeriodicallyAdjustMaxTasksLockRequired();
+			bool ShouldPeriodicallyAdjustMaxTasksLockRequired()
+				EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Updates the minimum priority allowed to run below which tasks should yield.
 			// This should be called whenever |num_running_tasks_| or |max_tasks| changes,
 			// or when a new task is added to |priority_queue_|.
-			void UpdateMinAllowedPriorityLockRequired();
+			void UpdateMinAllowedPriorityLockRequired() EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Increments/decrements the number of tasks of |priority| that are currently
 			// running in this thread group. Must be invoked before/after running a task.
-			void DecrementTasksRunningLockRequired(TaskPriority priority);
-			void IncrementTasksRunningLockRequired(TaskPriority priority);
+			void DecrementTasksRunningLockRequired(TaskPriority priority)
+				 EXCLUSIVE_LOCKS_REQUIRED(lock_);
+			void IncrementTasksRunningLockRequired(TaskPriority priority)
+				 EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Increments/decrements the number of tasks that can run in this thread
 			// group.  May only be called in a scope where a task is running with
 			// |priority|.
-			void DecrementMaxTasksLockRequired(TaskPriority priority);
-			void IncrementMaxTasksLockRequired(TaskPriority priority);
+			void DecrementMaxTasksLockRequired(TaskPriority priority)
+				 EXCLUSIVE_LOCKS_REQUIRED(lock_);
+			void IncrementMaxTasksLockRequired(TaskPriority priority)
+				 EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 			// Values set at Start() and never modified afterwards.
 			struct InitializedInStart {
@@ -254,43 +264,45 @@ namespace base {
 			const ThreadPriority priority_hint_;
 
 			// All workers owned by this thread group.
-			std::vector<scoped_refptr<WorkerThread>> workers_{};
+			std::vector<scoped_refptr<WorkerThread>> workers_ GUARDED_BY(lock_);
 
 			// Maximum number of tasks of any priority / BEST_EFFORT priority that can run
 			// concurrently in this thread group.
-			size_t max_tasks_ = 0;
-			size_t max_best_effort_tasks_ = 0;
+			size_t max_tasks_  GUARDED_BY(lock_) = 0;
+			size_t max_best_effort_tasks_  GUARDED_BY(lock_) = 0;
 
 			// Number of tasks of any priority / BEST_EFFORT priority that are currently
 			// running in this thread group.
-			size_t num_running_tasks_ = 0;
-			size_t num_running_best_effort_tasks_ = 0;
+			size_t num_running_tasks_  GUARDED_BY(lock_) = 0;
+			size_t num_running_best_effort_tasks_  GUARDED_BY(lock_) = 0;
 
 			// Number of workers running a task of any priority / BEST_EFFORT priority
 			// that are within the scope of a MAY_BLOCK ScopedBlockingCall but haven't
 			// caused a max tasks increase yet.
-			int num_unresolved_may_block_ = 0;
-			int num_unresolved_best_effort_may_block_ = 0;
+			int num_unresolved_may_block_  GUARDED_BY(lock_) = 0;
+			int num_unresolved_best_effort_may_block_  GUARDED_BY(lock_) = 0;
 
 			// Stack of idle workers. Initially, all workers are on this stack. A worker
 			// is removed from the stack before its WakeUp() function is called and when
 			// it receives work from GetWork() (a worker calls GetWork() when its sleep
 			// timeout expires, even if its WakeUp() method hasn't been called). A worker
 			// is pushed on this stack when it receives nullptr from GetWork().
-			WorkerThreadStack idle_workers_stack_;
+			WorkerThreadStack idle_workers_stack_ GUARDED_BY(lock_);
 
 			// Signaled when a worker is added to the idle workers stack.
-			std::unique_ptr<ConditionVariable> idle_workers_stack_cv_for_testing_{};
+			std::unique_ptr<ConditionVariable> idle_workers_stack_cv_for_testing_
+				 GUARDED_BY(lock_);
 
 			// Stack that contains the timestamps of when workers get cleaned up.
 			// Timestamps get popped off the stack as new workers are added.
-			base::stack<TimeTicks, std::vector<TimeTicks>> cleanup_timestamps_{};
+			base::stack<TimeTicks, std::vector<TimeTicks>> cleanup_timestamps_
+				 GUARDED_BY(lock_);
 
 			// Whether an AdjustMaxTasks() task was posted to the service thread.
-			bool adjust_max_tasks_posted_ = false;
+			bool adjust_max_tasks_posted_  GUARDED_BY(lock_) = false;
 
 			// Indicates to the delegates that workers are not permitted to cleanup.
-			bool worker_cleanup_disallowed_for_testing_ = false;
+			bool worker_cleanup_disallowed_for_testing_  GUARDED_BY(lock_) = false;
 
 			// Counts the number of workers cleaned up since the last call to
 			// WaitForWorkersCleanedUpForTesting() (or Start() if it wasn't called yet).
@@ -298,19 +310,18 @@ namespace base {
 			// incremented. Tests with a custom |suggested_reclaim_time_| can wait on a
 			// specific number of workers being cleaned up via
 			// WaitForWorkersCleanedUpForTesting().
-			size_t num_workers_cleaned_up_for_testing_ = 0;
+			size_t num_workers_cleaned_up_for_testing_  GUARDED_BY(lock_) = 0;
 #if DCHECK_IS_ON()
-			bool some_workers_cleaned_up_for_testing_ = false;
+			bool some_workers_cleaned_up_for_testing_  GUARDED_BY(lock_) = false;
 #endif
 
 			// Signaled, if non-null, when |num_workers_cleaned_up_for_testing_| is
 			// incremented.
-			std::unique_ptr<ConditionVariable> num_workers_cleaned_up_for_testing_cv_{};
+			std::unique_ptr<ConditionVariable> num_workers_cleaned_up_for_testing_cv_
+				 GUARDED_BY(lock_);
 
-#if DCHECK_IS_ON()
 			// Set at the start of JoinForTesting().
-			AtomicFlag join_for_testing_started_;
-#endif
+			bool join_for_testing_started_ GUARDED_BY(lock_) = false;
 
 			// ThreadPool.DetachDuration.[thread group name] histogram. Intentionally
 			// leaked.

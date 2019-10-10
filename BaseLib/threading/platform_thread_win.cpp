@@ -142,11 +142,11 @@ namespace base {
 				// difference:
 				//   http://www.microsoft.com/msj/1099/win32/win321099.aspx
 				thread_handle = 
-					::CreateThread(nullptr, stack_size, ThreadFunc, params, flags, nullptr);
+					CreateThread(nullptr, stack_size, ThreadFunc, params, flags, nullptr);
 			}
 
 			if (!thread_handle) {
-				const auto last_error = ::GetLastError();
+				const auto last_error = GetLastError();
 
 				switch (last_error) {
 				case ERROR_NOT_ENOUGH_MEMORY:
@@ -156,10 +156,10 @@ namespace base {
 					break;
 
 				default:
-					static auto* last_error_crash_key = debug::AllocateCrashKeyString(
+					static auto* last_error_crash_key = AllocateCrashKeyString(
 						"create_thread_last_error", debug::CrashKeySize::Size32);
-					debug::SetCrashKeyString(last_error_crash_key,
-											 base::NumberToString(last_error));
+					SetCrashKeyString(last_error_crash_key,
+											 NumberToString(last_error));
 				    break;
 				}
 
@@ -186,7 +186,7 @@ namespace base {
 		void AssertMemoryPriority(HANDLE thread, int memory_priority) {
 #if DCHECK_IS_ON()
 			static const auto get_thread_information_fn = 
-				reinterpret_cast<decltype(&::GetThreadInformation)>(::GetProcAddress(
+				reinterpret_cast<decltype(&GetThreadInformation)>(GetProcAddress(
 					::GetModuleHandle(L"Kernel32.dll"), "GetThreadInformation"));
 
 			if (!get_thread_information_fn) {
@@ -208,17 +208,17 @@ namespace base {
 
 	// static
 	PlatformThreadId PlatformThread::CurrentId() {
-		return ::GetCurrentThreadId();
+		return GetCurrentThreadId();
 	}
 
 	// static
 	PlatformThreadRef PlatformThread::CurrentRef() {
-		return PlatformThreadRef(::GetCurrentThreadId());
+		return PlatformThreadRef(GetCurrentThreadId());
 	}
 
 	// static
 	PlatformThreadHandle PlatformThread::CurrentHandle() {
-		return PlatformThreadHandle(::GetCurrentThread());
+		return PlatformThreadHandle(GetCurrentThread());
 	}
 
 	// static
@@ -245,16 +245,16 @@ namespace base {
 
 		// The SetThreadDescription API works even if no debugger is attached.
 		static auto set_thread_description_func = 
-			reinterpret_cast<SetThreadDescription>(::GetProcAddress(
+			reinterpret_cast<SetThreadDescription>(GetProcAddress(
 				::GetModuleHandle(L"Kernel32.dll"), "SetThreadDescription"));
 		if (set_thread_description_func) {
-			set_thread_description_func(::GetCurrentThread(), 
+			set_thread_description_func(GetCurrentThread(), 
 										UTF8ToWide(name).c_str());
 		}
 
 		// The debugger needs to be around to catch the name in the exception.  If
 		// there isn't a debugger, we are just needlessly throwing an exception.
-		if (!::IsDebuggerPresent())
+		if (!IsDebuggerPresent())
 			return;
 
 		SetNameInternal(CurrentId(), name.c_str());
@@ -291,10 +291,10 @@ namespace base {
 	void PlatformThread::Join(PlatformThreadHandle thread_handle) {
 		DCHECK(thread_handle.platform_handle());
 
-		auto thread_id = ::GetThreadId(thread_handle.platform_handle());
+		auto thread_id = GetThreadId(thread_handle.platform_handle());
 		DWORD last_error = 0;
 		if (!thread_id)
-			last_error = ::GetLastError();
+			last_error = GetLastError();
 
 		// Record information about the exiting thread in case joining hangs.
 		debug::Alias(&thread_id);
@@ -344,7 +344,7 @@ namespace base {
 		if (use_thread_mode_background && priority != ThreadPriority::BACKGROUND) {
 			// Exit background mode if the new priority is not BACKGROUND. This is a
 			// no-op if not in background mode.
-			::SetThreadPriority(thread_handle, THREAD_MODE_BACKGROUND_END);
+			SetThreadPriority(thread_handle, THREAD_MODE_BACKGROUND_END);
 			internal::AssertMemoryPriority(thread_handle, MEMORY_PRIORITY_NORMAL);
 		}
 
@@ -373,7 +373,7 @@ namespace base {
 #if DCHECK_IS_ON()
 		const auto success =
 #endif
-			::SetThreadPriority(thread_handle, desired_priority);
+			SetThreadPriority(thread_handle, desired_priority);
 		DPLOG_IF(ERROR, !success) << "Failed to set thread priority to "
 			<< desired_priority;
 
@@ -383,7 +383,7 @@ namespace base {
 			// THREAD_PRIORITY_LOWEST to also lower the CPU priority.
 			// https://crbug.com/901483
 			if (GetCurrentThreadPriority() != ThreadPriority::BACKGROUND) {
-				::SetThreadPriority(thread_handle, THREAD_PRIORITY_LOWEST);
+				SetThreadPriority(thread_handle, THREAD_PRIORITY_LOWEST);
 				// Make sure that using THREAD_PRIORITY_LOWEST didn't affect the memory
 				// priority set by THREAD_MODE_BACKGROUND_BEGIN. There is no practical
 				// way to verify the I/O priority.
@@ -397,7 +397,7 @@ namespace base {
 	// static
 	ThreadPriority PlatformThread::GetCurrentThreadPriority() {
 		const auto priority = 
-			::GetThreadPriority(PlatformThread::CurrentHandle().platform_handle());
+			GetThreadPriority(CurrentHandle().platform_handle());
 
 		switch (priority) {
 		case THREAD_PRIORITY_IDLE:

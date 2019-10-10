@@ -287,11 +287,11 @@ namespace base {
 
 		// True while inside of Run().
 		bool running_ = false;
-		mutable base::Lock running_lock_;  // Protects |running_|.
+		mutable Lock running_lock_;  // Protects |running_|.
 
 		// The thread's handle.
 		PlatformThreadHandle thread_;
-		mutable base::Lock thread_lock_;  // Protects |thread_|.
+		mutable Lock thread_lock_;  // Protects |thread_|.
 
 		// The thread's id once it has started.
 		PlatformThreadId id_ = kInvalidThreadId;

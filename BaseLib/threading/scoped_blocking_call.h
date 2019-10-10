@@ -38,7 +38,7 @@ namespace base {
 			~UncheckedScopedBlockingCall();
 
 		private:
-			internal::BlockingObserver* const blocking_observer_;
+			BlockingObserver* const blocking_observer_;
 
 			// Previous ScopedBlockingCall instantiated on this thread.
 			UncheckedScopedBlockingCall* const previous_scoped_blocking_call_;

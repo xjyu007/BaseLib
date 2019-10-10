@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include <cstdint>
 
@@ -11,6 +11,7 @@
 #include "base_export.h"
 #include "compiler_specific.h"
 #include "gtest_prod_util.h"
+#include "json/json_common.h"
 #include "json/json_reader.h"
 #include "macros.h"
 
@@ -38,7 +39,7 @@ namespace base {
 		// of the next token.
 		class BASE_EXPORT JSONParser {
 		public:
-			JSONParser(int options, int max_depth = JSONReader::kStackMaxDepth);
+			JSONParser(int options, size_t max_depth = kAbsoluteMaxDepth);
 			~JSONParser();
 
 			// Parses the input string according to the set options and returns the
@@ -210,7 +211,7 @@ namespace base {
 			const int options_;
 
 			// Maximum depth to parse.
-			const int max_depth_;
+			const size_t max_depth_;
 
 			// The input stream being parsed. Note: Not guaranteed to NUL-terminated.
 			std::string_view input_;
@@ -219,7 +220,7 @@ namespace base {
 			int index_;
 
 			// The number of times the parser has recursed (current stack depth).
-			int stack_depth_;
+			size_t stack_depth_;
 
 			// The line number that the parser is at currently.
 			int line_number_;

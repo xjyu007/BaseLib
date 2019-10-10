@@ -113,8 +113,6 @@ namespace base {
 		// Releases the Closure without calling.
 		OnceClosure Release() WARN_UNUSED_RESULT;
 
-		bool is_null() const { return closure_.is_null(); }
-
 	private:
 		OnceClosure closure_;
 

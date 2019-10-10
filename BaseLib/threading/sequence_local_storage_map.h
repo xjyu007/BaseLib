@@ -8,10 +8,8 @@
 #include "containers/flat_map.h"
 #include "macros.h"
 
-namespace base
-{
-	namespace internal
-	{
+namespace base {
+	namespace internal {
 
 		// A SequenceLocalStorageMap holds (slot_id) -> (value, destructor) items for a
 		// sequence. When a task runs, it is expected that a pointer to its sequence's
@@ -22,8 +20,7 @@ namespace base
 		// The Get() and Set() methods should not be accessed directly.
 		// Use SequenceLocalStorageSlot to Get() and Set() values in the current
 		// sequence's SequenceLocalStorageMap.
-		class BASE_EXPORT SequenceLocalStorageMap
-		{
+		class BASE_EXPORT SequenceLocalStorageMap {
 		public:
 			SequenceLocalStorageMap();
 			~SequenceLocalStorageMap();
@@ -35,19 +32,18 @@ namespace base
 
 			// Holds a pointer to a value alongside a destructor for this pointer.
 			// Calls the destructor on the value upon destruction.
-			class BASE_EXPORT ValueDestructorPair
-			{
+			class BASE_EXPORT ValueDestructorPair {
 			public:
 				using DestructorFunc = void(void*);
 
 				ValueDestructorPair(void* value, DestructorFunc* destructor);
 				~ValueDestructorPair();
 
-				ValueDestructorPair(ValueDestructorPair&& value_destructor_pair);
+				ValueDestructorPair(ValueDestructorPair&& value_destructor_pair) noexcept;
 
-				ValueDestructorPair& operator=(ValueDestructorPair&& value_destructor_pair);
+				ValueDestructorPair& operator=(ValueDestructorPair&& value_destructor_pair) noexcept;
 
-				void* value() const { return value_; }
+				[[nodiscard]] void* value() const { return value_; }
 
 			private:
 				void* value_;
@@ -68,7 +64,7 @@ namespace base
 			// flat_map was chosen because there are expected to be relatively few entries
 			// in the map. For low number of entries, flat_map is known to perform better
 			// than other map implementations.
-			base::flat_map<int, ValueDestructorPair> sls_map_;
+			flat_map<int, ValueDestructorPair> sls_map_;
 
 			DISALLOW_COPY_AND_ASSIGN(SequenceLocalStorageMap);
 		};
@@ -77,8 +73,7 @@ namespace base
 		// SequenceLocalStorageMap::GetForCurrentThread() will return a reference to the
 		// SequenceLocalStorageMap object passed to the constructor. There can be only
 		// one ScopedSetSequenceLocalStorageMapForCurrentThread instance per scope.
-		class BASE_EXPORT ScopedSetSequenceLocalStorageMapForCurrentThread
-		{
+		class BASE_EXPORT ScopedSetSequenceLocalStorageMapForCurrentThread {
 		public:
 			ScopedSetSequenceLocalStorageMapForCurrentThread(
 				SequenceLocalStorageMap* sequence_local_storage);

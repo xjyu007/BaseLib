@@ -40,6 +40,8 @@ namespace base::trace_event {
 
 	void BlameContext::Enter() {
 		DCHECK(WasInitialized());
+		if (LIKELY(!*category_group_enabled_))
+			return;
 		TRACE_EVENT_API_ADD_TRACE_EVENT(TRACE_EVENT_PHASE_ENTER_CONTEXT,
 			category_group_enabled_, name_, scope_, id_,
 			nullptr, TRACE_EVENT_FLAG_HAS_ID);
@@ -47,6 +49,8 @@ namespace base::trace_event {
 
 	void BlameContext::Leave() {
 		DCHECK(WasInitialized());
+		if (LIKELY(!*category_group_enabled_))
+			return;
 		TRACE_EVENT_API_ADD_TRACE_EVENT(TRACE_EVENT_PHASE_LEAVE_CONTEXT,
 			category_group_enabled_, name_, scope_, id_,
 			nullptr, TRACE_EVENT_FLAG_HAS_ID);
@@ -55,9 +59,10 @@ namespace base::trace_event {
 	void BlameContext::TakeSnapshot() {
 		DCHECK(thread_checker_.CalledOnValidThread());
 		DCHECK(WasInitialized());
-		if (!*category_group_enabled_)
+		if (LIKELY(!*category_group_enabled_))
 			return;
-		std::unique_ptr<trace_event::TracedValue> snapshot(new trace_event::TracedValue);
+		std::unique_ptr<trace_event::TracedValue> snapshot(
+			new trace_event::TracedValue);
 		AsValueInto(snapshot.get());
 		/*TraceArguments args("snapshot", std::move(snapshot));
 		TRACE_EVENT_API_ADD_TRACE_EVENT(TRACE_EVENT_PHASE_SNAPSHOT_OBJECT,

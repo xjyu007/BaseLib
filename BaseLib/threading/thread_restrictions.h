@@ -396,7 +396,7 @@ namespace base {
 
 		// Allowed usage:
 		friend class SimpleThread;
-		friend class base::GetAppOutputScopedAllowBaseSyncPrimitives;
+		friend class GetAppOutputScopedAllowBaseSyncPrimitives;
 		friend class blink::SourceStream;
 		friend class blink::WorkerThread;
 		friend class blink::scheduler::WorkerThread;
@@ -418,8 +418,8 @@ namespace base {
 		friend class webrtc::DesktopConfigurationMonitor;
 
 		// Usage that should be fixed:
-		friend class ::NativeBackendKWallet;            // http://crbug.com/125331
-		friend class ::chromeos::system::
+		friend class NativeBackendKWallet;            // http://crbug.com/125331
+		friend class chromeos::system::
 			StatisticsProviderImpl;                      // http://crbug.com/125385
 		friend class content::TextInputClientMac;        // http://crbug.com/121917
 		friend class blink::VideoFrameResourceProvider;  // http://crbug.com/878070
@@ -446,21 +446,21 @@ namespace base {
 		//	ScopedAllowBaseSyncPrimitivesOutsideBlockingScopeResetsState);
 
 		// Allowed usage:
-		friend class ::BrowserProcessImpl;  // http://crbug.com/125207
-		friend class ::KeyStorageLinux;
-		friend class ::NativeDesktopMediaList;
-		friend class ::StartupTimeBomb;
+		friend class BrowserProcessImpl;  // http://crbug.com/125207
+		friend class KeyStorageLinux;
+		friend class NativeDesktopMediaList;
+		friend class StartupTimeBomb;
 		friend class android::JavaHandlerThread;
 		friend class android_webview::
 			AwFormDatabaseService;  // http://crbug.com/904431
 		friend class android_webview::CookieManager;
 		friend class audio::OutputDevice;
-		friend class base::sequence_manager::internal::TaskQueueImpl;
-		friend class base::FileDescriptorWatcher;
-		friend class base::internal::JobTaskSource;
-		friend class base::MessageLoopImpl;
-		friend class base::ScopedAllowThreadRecallForStackSamplingProfiler;
-		friend class base::StackSamplingProfiler;
+		friend class sequence_manager::internal::TaskQueueImpl;
+		friend class FileDescriptorWatcher;
+		friend class internal::JobTaskSource;
+		friend class MessageLoopImpl;
+		friend class ScopedAllowThreadRecallForStackSamplingProfiler;
+		friend class StackSamplingProfiler;
 		friend class blink::RTCVideoDecoderAdapter;
 		friend class blink::RTCVideoEncoder;
 		friend class cc::TileTaskManagerImpl;
@@ -482,8 +482,8 @@ namespace base {
 		friend class vr::VrShell;
 
 		// Usage that should be fixed:
-		friend class ::chromeos::BlockingMethodCaller;  // http://crbug.com/125360
-		friend class base::Thread;                      // http://crbug.com/918039
+		friend class chromeos::BlockingMethodCaller;  // http://crbug.com/125360
+		friend class Thread;                      // http://crbug.com/918039
 		friend class cc::CompletionEvent;               // http://crbug.com/902653
 		friend class content::
 			BrowserGpuChannelHostFactory;                 // http://crbug.com/125248
@@ -624,7 +624,7 @@ namespace base {
 		friend class content::BrowserShutdownProfileDumper;
 		friend class content::BrowserTestBase;
 		friend class content::ScopedAllowWaitForDebugURL;
-		friend class ::HistogramSynchronizer;
+		friend class HistogramSynchronizer;
 		friend class internal::TaskTracker;
 		friend class web::WebMainLoop;
 		friend class MessagePumpDefault;

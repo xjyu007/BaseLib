@@ -221,7 +221,7 @@ namespace base {
 	// Truncates a string to the nearest UTF-8 character that will leave
 	// the string less than or equal to the specified byte size.
 	BASE_EXPORT void TruncateUTF8ToByteSize(const std::string& input, 
-											size_t byte_size, 
+											const size_t byte_size, 
 											std::string* output);
 
 #if defined(WCHAR_T_IS_UTF16)
@@ -277,12 +277,12 @@ namespace base {
 	//
 	// The std::string versions return where whitespace was found.
 	// NOTE: Safe to use the same variable for both input and output.
-	BASE_EXPORT TrimPositions TrimWhitespace(const std::wstring& input, 
+	BASE_EXPORT TrimPositions TrimWhitespace(std::wstring_view input, 
 											 TrimPositions positions, 
 											 std::wstring* output);
 	BASE_EXPORT std::wstring_view TrimWhitespace(std::wstring_view input, 
 												 TrimPositions positions);
-	BASE_EXPORT TrimPositions TrimWhitespaceASCII(const std::string& input, 
+	BASE_EXPORT TrimPositions TrimWhitespaceASCII(std::string_view input, 
 												  TrimPositions positions, 
 												  std::string* output);
 	BASE_EXPORT std::string_view TrimWhitespaceASCII(std::string_view input, 

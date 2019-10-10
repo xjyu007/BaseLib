@@ -244,7 +244,7 @@ namespace base {
 	}
 
 	template<typename Ch>
-	TrimPositions TrimStringT(const std::basic_string<Ch>& input,
+	TrimPositions TrimStringT(std::basic_string_view<Ch> input,
 							  std::basic_string_view<Ch> trim_chars,
 							  TrimPositions positions,
 							  std::basic_string<Ch>* output) {
@@ -279,13 +279,13 @@ namespace base {
 			((last_good_char == last_char) ? TRIM_NONE : TRIM_TRAILING));
 	}
 
-	bool TrimString(const std::wstring& input, 
+	bool TrimString(std::wstring_view input, 
 					std::wstring_view trim_chars, 
 					std::wstring* output) {
 		return TrimStringT(input, trim_chars, TRIM_ALL, output) != TRIM_NONE;
 	}
 
-	bool TrimString(const std::string& input, 
+	bool TrimString(std::string_view input, 
 					std::string_view trim_chars, 
 					std::string* output) {
 		return TrimStringT(input, trim_chars, TRIM_ALL, output) != TRIM_NONE;
@@ -293,7 +293,7 @@ namespace base {
 
 	template<typename Ch>
 	std::basic_string_view<Ch> TrimStringPieceT(std::basic_string_view<Ch> input,
-												 std::basic_string_view<Ch> trim_chars,
+												std::basic_string_view<Ch> trim_chars,
 												 TrimPositions positions) {
 		size_t begin = (positions & TRIM_LEADING) ? 
 			input.find_first_not_of(trim_chars) : 0;
@@ -315,7 +315,7 @@ namespace base {
 	}
 
 	void TruncateUTF8ToByteSize(const std::string& input, 
-								size_t byte_size, 
+								const size_t byte_size, 
 								std::string* output) {
 		DCHECK(output);
 		if (byte_size > input.length()) {
@@ -334,8 +334,8 @@ namespace base {
 		// character.  Once a full UTF8 character is found, we will
 		// truncate the string to the end of that character.
 		while (char_index >= 0) {
-			const auto prev = char_index;
-			base_icu::UChar32 code_point;
+			auto prev = char_index;
+			base_icu::UChar32 code_point = 0;
 			CBU8_NEXT(data, char_index, truncation_length, code_point);
 			if (!IsValidCharacter(code_point) ||
 				!IsValidCodepoint(code_point)) {
@@ -351,7 +351,7 @@ namespace base {
 			output->clear();
 	}
 
-	TrimPositions TrimWhitespace(const std::wstring& input, 
+	TrimPositions TrimWhitespace(std::wstring_view input, 
 								 TrimPositions positions, 
 								 std::wstring* output) {
 		return TrimStringT(input, std::wstring_view(kWhitespaceUTF16), positions, output);
@@ -362,7 +362,7 @@ namespace base {
 		return TrimStringPieceT(input, std::wstring_view(kWhitespaceUTF16), positions);
 	}
 
-	TrimPositions TrimWhitespaceASCII(const std::string& input, 
+	TrimPositions TrimWhitespaceASCII(std::string_view input, 
 									  TrimPositions positions, 
 									  std::string* output) {
 		return TrimStringT(input, std::string_view(kWhitespaceASCII), positions, output);

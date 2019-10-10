@@ -25,6 +25,7 @@
 #include "message_loop/message_pump_type.h"
 #include "pending_task.h"
 #include "run_loop.h"
+#include "sequenced_task_runner.h"
 #include "single_thread_task_runner.h"
 #include "synchronization/lock.h"
 #include "task/common/task_annotator.h"
@@ -127,6 +128,8 @@ namespace base {
 				[[nodiscard]] std::string DescribeAllPendingTasks() const override;
 				std::unique_ptr<NativeWorkHandle> OnNativeWorkPending(
 					TaskQueue::QueuePriority priority) override;
+				void AddTaskObserver(TaskObserver* task_observer) override;
+				void RemoveTaskObserver(TaskObserver* task_observer) override;
 
 				// SequencedTaskSource implementation:
 				Task* SelectNextTask() override;
@@ -135,8 +138,6 @@ namespace base {
 				bool HasPendingHighResolutionTasks() override;
 				bool OnSystemIdle() override;
 
-				void AddTaskObserver(TaskObserver* task_observer);
-				void RemoveTaskObserver(TaskObserver* task_observer);
 				void AddDestructionObserver(
 					MessageLoopCurrent::DestructionObserver* destruction_observer);
 				void RemoveDestructionObserver(

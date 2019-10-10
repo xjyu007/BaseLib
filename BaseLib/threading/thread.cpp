@@ -36,7 +36,7 @@ namespace base {
 		// because its Stop method was called.  This allows us to catch cases where
 		// MessageLoop::QuitWhenIdle() is called directly, which is unexpected when
 		// using a Thread to setup and run a MessageLoop.
-		base::LazyInstance<base::ThreadLocalBoolean>::Leaky lazy_tls_bool =
+		LazyInstance<ThreadLocalBoolean>::Leaky lazy_tls_bool =
 			LAZY_INSTANCE_INITIALIZER;
 
 		class SequenceManagerThreadDelegate : public Thread::Delegate {
@@ -253,7 +253,7 @@ namespace base {
 		stopping_ = true;
 
 		task_runner()->PostTask(
-			FROM_HERE, base::BindOnce(&Thread::ThreadQuitHelper, Unretained(this)));
+			FROM_HERE, BindOnce(&Thread::ThreadQuitHelper, Unretained(this)));
 	}
 
 	void Thread::DetachFromSequence() {

@@ -260,6 +260,7 @@
     <ClInclude Include="i18n\time_formatting.h" />
     <ClInclude Include="i18n\unicodestring.h" />
     <ClInclude Include="immediate_crash.h" />
+    <ClInclude Include="json\json_common.h" />
     <ClInclude Include="json\json_file_value_serializer.h" />
     <ClInclude Include="json\json_parser.h" />
     <ClInclude Include="json\json_reader.h" />

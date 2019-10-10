@@ -57,7 +57,7 @@ namespace base {
 		UncheckedScopedBlockingCall::~UncheckedScopedBlockingCall() {
 			// TLS affects result of GetLastError() on Windows. ScopedClearLastError
 			// prevents side effect.
-			base::internal::ScopedClearLastError save_last_error;
+			ScopedClearLastError save_last_error;
 			DCHECK_EQ(this, tls_last_scoped_blocking_call.Get().Get());
 			tls_last_scoped_blocking_call.Get().Set(previous_scoped_blocking_call_);
 			if (blocking_observer_ && !previous_scoped_blocking_call_)
@@ -101,7 +101,7 @@ namespace base {
 			tls_construction_in_progress.Get().Set(true);
 #endif
 
-			internal::AssertBaseSyncPrimitivesAllowed();
+			AssertBaseSyncPrimitivesAllowed();
 			//TRACE_EVENT_BEGIN2("base", "ScopedBlockingCallWithBaseSyncPrimitives", "file_name", from_here.file_name(), "function_name", from_here.function_name());
 
 #if DCHECK_IS_ON()

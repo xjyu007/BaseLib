@@ -121,7 +121,7 @@ namespace base {
 		// on platform. If you're looking to use this in unit tests testing delayed
 		// tasks, this will be unreliable - instead, use
 		// base::test::TaskEnvironment with MOCK_TIME mode.
-		static void Sleep(base::TimeDelta duration);
+		static void Sleep(TimeDelta duration);
 
 		// Sets the thread name visible to debuggers/tools. This will try to
 		// initialize the context for current thread unless it's a WorkerThread.

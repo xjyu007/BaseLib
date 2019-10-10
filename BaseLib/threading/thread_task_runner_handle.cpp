@@ -17,7 +17,7 @@ namespace base {
 
 	namespace {
 
-		base::LazyInstance<base::ThreadLocalPointer<ThreadTaskRunnerHandle>>::Leaky
+		LazyInstance<ThreadLocalPointer<ThreadTaskRunnerHandle>>::Leaky
 			thread_task_runner_tls = LAZY_INSTANCE_INITIALIZER;
 
 	}  // namespace
@@ -48,7 +48,7 @@ namespace base {
 		if (!IsSet()) {
 			auto top_level_ttrh = std::make_unique<ThreadTaskRunnerHandle>(
 				std::move(overriding_task_runner));
-			return ScopedClosureRunner(base::BindOnce(
+			return ScopedClosureRunner(BindOnce(
 				[](std::unique_ptr<ThreadTaskRunnerHandle> ttrh_to_release) {},
 				std::move(top_level_ttrh)));
 		}
@@ -62,7 +62,7 @@ namespace base {
 		auto no_running_during_override = 
 			std::make_unique<RunLoop::ScopedDisallowRunningForTesting>();
 
-		return ScopedClosureRunner(base::BindOnce(
+		return ScopedClosureRunner(BindOnce(
 			[](scoped_refptr<SingleThreadTaskRunner> task_runner_to_restore,
 				SingleThreadTaskRunner* expected_task_runner_before_restore,
 				std::unique_ptr<RunLoop::ScopedDisallowRunningForTesting>
@@ -78,7 +78,7 @@ namespace base {
 			ttrh->task_runner_.swap(task_runner_to_restore);
 		},
 			std::move(overriding_task_runner),
-			base::Unretained(ttrh->task_runner_.get()),
+			Unretained(ttrh->task_runner_.get()),
 			std::move(no_running_during_override)));
 	}
 

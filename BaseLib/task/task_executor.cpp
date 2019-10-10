@@ -64,9 +64,9 @@ namespace base {
 	}
 
 	TaskExecutor* GetRegisteredTaskExecutorForTraits(const TaskTraits& traits) {
-		const auto extension_id = traits.extension_id();
+		uint8_t extension_id = traits.extension_id();
 		if (extension_id != TaskTraitsExtensionStorage::kInvalidExtensionId) {
-			const auto executor = (*GetTaskExecutorMap())[extension_id - 1];
+			TaskExecutor* executor = (*GetTaskExecutorMap())[extension_id - 1];
 			DCHECK(executor);
 			return executor;
 		}

@@ -1488,6 +1488,9 @@
     <ClInclude Include="task\simple_task_executor.h">
       <Filter>task</Filter>
     </ClInclude>
+    <ClInclude Include="json\json_common.h">
+      <Filter>json</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="strings\sys_string_conversions.cpp">

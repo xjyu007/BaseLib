@@ -13,14 +13,12 @@
 #include "synchronization/lock.h"
 #include "threading/platform_thread.h"
 
-namespace base
-{
+namespace base {
 
 	template <typename T>
 	struct DefaultSingletonTraits;
 
-	class BASE_EXPORT ThreadIdNameManager
-	{
+	class BASE_EXPORT ThreadIdNameManager {
 	public:
 		static ThreadIdNameManager* GetInstance();
 
@@ -32,7 +30,7 @@ namespace base
 		// The callback is called on the thread, immediately after the name is set.
 		// |name| is a pointer to a C string that is guaranteed to remain valid for
 		// the duration of the process.
-		using SetNameCallback = base::RepeatingCallback<void(const char* name)>;
+		using SetNameCallback = RepeatingCallback<void(const char* name)>;
 		void InstallSetNameCallback(SetNameCallback callback);
 
 		// Set the name for the current thread.

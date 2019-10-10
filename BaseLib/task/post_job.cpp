@@ -4,9 +4,11 @@
 
 #include "task/post_job.h"
 
+#include "task/scoped_set_task_priority_for_current_thread.h"
 #include "task/thread_pool/job_task_source.h"
 #include "task/thread_pool/pooled_task_runner_delegate.h"
-#include "scoped_set_task_priority_for_current_thread.h"
+#include "task/thread_pool/thread_pool_impl.h"
+#include "task/thread_pool/thread_pool_instance.h"
 
 namespace base {
 	namespace experimental {
@@ -100,6 +102,8 @@ namespace base {
 #endif  // DCHECK_IS_ON()
 		}
 
+		JobHandle::JobHandle() = default;
+
 		JobHandle::JobHandle(scoped_refptr<internal::JobTaskSource> task_source)
 		    : task_source_(std::move(task_source)) {}
 
@@ -109,9 +113,9 @@ namespace base {
 				   "JobHandle is destroyed.";
 		}
 
-		JobHandle::JobHandle(JobHandle&&) = default;
+		JobHandle::JobHandle(JobHandle&&) noexcept = default;
 
-		JobHandle& JobHandle::operator=(JobHandle&& other) {
+		JobHandle& JobHandle::operator=(JobHandle&& other) noexcept {
 			DCHECK(!task_source_)
 				  << "The Job must be cancelled, detached or joined before its "
 				     "JobHandle is re-assigned.";
@@ -155,6 +159,33 @@ namespace base {
 		void JobHandle::Detach() {
 			DCHECK(task_source_);
 			task_source_ = nullptr;
+		}
+
+		JobHandle PostJob(const Location& from_here,
+						  const TaskTraits& traits,
+						  RepeatingCallback<void(JobDelegate*)> worker_task,
+						  RepeatingCallback<size_t()> max_concurrency_callback) {
+			DCHECK(ThreadPoolInstance::Get())
+				<< "Ref. Prerequisite section of post_task.h.\n\n"
+				"Hint: if this is in a unit test, you're likely merely missing a "
+				"base::test::TaskEnvironment member in your fixture.\n";
+			DCHECK(traits.use_thread_pool())
+				<< "The base::ThreadPool() trait is mandatory with PostJob().";
+			DCHECK_EQ(traits.extension_id(),
+					  TaskTraitsExtensionStorage::kInvalidExtensionId)
+				<< "Extension traits cannot be used with PostJob().";
+			TaskTraits adjusted_traits = traits;
+			adjusted_traits.InheritPriority(internal::GetTaskPriorityForCurrentThread());
+			auto task_source = base::MakeRefCounted<internal::JobTaskSource>(
+				from_here, adjusted_traits, std::move(worker_task),
+				std::move(max_concurrency_callback),
+				dynamic_cast<internal::ThreadPoolImpl*>(ThreadPoolInstance::Get()));
+			const bool queued =
+				dynamic_cast<internal::ThreadPoolImpl*>(ThreadPoolInstance::Get())
+					->EnqueueJobTaskSource(task_source);
+			if (queued)
+				return internal::JobTaskSource::CreateJobHandle(std::move(task_source));
+			return JobHandle();
 		}
 
 	}  // namespace experimental

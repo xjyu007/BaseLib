@@ -144,6 +144,18 @@ namespace base {
 		return std::make_unique<Value>(std::move(val));
 	}
 
+	// static
+	const DictionaryValue& Value::AsDictionaryValue(const Value& val) {
+		CHECK(val.is_dict());
+		return static_cast<const DictionaryValue&>(val);
+	}
+
+	// static
+	const ListValue& Value::AsListValue(const Value& val) {
+		CHECK(val.is_list());
+		return static_cast<const ListValue&>(val);
+	}
+
 	Value::Value(Value&& that) noexcept {
 		InternalMoveConstructFrom(std::move(that));
 	}

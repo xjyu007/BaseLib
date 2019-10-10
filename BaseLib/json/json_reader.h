@@ -1,5 +1,3 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -27,11 +25,14 @@
 //   double quotes
 // TODO(tc): Add an option to disable comment stripping
 
+#pragma once
+
 #include <memory>
 #include <string>
 #include <optional>
 
 #include "base_export.h"
+#include "json/json_common.h"
 #include "values.h"
 
 namespace base {
@@ -56,8 +57,6 @@ namespace base {
 
 	class BASE_EXPORT JSONReader {
 	public:
-		static const int kStackMaxDepth;
-
 		// Error codes during parsing.
 		enum JsonParseError {
 			JSON_NO_ERROR = 0,
@@ -103,30 +102,32 @@ namespace base {
 		static const char kInputTooLarge[];
 
 		// Constructs a reader.
-		JSONReader(int options = JSON_PARSE_RFC, int max_depth = kStackMaxDepth);
+		JSONReader(int options = JSON_PARSE_RFC,
+		           size_t max_depth = internal::kAbsoluteMaxDepth);
 
 		~JSONReader();
 
 		// Reads and parses |json|, returning a Value.
 		// If |json| is not a properly formed JSON string, returns base::nullopt.
 		static std::optional<Value> Read(std::string_view json,
-			int options = JSON_PARSE_RFC,
-			int max_depth = kStackMaxDepth);
+										 int options = JSON_PARSE_RFC,
+										 size_t max_depth = internal::kAbsoluteMaxDepth);
 
 		// Deprecated. Use the Read() method above.
 		// Reads and parses |json|, returning a Value.
 		// If |json| is not a properly formed JSON string, returns nullptr.
 		// Wrap this in base::FooValue::From() to check the Value is of type Foo and
 		// convert to a FooValue at the same time.
-		static std::unique_ptr<Value> ReadDeprecated(std::string_view json,
+		static std::unique_ptr<Value> ReadDeprecated(
+			std::string_view json,
 			int options = JSON_PARSE_RFC,
-			int max_depth = kStackMaxDepth);
+			size_t max_depth = internal::kAbsoluteMaxDepth);
 
 		// Reads and parses |json| like Read(). Returns a ValueWithError, which on
 		// error, will be populated with a formatted error message, an error code, and
 		// the error location if appropriate.
 		static ValueWithError ReadAndReturnValueWithError(std::string_view json,
-			int options);
+														  int options);
 
 		// Deprecated. Use the ReadAndReturnValueWithError() method above.
 		// Reads and parses |json| like Read(). |error_code_out| and |error_msg_out|

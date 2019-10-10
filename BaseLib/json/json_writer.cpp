@@ -19,18 +19,21 @@ namespace base {
 	const char kPrettyPrintLineEnding[] = "\r\n";
 
 	// static
-	bool JSONWriter::Write(const Value& node, std::string* json) {
-		return WriteWithOptions(node, 0, json);
+	bool JSONWriter::Write(const Value& node, std::string* json, size_t max_depth) {
+		return WriteWithOptions(node, 0, json, max_depth);
 	}
 
 	// static
-	bool JSONWriter::WriteWithOptions(const Value& node, int options, std::string* json) {
+	bool JSONWriter::WriteWithOptions(const Value& node, 
+									  int options, 
+									  std::string* json,
+									  size_t max_depth) {
 		json->clear();
 		// Is there a better way to estimate the size of the output?
 		json->reserve(1024);
 
-		const JSONWriter writer(options, json);
-		const auto result = writer.BuildJSONString(node, 0U);
+		JSONWriter writer(options, json, max_depth);
+		bool result = writer.BuildJSONString(node, 0U);
 
 		if (options & OPTIONS_PRETTY_PRINT)
 			json->append(kPrettyPrintLineEnding);
@@ -38,17 +41,23 @@ namespace base {
 		return result;
 	}
 
-	JSONWriter::JSONWriter(int options, std::string* json)
+	JSONWriter::JSONWriter(int options, std::string* json, size_t max_depth)
 		: omit_binary_values_((options& OPTIONS_OMIT_BINARY_VALUES) != 0),
 		omit_double_type_preservation_(
 		(options& OPTIONS_OMIT_DOUBLE_TYPE_PRESERVATION) != 0),
 		pretty_print_((options& OPTIONS_PRETTY_PRINT) != 0),
-		json_string_(json) {
+		json_string_(json),
+		max_depth_(max_depth),
+		stack_depth_(0) {
 		DCHECK(json);
+		CHECK_LE(max_depth, internal::kAbsoluteMaxDepth);
 	}
 
-	bool JSONWriter::BuildJSONString(const Value& node, size_t depth) const
-	{
+	bool JSONWriter::BuildJSONString(const Value& node, size_t depth){
+		internal::StackMarker depth_check(max_depth_, &stack_depth_);
+		if (depth_check.IsTooDeep())
+			return false;
+
 		switch (node.type()) {
 		case Value::Type::NONE:
 			json_string_->append("null");
@@ -57,15 +66,15 @@ namespace base {
 		case Value::Type::BOOLEAN:
 			// Note: We are explicitly invoking the std::string constructor in order
 			// to avoid ASAN errors on Windows: https://crbug.com/900041
-			json_string_->append(node.GetBool() ? std::string("true") : std::string("false"));
+			json_string_->append(node.GetBool() ? std::string("true") 
+												: std::string("false"));
 			return true;
 
 		case Value::Type::INTEGER:
 			json_string_->append(NumberToString(node.GetInt()));
 			return true;
 
-		case Value::Type::DOUBLE:
-		{
+		case Value::Type::DOUBLE: {
 			const auto value = node.GetDouble();
 			if (omit_double_type_preservation_ &&
 				value <= std::numeric_limits<int64_t>::max() &&
@@ -97,8 +106,7 @@ namespace base {
 			EscapeJSONString(node.GetString(), true, json_string_);
 			return true;
 
-		case Value::Type::LIST:
-		{
+		case Value::Type::LIST: {
 			json_string_->push_back('[');
 			if (pretty_print_)
 				json_string_->push_back(' ');
@@ -127,8 +135,7 @@ namespace base {
 			return result;
 		}
 
-		case Value::Type::DICTIONARY:
-		{
+		case Value::Type::DICTIONARY: {
 			json_string_->push_back('{');
 			if (pretty_print_)
 				json_string_->append(kPrettyPrintLineEnding);

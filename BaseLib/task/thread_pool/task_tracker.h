@@ -88,7 +88,7 @@ namespace base {
 			// be pushed to a task source (if non-delayed) or be added to the
 			// DelayedTaskManager (if delayed). Returns true if this operation is allowed
 			// (the operation should be performed if-and-only-if it is). This method may
-			// also modify metadata on |task| if desired.
+			// also modify meta data on |task| if desired.
 			bool WillPostTask(Task* task, TaskShutdownBehavior shutdown_behavior);
 
 			// Informs this TaskTracker that |task| that is about to be pushed to a task

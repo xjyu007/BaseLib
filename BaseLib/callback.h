@@ -75,7 +75,7 @@ namespace base {
 		  : CallbackBase(std::move(other)) {}
 
 		OnceCallback& operator=(RepeatingCallback<RunType> other) {
-			static_cast<internal::CallbackBase&>(*this) = std::move(other);
+			static_cast<CallbackBase&>(*this) = std::move(other);
 			return *this;
 		}
 
@@ -109,7 +109,7 @@ namespace base {
 		RepeatingCallback(std::nullptr_t) = delete;
 
 		explicit RepeatingCallback(internal::BindStateBase* bind_state)
-		  : internal::CallbackBaseCopyable(bind_state) {}
+		  : CallbackBaseCopyable(bind_state) {}
 
 		// Copyable and movable.
 		RepeatingCallback(const RepeatingCallback&) = default;

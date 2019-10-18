@@ -76,7 +76,8 @@ namespace base::internal {
 
 	WeakPtrBase::~WeakPtrBase() = default;
 
-	WeakPtrBase::WeakPtrBase(const WeakReference& ref, uintptr_t ptr) : ref_(ref), ptr_(ptr) {
+	WeakPtrBase::WeakPtrBase(const WeakReference& ref, uintptr_t ptr) 
+			: ref_(ref), ptr_(ptr) {
 		DCHECK(ptr_);
 	}
 

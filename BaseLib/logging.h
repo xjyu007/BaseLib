@@ -468,7 +468,7 @@ namespace logging {
 		// |message| must be non-null if and only if the check failed.
 		constexpr CheckOpResult(std::string* message) : message_(message) {}
 		// Returns true if the check succeeded.
-		operator bool() const { return !message_; }
+		constexpr operator bool() const { return !message_; }
 		// Returns the message.
 		[[nodiscard]] std::string* message() const { return message_; }
 
@@ -507,11 +507,11 @@ namespace logging {
 #else  // !(OFFICIAL_BUILD && NDEBUG)
 
 // Do as much work as possible out of line to reduce inline code size.
-#define CHECK(condition)                                                      \
+#define CHECK(condition)                                                        \
 	LAZY_STREAM(::logging::LogMessage(__FILE__, __LINE__, #condition).stream(), \
 	          !ANALYZER_ASSUME_TRUE(condition))
 
-#define PCHECK(condition)                                           \
+#define PCHECK(condition)                                             \
 	LAZY_STREAM(PLOG_STREAM(FATAL), !ANALYZER_ASSUME_TRUE(condition)) \
 		<< "Check failed: " #condition ". "
 
@@ -521,12 +521,12 @@ namespace logging {
 // macro is used in an 'if' clause such as:
 // if (a == 1)
 //   CHECK_EQ(2, a);
-#define CHECK_OP(name, op, val1, val2)                                         \
+#define CHECK_OP(name, op, val1, val2)                                           \
 	switch (0) case 0: default:                                                  \
 	if (::logging::CheckOpResult true_if_passed =                                \
-	  ::logging::Check##name##Impl((val1), (val2),                             \
-	                               #val1 " " #op " " #val2))                   \
-	;                                                                           \
+	  ::logging::Check##name##Impl((val1), (val2),                               \
+	                               #val1 " " #op " " #val2))                     \
+	;                                                                            \
 	else                                                                         \
 	::logging::LogMessage(__FILE__, __LINE__, true_if_passed.message()).stream()
 
@@ -539,7 +539,7 @@ namespace logging {
 		base::internal::SupportsOstreamOperator<const T&>::value &&
 		!std::is_function<typename std::remove_pointer<T>::type>::value,
 		void>::type
-		MakeCheckOpValueString(std::ostream* os, const T& v) {
+	MakeCheckOpValueString(std::ostream* os, const T& v) {
 		(*os) << v;
 	}
 
@@ -549,7 +549,7 @@ namespace logging {
 		!base::internal::SupportsOstreamOperator<const T&>::value&&
 		base::internal::SupportsToString<const T&>::value,
 		void>::type
-		MakeCheckOpValueString(std::ostream* os, const T& v) {
+	MakeCheckOpValueString(std::ostream* os, const T& v) {
 		(*os) << v.ToString();
 	}
 
@@ -562,7 +562,7 @@ namespace logging {
 	inline typename std::enable_if<
 		std::is_function<typename std::remove_pointer<T>::type>::value,
 		void>::type
-		MakeCheckOpValueString(std::ostream* os, const T& v) {
+	MakeCheckOpValueString(std::ostream* os, const T& v) {
 		(*os) << reinterpret_cast<const void*>(v);
 	}
 
@@ -573,7 +573,7 @@ namespace logging {
 		!base::internal::SupportsOstreamOperator<const T&>::value&&
 		std::is_enum<T>::value,
 		void>::type
-		MakeCheckOpValueString(std::ostream* os, const T& v) {
+	MakeCheckOpValueString(std::ostream* os, const T& v) {
 		(*os) << static_cast<typename std::underlying_type<T>::type>(v);
 	}
 
@@ -622,19 +622,20 @@ namespace logging {
 	// static analysis builds, blocks analysis of the current path if the
 	// condition is false.
 #define DEFINE_CHECK_OP_IMPL(name, op)                                       \
-	template <class t1, class t2>                                              \
-	inline std::string* Check##name##Impl(const t1& v1, const t2& v2,          \
-	                                      const char* names) {                 \
-		if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
-			return NULL;                                                           \
-		else                                                                     \
-			return ::logging::MakeCheckOpString(v1, v2, names);                    \
-		}                                                                          \
-		inline std::string* Check##name##Impl(int v1, int v2, const char* names) { \
-		if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
-		return NULL;                                                           \
-		else                                                                     \
-		return ::logging::MakeCheckOpString(v1, v2, names);                    \
+	template <class t1, class t2>                                            \
+	constexpr std::string* Check##name##Impl(const t1& v1, const t2& v2,     \
+	                                         const char* names) {            \
+		if (ANALYZER_ASSUME_TRUE(v1 op v2))                                  \
+			return nullptr;                                                  \
+		else                                                                 \
+			return ::logging::MakeCheckOpString(v1, v2, names);              \
+		}                                                                    \
+		constexpr std::string* Check##name##Impl(int v1, int v2,             \
+		                                         const char* names) {        \
+		if (ANALYZER_ASSUME_TRUE(v1 op v2))                                  \
+			return nullptr;                                                  \
+		else                                                                 \
+			return ::logging::MakeCheckOpString(v1, v2, names);              \
 	}
 	DEFINE_CHECK_OP_IMPL(EQ, == )
 	DEFINE_CHECK_OP_IMPL(NE, != )
@@ -684,10 +685,10 @@ namespace logging {
 #endif  // DCHECK_IS_ON()
 
 #define DLOG(severity)                                          \
-  LAZY_STREAM(LOG_STREAM(severity), DLOG_IS_ON(severity))
+    LAZY_STREAM(LOG_STREAM(severity), DLOG_IS_ON(severity))
 
 #define DPLOG(severity)                                         \
-  LAZY_STREAM(PLOG_STREAM(severity), DLOG_IS_ON(severity))
+    LAZY_STREAM(PLOG_STREAM(severity), DLOG_IS_ON(severity))
 
 #define DVLOG(verboselevel) DVLOG_IF(verboselevel, true)
 
@@ -722,12 +723,12 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
 
 #if DCHECK_IS_ON()
 
-#define DCHECK(condition)                                           \
-  LAZY_STREAM(LOG_STREAM(DCHECK), !ANALYZER_ASSUME_TRUE(condition)) \
-      << "Check failed: " #condition ". "
-#define DPCHECK(condition)                                           \
-  LAZY_STREAM(PLOG_STREAM(DCHECK), !ANALYZER_ASSUME_TRUE(condition)) \
-      << "Check failed: " #condition ". "
+#define DCHECK(condition)                                             \
+    LAZY_STREAM(LOG_STREAM(DCHECK), !ANALYZER_ASSUME_TRUE(condition)) \
+        << "Check failed: " #condition ". "
+#define DPCHECK(condition)                                             \
+    LAZY_STREAM(PLOG_STREAM(DCHECK), !ANALYZER_ASSUME_TRUE(condition)) \
+        << "Check failed: " #condition ". "
 
 #else  // DCHECK_IS_ON()
 
@@ -744,14 +745,14 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
 //   DCHECK_EQ(2, a);
 #if DCHECK_IS_ON()
 
-#define DCHECK_OP(name, op, val1, val2)                                \
-  switch (0) case 0: default:                                          \
-  if (::logging::CheckOpResult true_if_passed =                        \
-      ::logging::Check##name##Impl((val1), (val2),                     \
-                                   #val1 " " #op " " #val2))           \
-   ;                                                                   \
-  else                                                                 \
-    ::logging::LogMessage(__FILE__, __LINE__, ::logging::LOG_DCHECK,   \
+#define DCHECK_OP(name, op, val1, val2)                                  \
+    switch (0) case 0: default:                                          \
+    if (::logging::CheckOpResult true_if_passed =                        \
+        ::logging::Check##name##Impl((val1), (val2),                     \
+                                     #val1 " " #op " " #val2))           \
+    ;                                                                    \
+    else                                                                 \
+    ::logging::LogMessage(__FILE__, __LINE__, ::logging::LOG_DCHECK,     \
                           true_if_passed.message()).stream()
 
 #else  // DCHECK_IS_ON()
@@ -913,14 +914,14 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
 	BASE_EXPORT void RawLog(int level, const char* message);
 
 #define RAW_LOG(level, message) \
-  ::logging::RawLog(::logging::LOG_##level, message)
+    ::logging::RawLog(::logging::LOG_##level, message)
 
-#define RAW_CHECK(condition)                               \
-  do {                                                     \
-    if (!(condition))                                      \
-      ::logging::RawLog(::logging::LOG_FATAL,              \
-                        "Check failed: " #condition "\n"); \
-  } while (0)
+#define RAW_CHECK(condition)                                     \
+    do {                                                         \
+        if(!(condition))                                         \
+            ::logging::RawLog(::logging::LOG_FATAL,              \
+                              "Check failed: " #condition "\n"); \
+    } while (0)
 
 	// Returns true if logging to file is enabled.
 	BASE_EXPORT bool IsLoggingToFileEnabled();
@@ -957,10 +958,10 @@ namespace std {
 #define NOTIMPLEMENTED_MSG "NOT IMPLEMENTED"
 
 #define NOTIMPLEMENTED() DLOG(ERROR) << NOTIMPLEMENTED_MSG
-#define NOTIMPLEMENTED_LOG_ONCE()                       \
-  do {                                                  \
-    static bool logged_once = false;                    \
-    DLOG_IF(ERROR, !logged_once) << NOTIMPLEMENTED_MSG; \
-    logged_once = true;                                 \
-  } while (0);                                          \
-  EAT_STREAM_PARAMETERS
+#define NOTIMPLEMENTED_LOG_ONCE()                           \
+    do {                                                    \
+        static bool logged_once = false;                    \
+        DLOG_IF(ERROR, !logged_once) << NOTIMPLEMENTED_MSG; \
+        logged_once = true;                                 \
+    } while (0);                                            \
+    EAT_STREAM_PARAMETERS

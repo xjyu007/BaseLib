@@ -14,18 +14,12 @@
 #include "logging.h"
 #include "path_service.h"
 #include "strings/string_util.h"
+#include "strings/sys_string_conversions.h"
 #include "build_config.h"
 #include "unicode/putil.h"
 #include "unicode/udata.h"
 
-namespace base::i18n
-{
-
-#if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_SHARED
-#define ICU_UTIL_DATA_SYMBOL "icudt" U_ICU_VERSION_SHORT "_dat"
-#define ICU_UTIL_DATA_SHARED_MODULE_NAME "icudt.dll"
-#endif
-
+namespace base::i18n {
 		namespace {
 #if DCHECK_IS_ON()
 			// Assert that we are not called more than once.  Even though calling this

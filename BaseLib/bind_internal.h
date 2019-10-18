@@ -35,7 +35,7 @@
 //  FunctorTraits<> -- Type traits used to determine the correct RunType and
 //                     invocation manner for a Functor.  This is where function
 //                     signature adapters are applied.
-//  InvokeHelper<> -- Take a Functor + arguments and actully invokes it.
+//  InvokeHelper<> -- Take a Functor + arguments and actually invokes it.
 //                    Handle the differing syntaxes needed for WeakPtr<>
 //                    support.  This is separate from Invoker to avoid creating
 //                    multiple version of Invoker<>.
@@ -539,7 +539,7 @@ namespace base {
 		template <typename ReturnType>
 		struct InvokeHelper<true, ReturnType> {
 			// WeakCalls are only supported for functions with a void return type.
-			// Otherwise, the function result would be undefined if the the WeakPtr<>
+			// Otherwise, the function result would be undefined if the WeakPtr<>
 			// is invalidated.
 			static_assert(std::is_void<ReturnType>::value,
 				"weak_ptrs can only bind to methods without return values");
@@ -594,9 +594,9 @@ namespace base {
 		private:
 			template <typename Functor, typename BoundArgsTuple, size_t... indices>
 			static inline R RunImpl(Functor&& functor,
-				BoundArgsTuple&& bound,
-				std::index_sequence<indices...>,
-				UnboundArgs&& ... unbound_args) {
+									BoundArgsTuple&& bound,
+									std::index_sequence<indices...>,
+									UnboundArgs&& ... unbound_args) {
 				static constexpr bool is_method = MakeFunctorTraits<Functor>::is_method;
 
 				using DecayedArgsTuple = std::decay_t<BoundArgsTuple>;
@@ -655,9 +655,9 @@ namespace base {
 		// Used by QueryCancellationTraits below.
 		template <typename Functor, typename BoundArgsTuple, size_t... indices>
 		bool QueryCancellationTraitsImpl(BindStateBase::CancellationQueryMode mode,
-			const Functor& functor,
-			const BoundArgsTuple& bound_args,
-			std::index_sequence<indices...>) {
+										 const Functor& functor,
+										 const BoundArgsTuple& bound_args,
+										 std::index_sequence<indices...>) {
 			switch (mode) {
 			case BindStateBase::IS_CANCELLED:
 				return CallbackCancellationTraits<Functor, BoundArgsTuple>::IsCancelled(
@@ -674,7 +674,7 @@ namespace base {
 		// true if the callback |base| represents is canceled.
 		template <typename BindStateType>
 		bool QueryCancellationTraits(const BindStateBase* base,
-			BindStateBase::CancellationQueryMode mode) {
+									 BindStateBase::CancellationQueryMode mode) {
 			const BindStateType* storage = static_cast<const BindStateType*>(base);
 			static constexpr size_t num_bound_args =
 				std::tuple_size<decltype(storage->bound_args_)>::value;
@@ -919,8 +919,8 @@ namespace base {
 		Functor,
 		std::tuple<BoundArgs...>,
 		std::enable_if_t<
-		internal::IsWeakMethod<internal::FunctorTraits<Functor>::is_method,
-		BoundArgs...>::value>> {
+			internal::IsWeakMethod<internal::FunctorTraits<Functor>::is_method,
+			BoundArgs...>::value>> {
 		static constexpr bool is_cancellable = true;
 
 		template <typename Receiver, typename... Args>
@@ -941,7 +941,7 @@ namespace base {
 	// Specialization for a nested bind.
 	template <typename Signature, typename... BoundArgs>
 	struct CallbackCancellationTraits<OnceCallback<Signature>,
-		std::tuple<BoundArgs...>> {
+									  std::tuple<BoundArgs...>> {
 		static constexpr bool is_cancellable = true;
 
 		template <typename Functor>
@@ -957,7 +957,7 @@ namespace base {
 
 	template <typename Signature, typename... BoundArgs>
 	struct CallbackCancellationTraits<RepeatingCallback<Signature>,
-		std::tuple<BoundArgs...>> {
+									  std::tuple<BoundArgs...>> {
 		static constexpr bool is_cancellable = true;
 
 		template <typename Functor>

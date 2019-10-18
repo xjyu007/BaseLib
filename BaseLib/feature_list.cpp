@@ -27,6 +27,17 @@ namespace base {
 		// Tracks whether the FeatureList instance was initialized via an accessor.
 		bool g_initialized_from_accessor = false;
 
+#if DCHECK_IS_ON()
+		const char* g_reason_overrides_disallowed = nullptr;
+
+		void DCheckOverridesAllowed() {
+			const bool feature_overrides_allowed = !g_reason_overrides_disallowed;
+			DCHECK(feature_overrides_allowed) << g_reason_overrides_disallowed;
+		}
+#else
+		void DCheckOverridesAllowed() {}
+#endif
+
 		// An allocator entry for a feature in shared memory. The FeatureEntry is
 		// followed by a base::Pickle object that contains the feature and trial name.
 		struct FeatureEntry {
@@ -83,6 +94,23 @@ namespace base {
 	FeatureList::FeatureList() = default;
 
 	FeatureList::~FeatureList() = default;
+
+	FeatureList::ScopedDisallowOverrides::ScopedDisallowOverrides(
+	    const char* reason)
+#if DCHECK_IS_ON()
+	    : previous_reason_(g_reason_overrides_disallowed) {
+	  g_reason_overrides_disallowed = reason;
+	}
+#else
+	{
+	}
+#endif
+
+FeatureList::ScopedDisallowOverrides::~ScopedDisallowOverrides() {
+#if DCHECK_IS_ON()
+  g_reason_overrides_disallowed = previous_reason_;
+#endif
+}
 
 	void FeatureList::InitializeFromCommandLine(
 		const std::string& enable_features,
@@ -383,11 +411,11 @@ namespace base {
 									   OverrideState overridden_state, 
 									   FieldTrial* field_trial) {
 		DCHECK(!initialized_);
+		DCheckOverridesAllowed();
 		if (field_trial) {
 			DCHECK(IsValidFeatureOrFieldTrialName(field_trial->trial_name())) 
 				<< field_trial->trial_name();
 		}
-		
 		if (feature_name.front() == '*') {
 			feature_name = feature_name.substr(1);
 			overridden_state = OVERRIDE_USE_DEFAULT;

@@ -15,6 +15,7 @@
 #include "logging.h"
 #include "macros.h"
 #include "stl_util.h"
+#include "compiler_specific.h"
 
 namespace base {
 #undef max
@@ -281,8 +282,7 @@ namespace base {
 																	 T,
 																	 Extent> = false>
 			constexpr explicit span(Container & container) noexcept
-				: span(base::data(container), base::size(container)) {
-		}
+				: span(base::data(container), base::size(container)) {}
 
 		template <typename Container,
 			internal::EnableIfSpanCompatibleContainerAndSpanIsDynamic<
@@ -290,8 +290,7 @@ namespace base {
 				T,
 				Extent> = false>
 			constexpr span(const Container & container) noexcept
-				: span(base::data(container), base::size(container)) {
-		}
+				: span(base::data(container), base::size(container)) {}
 
 		template <
 			typename Container,
@@ -299,8 +298,7 @@ namespace base {
 																	 T,
 																	 Extent> = false>
 			constexpr explicit span(const Container & container) noexcept
-				: span(base::data(container), base::size(container)) {
-		}
+				: span(base::data(container), base::size(container)) {}
 
 		constexpr span(const span& other) noexcept = default;
 
@@ -313,8 +311,7 @@ namespace base {
 			typename =
 			internal::EnableIfLegalSpanConversion<U, OtherExtent, T, Extent>>
 			constexpr span(const span<U, OtherExtent> & other)
-			: span(other.data(), other.size()) {
-		}
+			: span(other.data(), other.size()) {}
 
 		constexpr span& operator=(const span& other) noexcept = default;
 		~span() noexcept = default;
@@ -378,7 +375,7 @@ namespace base {
 		// [span.obs], span observers
 		constexpr size_t size() const noexcept { return ExtentStorage::size(); }
 		constexpr size_t size_bytes() const noexcept { return size() * sizeof(T); }
-		constexpr bool empty() const noexcept {
+		constexpr bool empty() const noexcept WARN_UNUSED_RESULT {
 			return size() == 0;
 		}
 
@@ -406,8 +403,10 @@ namespace base {
 		constexpr T* data() const noexcept { return data_; }
 
 		// [span.iter], span iterator support
-		iterator begin() const noexcept { return iterator(data_, data_ + size()); }
-		iterator end() const noexcept {
+		constexpr iterator begin() const noexcept {
+			return iterator(data_, data_ + size());
+		}
+		constexpr iterator end() const noexcept {
 			return iterator(data_, data_ + size(), data_ + size());
 		}
 

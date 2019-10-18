@@ -320,7 +320,7 @@ namespace base {
 		id_event_.Signal();
 
 		// Complete the initialization of our Thread object.
-		PlatformThread::SetName(name_.c_str());
+		PlatformThread::SetName(name_);
 		ANNOTATE_THREAD_NAME(name_.c_str());  // Tell the name to race detector.
 
 		// Lazily initialize the |message_loop| so that it can run on this thread.

@@ -23,10 +23,6 @@ namespace base::internal {
 			// NORMAL priority to avoid priority inversions on shutdown (ThreadPoolImpl
 			// increases BACKGROUND threads priority to NORMAL on shutdown while resolving
 			// remaining shutdown blocking tasks).
-			//
-			// This is ignored on Android, because it doesn't have a clean shutdown phase.
-			if (!PlatformThread::CanIncreaseThreadPriority(ThreadPriority::NORMAL))
-				return false;
 
 			return true;
 		}

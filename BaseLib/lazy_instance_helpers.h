@@ -54,7 +54,7 @@ namespace base {
 		// worsened by https://chromium-review.googlesource.com/c/chromium/src/+/868013
 		// and caught then as https://crbug.com/804034.
 		template <typename Type>
-		Type* GetOrCreateLazyPointer(subtle::AtomicWord* state,
+		Type* GetOrCreateLazyPointer(AtomicWord* state,
 			Type* (*creator_func)(void*),
 			void* creator_arg,
 			void (*destructor)(void*),
@@ -64,7 +64,7 @@ namespace base {
 
 			// If any bit in the created mask is true, the instance has already been
 			// fully constructed.
-			constexpr subtle::AtomicWord kLazyInstanceCreatedMask =
+			constexpr AtomicWord kLazyInstanceCreatedMask =
 				~internal::kLazyInstanceStateCreating;
 
 			// We will hopefully have fast access when the instance is already created.
@@ -73,20 +73,20 @@ namespace base {
 			// has acquire memory ordering as a thread which sees |state| > creating needs
 			// to acquire visibility over the associated data. Pairing Release_Store is in
 			// CompleteLazyInstance().
-			subtle::AtomicWord instance = subtle::Acquire_Load(state);
+			AtomicWord instance = Acquire_Load(state);
 			if (!(instance & kLazyInstanceCreatedMask)) {
 				if (internal::NeedsLazyInstance(state)) {
 					// This thread won the race and is now responsible for creating the
 					// instance and storing it back into |state|.
 					instance =
-						reinterpret_cast<subtle::AtomicWord>((*creator_func)(creator_arg));
+						reinterpret_cast<AtomicWord>((*creator_func)(creator_arg));
 					internal::CompleteLazyInstance(state, instance, destructor,
 						destructor_arg);
 				} else {
 					// This thread lost the race but now has visibility over the constructed
 					// instance (NeedsLazyInstance() doesn't return until the constructing
 					// thread releases the instance via CompleteLazyInstance()).
-					instance = subtle::Acquire_Load(state);
+					instance = Acquire_Load(state);
 					DCHECK(instance & kLazyInstanceCreatedMask);
 				}
 			}

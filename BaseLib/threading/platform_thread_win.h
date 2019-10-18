@@ -1,8 +1,8 @@
-#pragma once
-
 // Copyright 2018 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#pragma once
 
 #include "threading/platform_thread.h"
 
@@ -23,10 +23,6 @@ namespace base {
 	}  // namespace features
 
 	namespace internal {
-
-		// The value returned by ::GetThreadPriority() after background thread mode is
-		// enabled on Windows 7. Exposed for unit tests.
-		constexpr int kWin7BackgroundThreadModePriority = 4;
 
 		// Assert that the memory priority of |thread| is |memory_priority|. No-op on
 		// Windows 7 because ::GetThreadInformation() is not available. Exposed for unit

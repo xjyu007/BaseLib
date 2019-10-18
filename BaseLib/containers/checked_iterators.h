@@ -10,6 +10,7 @@
 
 #include "containers/util.h"
 #include "logging.h"
+#include "compiler_specific.h"
 
 namespace base {
 
@@ -26,15 +27,16 @@ namespace base {
 		template <typename U>
 		friend class CheckedContiguousIterator;
 
-		CheckedContiguousIterator() = default;
-		CheckedContiguousIterator(T* start, const T* end)
+		constexpr CheckedContiguousIterator() = default;
+		constexpr CheckedContiguousIterator(T* start, const T* end)
 			: CheckedContiguousIterator(start, start, end) {}
-		CheckedContiguousIterator(const T* start, T* current, const T* end)
+		constexpr CheckedContiguousIterator(const T* start, T* current, const T* end)
 			: start_(start), current_(current), end_(end) {
-			CHECK(start <= current);
-			CHECK(current <= end);
+			CHECK_LE(start, current);
+			CHECK_LE(current, end);
 		}
-		CheckedContiguousIterator(const CheckedContiguousIterator& other) = default;
+		constexpr CheckedContiguousIterator(const CheckedContiguousIterator& other) =
+			default;
 
 		// Converting constructor allowing conversions like CRAI<T> to CRAI<const T>,
 		// but disallowing CRAI<const T> to CRAI<T> or CRAI<Derived> to CRAI<Base>,
@@ -44,75 +46,75 @@ namespace base {
 		template <
 			typename U,
 			std::enable_if_t<std::is_convertible<U (*)[], T (*)[]>::value>* = nullptr>
-		CheckedContiguousIterator(const CheckedContiguousIterator<U>& other)
+		constexpr CheckedContiguousIterator(const CheckedContiguousIterator<U>& other)
 			: start_(other.start_), current_(other.current_), end_(other.end_) {
 			// We explicitly don't delegate to the 3-argument constructor here. Its
 			// CHECKs would be redundant, since we expect |other| to maintain its own
 			// invariant. However, DCHECKs never hurt anybody. Presumably.
-			DCHECK(other.start_ <= other.current_);
-			DCHECK(other.current_ <= other.end_);
+			DCHECK_LE(other.start_, other.current_);
+			DCHECK_LE(other.current_, other.end_);
 		}
 
 		~CheckedContiguousIterator() = default;
 
-		CheckedContiguousIterator& operator=(const CheckedContiguousIterator& other) =
-				default;
+		constexpr CheckedContiguousIterator& operator=(
+			const CheckedContiguousIterator& other) = default;
 
-		bool operator==(const CheckedContiguousIterator& other) const {
+		constexpr bool operator==(const CheckedContiguousIterator& other) const {
 			CheckComparable(other);
 			return current_ == other.current_;
 		}
 
-		bool operator!=(const CheckedContiguousIterator& other) const {
+		constexpr bool operator!=(const CheckedContiguousIterator& other) const {
 			CheckComparable(other);
 			return current_ != other.current_;
 		}
 
-		bool operator<(const CheckedContiguousIterator& other) const {
+		constexpr bool operator<(const CheckedContiguousIterator& other) const {
 			CheckComparable(other);
 			return current_ < other.current_;
 		}
 
-		bool operator<=(const CheckedContiguousIterator& other) const {
+		constexpr bool operator<=(const CheckedContiguousIterator& other) const {
 			CheckComparable(other);
 			return current_ <= other.current_;
 		}
 
-		bool operator>(const CheckedContiguousIterator& other) const {
+		constexpr bool operator>(const CheckedContiguousIterator& other) const {
 			CheckComparable(other);
 			return current_ > other.current_;
 		}
 
-		bool operator>=(const CheckedContiguousIterator& other) const {
+		constexpr bool operator>=(const CheckedContiguousIterator& other) const {
 			CheckComparable(other);
 			return current_ >= other.current_;
 		}
 
-		CheckedContiguousIterator& operator++() {
-			CHECK(current_ != end_);
+		constexpr CheckedContiguousIterator& operator++() {
+			CHECK_NE(current_, end_);
 			++current_;
 			return *this;
 		}
 
-		CheckedContiguousIterator operator++(int) {
+		constexpr CheckedContiguousIterator operator++(int) {
 			CheckedContiguousIterator old = *this;
 			++* this;
 			return old;
 		}
 
-		CheckedContiguousIterator& operator--() {
-			CHECK(current_ != start_);
+		constexpr CheckedContiguousIterator& operator--() {
+			CHECK_NE(current_, start_);
 			--current_;
 			return *this;
 		}
 
-		CheckedContiguousIterator& operator--(int) {
+		constexpr CheckedContiguousIterator& operator--(int) {
 			CheckedContiguousIterator old = *this;
 			--* this;
 			return old;
 		}
 
-		CheckedContiguousIterator& operator+=(difference_type rhs) {
+		constexpr CheckedContiguousIterator& operator+=(difference_type rhs) {
 			if (rhs > 0) {
 				CHECK_LE(rhs, end_ - current_);
     		} else {
@@ -122,13 +124,13 @@ namespace base {
 			return *this;
 		}
 
-		CheckedContiguousIterator operator+(difference_type rhs) const {
+		constexpr CheckedContiguousIterator operator+(difference_type rhs) const {
 			CheckedContiguousIterator it = *this;
 			it += rhs;
 			return it;
 		}
 
-		CheckedContiguousIterator& operator-=(difference_type rhs) {
+		constexpr CheckedContiguousIterator& operator-=(difference_type rhs) {
 			if (rhs < 0) {
 				CHECK_LE(rhs, end_ - current_);
     		} else {
@@ -138,30 +140,31 @@ namespace base {
 			return *this;
 		}
 
-		CheckedContiguousIterator operator-(difference_type rhs) const {
+		constexpr CheckedContiguousIterator operator-(difference_type rhs) const {
 			CheckedContiguousIterator it = *this;
 			it -= rhs;
 			return it;
 		}
 
-		friend difference_type operator-(const CheckedContiguousIterator& lhs,
+		constexpr friend difference_type operator-(
+										 const CheckedContiguousIterator& lhs,
 										 const CheckedContiguousIterator& rhs) {
-			CHECK(lhs.start_ == rhs.start_);
-			CHECK(lhs.end_ == rhs.end_);
+			CHECK_EQ(lhs.start_, rhs.start_);
+			CHECK_EQ(lhs.end_, rhs.end_);
 			return lhs.current_ - rhs.current_;
 		}
 
-		reference operator*() const {
-			CHECK(current_ != end_);
+		constexpr reference operator*() const {
+			CHECK_NE(current_, end_);
 			return *current_;
 		}
 
-		pointer operator->() const {
-			CHECK(current_ != end_);
+		constexpr pointer operator->() const {
+			CHECK_NE(current_, end_);
 			return current_;
 		}
 
-		reference operator[](difference_type rhs) const {
+		constexpr reference operator[](difference_type rhs) const {
 			CHECK_GE(rhs, 0);
 			CHECK_LT(rhs, end_ - current_);
 			return current_[rhs];
@@ -169,7 +172,8 @@ namespace base {
 
 		static bool IsRangeMoveSafe(const CheckedContiguousIterator& from_begin,
 		                            const CheckedContiguousIterator& from_end,
-		                            const CheckedContiguousIterator& to){
+		                            const CheckedContiguousIterator& to)
+				WARN_UNUSED_RESULT {
 			if (from_end < from_begin)
 				return false;
 			const auto from_begin_uintptr = get_uintptr(from_begin.current_);
@@ -183,7 +187,7 @@ namespace base {
 		}
 
 	private:
-		void CheckComparable(const CheckedContiguousIterator& other) const {
+		constexpr void CheckComparable(const CheckedContiguousIterator& other) const {
 			CHECK_EQ(start_, other.start_);
 			CHECK_EQ(end_, other.end_);
 		}

@@ -7,6 +7,7 @@
 #include "debug_/activity_tracker.h"
 #include "debug_/alias.h"
 #include "debug_/crash_logging.h"
+#include "debug_/profiler.h"
 #include "logging.h"
 #include "metrics/histogram_macros.h"
 #include "process/memory.h"
@@ -25,9 +26,9 @@ namespace base {
 
 	namespace {
 
-		// The value returned by ::GetThreadPriority() after background thread mode is
-		// enabled on Windows 8+.
-		constexpr int kWin8AboveBackgroundThreadModePriority = -4;
+	// The most common value returned by ::GetThreadPriority() after background
+	// thread mode is enabled on Windows 7.
+		constexpr int kWin7BackgroundThreadModePriority = 4;
 
 		// The information on how to set the thread name comes from
 		// a MSDN article: http://msdn2.microsoft.com/en-us/library/xcb2z8hs.aspx
@@ -113,7 +114,7 @@ namespace base {
 			PlatformThread::Delegate* delegate,
 			PlatformThreadHandle* out_thread_handle,
 			ThreadPriority priority) {
-			unsigned int flags;
+			unsigned int flags = 0;
 			if (stack_size > 0) {
 				flags = STACK_SIZE_PARAM_IS_A_RESERVATION;
 #if defined(ARCH_CPU_32_BITS)
@@ -159,7 +160,7 @@ namespace base {
 					static auto* last_error_crash_key = AllocateCrashKeyString(
 						"create_thread_last_error", debug::CrashKeySize::Size32);
 					SetCrashKeyString(last_error_crash_key,
-											 NumberToString(last_error));
+									  		 NumberToString(last_error));
 				    break;
 				}
 
@@ -319,11 +320,6 @@ namespace base {
 	}
 
 	// static
-	bool PlatformThread::CanIncreaseThreadPriority(ThreadPriority priority) {
-		return true;
-	}
-
-	// static
 	void PlatformThread::SetCurrentThreadPriorityImpl(ThreadPriority priority) {
 		// A DCHECK is triggered on FeatureList initialization if the state of a
 		// feature has been checked before. We only want to trigger that DCHECK if the
@@ -396,31 +392,59 @@ namespace base {
 
 	// static
 	ThreadPriority PlatformThread::GetCurrentThreadPriority() {
+		static_assert(
+			THREAD_PRIORITY_IDLE < 0,
+			"THREAD_PRIORITY_IDLE is >= 0 and will incorrectly cause errors.");
+		static_assert(
+			THREAD_PRIORITY_LOWEST < 0,
+			"THREAD_PRIORITY_LOWEST is >= 0 and will incorrectly cause errors.");
+		static_assert(THREAD_PRIORITY_BELOW_NORMAL < 0,
+					  "THREAD_PRIORITY_BELOW_NORMAL is >= 0 and will incorrectly "
+					  "cause errors.");
+		static_assert(
+			THREAD_PRIORITY_NORMAL == 0,
+			"The logic below assumes that THREAD_PRIORITY_NORMAL is zero. If it is "
+			"not, ThreadPriority::BACKGROUND may be incorrectly detected.");
+		static_assert(THREAD_PRIORITY_ABOVE_NORMAL >= 0,
+					  "THREAD_PRIORITY_ABOVE_NORMAL is < 0 and will incorrectly be "
+					  "translated to ThreadPriority::BACKGROUND.");
+		static_assert(THREAD_PRIORITY_HIGHEST >= 0,
+					  "THREAD_PRIORITY_HIGHEST is < 0 and will incorrectly be "
+					  "translated to ThreadPriority::BACKGROUND.");
+		static_assert(THREAD_PRIORITY_TIME_CRITICAL >= 0,
+					  "THREAD_PRIORITY_TIME_CRITICAL is < 0 and will incorrectly be "
+					  "translated to ThreadPriority::BACKGROUND.");
+		static_assert(THREAD_PRIORITY_ERROR_RETURN >= 0,
+					  "THREAD_PRIORITY_ERROR_RETURN is < 0 and will incorrectly be "
+					  "translated to ThreadPriority::BACKGROUND.");
+
 		const auto priority = 
 			GetThreadPriority(CurrentHandle().platform_handle());
 
-		switch (priority) {
-		case THREAD_PRIORITY_IDLE:
-		case internal::kWin7BackgroundThreadModePriority:
-			DCHECK_EQ(win::GetVersion(), win::Version::WIN7);
-			FALLTHROUGH;
-		case kWin8AboveBackgroundThreadModePriority:
-		case THREAD_PRIORITY_LOWEST:
-		case THREAD_PRIORITY_BELOW_NORMAL:
+		// Negative values represent a background priority. We have observed -3, -4,
+		// -6 when THREAD_MODE_BACKGROUND_* is used. THREAD_PRIORITY_IDLE,
+		// THREAD_PRIORITY_LOWEST and THREAD_PRIORITY_BELOW_NORMAL are other possible
+		// negative values.
+		if (priority < THREAD_PRIORITY_NORMAL)
 			return ThreadPriority::BACKGROUND;
-		case THREAD_PRIORITY_NORMAL:
-			return ThreadPriority::NORMAL;
-		case THREAD_PRIORITY_ABOVE_NORMAL:
-		case THREAD_PRIORITY_HIGHEST:
-			return ThreadPriority::DISPLAY;
-		case THREAD_PRIORITY_TIME_CRITICAL:
-			return ThreadPriority::REALTIME_AUDIO;
-		case THREAD_PRIORITY_ERROR_RETURN:
-			DPCHECK(false) << "GetThreadPriority error";
-		default: ;
+
+		switch (priority) {
+			case kWin7BackgroundThreadModePriority:
+				DCHECK_EQ(win::GetVersion(), win::Version::WIN7);
+				return ThreadPriority::BACKGROUND;
+			case THREAD_PRIORITY_NORMAL:
+				return ThreadPriority::NORMAL;
+			case THREAD_PRIORITY_ABOVE_NORMAL:
+			case THREAD_PRIORITY_HIGHEST:
+				return ThreadPriority::DISPLAY;
+			case THREAD_PRIORITY_TIME_CRITICAL:
+				return ThreadPriority::REALTIME_AUDIO;
+			case THREAD_PRIORITY_ERROR_RETURN:
+				DPCHECK(false) << "::GetThreadPriority error";
+			default: ;
 		}
 
-		NOTREACHED() << "GetCurrentThreadPriority returned " << priority << ".";
+		NOTREACHED() << "::GetThreadPriority returned " << priority << ".";
 		return ThreadPriority::NORMAL;
 	}
 

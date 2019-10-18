@@ -23,7 +23,7 @@
 namespace base::sequence_manager {
 
 	// static
-	const char* TaskQueue::PriorityToString(TaskQueue::QueuePriority priority) {
+	const char* TaskQueue::PriorityToString(QueuePriority priority) {
 		switch (priority) {
 		case kControlPriority:
 			return "control";
@@ -211,8 +211,8 @@ namespace base::sequence_manager {
 		void TaskQueueImpl::PostTask(PostedTask task) {
 			CurrentThread current_thread =
 				associated_thread_->IsBoundToCurrentThread()
-				? TaskQueueImpl::CurrentThread::kMainThread
-				: TaskQueueImpl::CurrentThread::kNotMainThread;
+				? CurrentThread::kMainThread
+				: CurrentThread::kNotMainThread;
 
 #if DCHECK_IS_ON()
 			MaybeLogPostTask(&task);
@@ -239,7 +239,7 @@ namespace base::sequence_manager {
 		void TaskQueueImpl::MaybeAdjustTaskDelay(PostedTask* task,
 			CurrentThread current_thread) {
 #if DCHECK_IS_ON()
-			if (current_thread == TaskQueueImpl::CurrentThread::kNotMainThread) {
+			if (current_thread == CurrentThread::kNotMainThread) {
 				base::internal::CheckedAutoLock lock(any_thread_lock_);
 				// Add a per-priority delay to cross thread tasks. This can help diagnose
 				// scheduler induced flakiness by making things flake most of the time.
@@ -279,7 +279,7 @@ namespace base::sequence_manager {
 				const auto sequence_number = sequence_manager_->GetNextSequenceNumber();
 				const auto was_immediate_incoming_queue_empty =
 					any_thread_.immediate_incoming_queue.empty();
-				base::TimeTicks delayed_run_time;
+				TimeTicks delayed_run_time;
 				// The desired run time is only required when delayed fence is allowed.
 				// Avoid evaluating it when not required.
 			    //
@@ -300,7 +300,7 @@ namespace base::sequence_manager {
 
 #if DCHECK_IS_ON()
 				any_thread_.immediate_incoming_queue.back().cross_thread_ =
-					(current_thread == TaskQueueImpl::CurrentThread::kNotMainThread);
+					(current_thread == CurrentThread::kNotMainThread);
 #endif
 
 				sequence_manager_->WillQueueTask(
@@ -886,8 +886,8 @@ namespace base::sequence_manager {
 
 		// static
 		void TaskQueueImpl::QueueAsValueInto(const TaskDeque& queue,
-			TimeTicks now,
-			trace_event::TracedValue* state) {
+											 TimeTicks now,
+											 trace_event::TracedValue* state) {
 			for (const Task& task : queue) {
 				TaskAsValueInto(task, now, state);
 			}
@@ -895,8 +895,8 @@ namespace base::sequence_manager {
 
 		// static
 		void TaskQueueImpl::TaskAsValueInto(const Task& task,
-			TimeTicks now,
-			trace_event::TracedValue* state) {
+											TimeTicks now,
+											trace_event::TracedValue* state) {
 			state->BeginDictionary();
 			state->SetString("posted_from", task.posted_from.ToString());
 			if (task.enqueue_order_set())
@@ -984,7 +984,7 @@ namespace base::sequence_manager {
 			if (should_report) {
 				bool tracing_enabled = false;
 				//TRACE_EVENT_CATEGORY_GROUP_ENABLED(TRACE_DISABLED_BY_DEFAULT("lifecycles"),
-				//										&tracing_enabled);
+				//									 &tracing_enabled);
 				if (!tracing_enabled)
 					return;
 			}
@@ -1105,8 +1105,8 @@ namespace base::sequence_manager {
 			}
 
 			const auto resolution = has_pending_high_resolution_tasks()
-				? WakeUpResolution::kHigh
-				: WakeUpResolution::kLow;
+									? WakeUpResolution::kHigh
+									: WakeUpResolution::kLow;
 			main_thread_only().time_domain->SetNextWakeUpForQueue(this, wake_up, 
 																  resolution, lazy_now);
 		}
@@ -1136,7 +1136,7 @@ namespace base::sequence_manager {
 		}
 
 		void TaskQueueImpl::SetOnTaskReadyHandler(
-			TaskQueueImpl::OnTaskReadyHandler handler) {
+			OnTaskReadyHandler handler) {
 			DCHECK(should_notify_observers_ || handler.is_null());
 			main_thread_only().on_task_ready_handler = handler;
 
@@ -1146,7 +1146,7 @@ namespace base::sequence_manager {
 		}
 
 		void TaskQueueImpl::SetOnTaskStartedHandler(
-			TaskQueueImpl::OnTaskStartedHandler handler) {
+			OnTaskStartedHandler handler) {
 			DCHECK(should_notify_observers_ || handler.is_null());
 			main_thread_only().on_task_started_handler = std::move(handler);
 		}
@@ -1158,7 +1158,7 @@ namespace base::sequence_manager {
 		}
 
 		void TaskQueueImpl::SetOnTaskCompletedHandler(
-			TaskQueueImpl::OnTaskCompletedHandler handler) {
+			OnTaskCompletedHandler handler) {
 			DCHECK(should_notify_observers_ || handler.is_null());
 			main_thread_only().on_task_completed_handler = std::move(handler);
 		}
@@ -1241,7 +1241,7 @@ namespace base::sequence_manager {
 
 			auto tracing_enabled = false;
 			//TRACE_EVENT_CATEGORY_GROUP_ENABLED(TRACE_DISABLED_BY_DEFAULT("lifecycles"),
-			//		&tracing_enabled);
+			//									 &tracing_enabled);
 			if (!tracing_enabled)
 				return;
 
@@ -1250,7 +1250,7 @@ namespace base::sequence_manager {
 				return;
 			}
 
-			auto time_since_disabled =
+			const auto time_since_disabled =
 				main_thread_only().time_domain->Now() -
 				main_thread_only().disabled_time.value();
 
@@ -1258,7 +1258,7 @@ namespace base::sequence_manager {
 		}
 
 		bool TaskQueueImpl::ShouldReportIpcTaskQueuedFromAnyThreadLocked(
-			base::TimeDelta* time_since_disabled) {
+			TimeDelta* time_since_disabled) {
 			// It's possible that tracing was just enabled and no disabled time has been
 			// stored. In that case, skip emitting the event.
 			if (!any_thread_.tracing_only.disabled_time)
@@ -1286,7 +1286,7 @@ namespace base::sequence_manager {
 			if (!tracing_enabled)
 				return;
 
-			base::TimeDelta time_since_disabled;
+			TimeDelta time_since_disabled;
 			if (ShouldReportIpcTaskQueuedFromAnyThreadLocked(&time_since_disabled))
 				ReportIpcTaskQueued(pending_task, task_queue_name, time_since_disabled);
 		}
@@ -1299,11 +1299,11 @@ namespace base::sequence_manager {
 
 			bool tracing_enabled = false;
 			//TRACE_EVENT_CATEGORY_GROUP_ENABLED(TRACE_DISABLED_BY_DEFAULT("lifecycles"),
-			//									&tracing_enabled);
+			//									 &tracing_enabled);
 			if (!tracing_enabled)
 				return;
 
-			base::TimeDelta time_since_disabled;
+			TimeDelta time_since_disabled;
 			bool should_report = false;
 			{
 				base::internal::CheckedAutoLock lock(any_thread_lock_);
@@ -1317,7 +1317,7 @@ namespace base::sequence_manager {
 		void TaskQueueImpl::ReportIpcTaskQueued(
 			Task* pending_task,
 			const char* task_queue_name,
-			const base::TimeDelta& time_since_disabled) {
+			const TimeDelta& time_since_disabled) {
 			// Use a begin/end event pair so we can get 4 fields in the event.
 			/*TRACE_EVENT_BEGIN2(TRACE_DISABLED_BY_DEFAULT("lifecycles"),
 								"task_posted_to_disabled_queue", "task_queue_name",

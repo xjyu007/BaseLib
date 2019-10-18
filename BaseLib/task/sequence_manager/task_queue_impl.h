@@ -26,8 +26,6 @@
 #include "threading/thread_checker.h"
 #include "trace_event/trace_event.h"
 #include "trace_event/traced_value.h"
-#include "trace_event/blame_context.h"
-#include "time/time_override.h"
 
 namespace base {
 	namespace sequence_manager {
@@ -91,11 +89,14 @@ namespace base {
 
 				using OnNextWakeUpChangedCallback = RepeatingCallback<void(TimeTicks)>;
 				using OnTaskReadyHandler = RepeatingCallback<void(const Task&, LazyNow*)>;
-				using OnTaskStartedHandler = RepeatingCallback<void(const Task&, const TaskQueue::TaskTiming&)>;
-				using OnTaskCompletedHandler = RepeatingCallback<void(const Task&, TaskQueue::TaskTiming*, LazyNow*)>;
+				using OnTaskStartedHandler = 
+					RepeatingCallback<void(const Task&, const TaskQueue::TaskTiming&)>;
+				using OnTaskCompletedHandler = 
+					RepeatingCallback<void(const Task&, TaskQueue::TaskTiming*, LazyNow*)>;
 
 				// May be called from any thread.
-				scoped_refptr<SingleThreadTaskRunner> CreateTaskRunner(TaskType task_type) const;
+				scoped_refptr<SingleThreadTaskRunner> CreateTaskRunner(
+					TaskType task_type) const;
 
 				// TaskQueue implementation.
 				const char* GetName() const;
@@ -147,7 +148,8 @@ namespace base {
 				// Check for available tasks in immediate work queues.
 				// Used to check if we need to generate notifications about delayed work.
 				bool HasPendingImmediateWork();
-				bool HasPendingImmediateWorkLocked();
+				bool HasPendingImmediateWorkLocked()
+					EXCLUSIVE_LOCKS_REQUIRED(any_thread_lock_);
 
 				bool has_pending_high_resolution_tasks() const {
 					return main_thread_only()
@@ -383,7 +385,8 @@ namespace base {
 
 				void ScheduleDelayedWorkTask(Task pending_task);
 
-				void MoveReadyImmediateTasksToImmediateWorkQueueLocked();
+				void MoveReadyImmediateTasksToImmediateWorkQueueLocked()
+					EXCLUSIVE_LOCKS_REQUIRED(any_thread_lock_);
 
 				// LazilyDeallocatedDeque use TimeTicks to figure out when to resize.  We
 				// should use real time here always.
@@ -415,7 +418,8 @@ namespace base {
 				void ActivateDelayedFenceIfNeeded(TimeTicks now);
 
 				// Updates state protected by any_thread_lock_.
-				void UpdateCrossThreadQueueStateLocked();
+				void UpdateCrossThreadQueueStateLocked()
+					EXCLUSIVE_LOCKS_REQUIRED(any_thread_lock_);
 
 				void MaybeLogPostTask(PostedTask* task) const;
 				void MaybeAdjustTaskDelay(PostedTask* task, CurrentThread current_thread);
@@ -425,9 +429,11 @@ namespace base {
 				void MaybeReportIpcTaskQueuedFromMainThread(Task* pending_task,
 				                                      const char* task_queue_name);
 				bool ShouldReportIpcTaskQueuedFromAnyThreadLocked(
-					TimeDelta* time_since_disabled);
+					base::TimeDelta* time_since_disabled)
+					EXCLUSIVE_LOCKS_REQUIRED(any_thread_lock_);
 				void MaybeReportIpcTaskQueuedFromAnyThreadLocked(Task* pending_task,
-				                                           const char* task_queue_name);
+																 const char* task_queue_name)
+					EXCLUSIVE_LOCKS_REQUIRED(any_thread_lock_);
 				void MaybeReportIpcTaskQueuedFromAnyThreadUnlocked(
 					Task* pending_task,
 					const char* task_queue_name);
@@ -487,7 +493,7 @@ namespace base {
 					TracingOnly tracing_only;
 				};
 
-				AnyThread any_thread_;
+				AnyThread any_thread_ GUARDED_BY(any_thread_lock_);
 
 				MainThreadOnly main_thread_only_;
 				MainThreadOnly& main_thread_only() {

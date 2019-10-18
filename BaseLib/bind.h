@@ -11,10 +11,6 @@
 #include "bind_internal.h"
 #include "compiler_specific.h"
 
-#if defined(OS_MACOSX) && !HAS_FEATURE(objc_arc)
-#include "mac/scoped_block.h"
-#endif
-
 // -----------------------------------------------------------------------------
 // Usage documentation
 // -----------------------------------------------------------------------------
@@ -437,26 +433,5 @@ namespace base {
 	static inline internal::IgnoreResultHelper<T> IgnoreResult(T data) {
 		return internal::IgnoreResultHelper<T>(std::move(data));
 	}
-
-#if defined(OS_MACOSX) && !HAS_FEATURE(objc_arc)
-
-	// RetainBlock() is used to adapt an Objective-C block when Automated Reference
-	// Counting (ARC) is disabled. This is unnecessary when ARC is enabled, as the
-	// BindOnce and BindRepeating already support blocks then.
-	//
-	// EXAMPLE OF RetainBlock():
-	//
-	//   // Wrap the block and bind it to a callback.
-	//   OnceCallback<void(int)> cb =
-	//       BindOnce(RetainBlock(^(int n) { NSLog(@"%d", n); }));
-	//   std::move(cb).Run(1);  // Logs "1".
-	template <typename R, typename... Args>
-	base::mac::ScopedBlock<R(^)(Args...)> RetainBlock(R(^ block)(Args...)) {
-		return base::mac::ScopedBlock<R(^)(Args...)>(block,
-			base::scoped_policy::RETAIN);
-	}
-
-#endif  // defined(OS_MACOSX) && !HAS_FEATURE(objc_arc)
-
 }  // namespace base
 

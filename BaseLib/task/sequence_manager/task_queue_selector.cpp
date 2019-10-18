@@ -31,20 +31,20 @@ namespace base::sequence_manager::internal {
 
 	TaskQueueSelector::~TaskQueueSelector() = default;
 
-	void TaskQueueSelector::AddQueue(internal::TaskQueueImpl* queue) {
+	void TaskQueueSelector::AddQueue(TaskQueueImpl* queue) {
 		DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
 		DCHECK(queue->IsQueueEnabled());
 		AddQueueImpl(queue, TaskQueue::kNormalPriority);
 	}
 
-	void TaskQueueSelector::RemoveQueue(internal::TaskQueueImpl* queue) {
+	void TaskQueueSelector::RemoveQueue(TaskQueueImpl* queue) {
 		DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
 		if (queue->IsQueueEnabled()) {
 			RemoveQueueImpl(queue);
 		}
 	}
 
-	void TaskQueueSelector::EnableQueue(internal::TaskQueueImpl* queue) {
+	void TaskQueueSelector::EnableQueue(TaskQueueImpl* queue) {
 		DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
 		DCHECK(queue->IsQueueEnabled());
 		AddQueueImpl(queue, queue->GetQueuePriority());
@@ -52,13 +52,13 @@ namespace base::sequence_manager::internal {
 			task_queue_selector_observer_->OnTaskQueueEnabled(queue);
 	}
 
-	void TaskQueueSelector::DisableQueue(internal::TaskQueueImpl* queue) {
+	void TaskQueueSelector::DisableQueue(TaskQueueImpl* queue) {
 		DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
 		DCHECK(!queue->IsQueueEnabled());
 		RemoveQueueImpl(queue);
 	}
 
-	void TaskQueueSelector::SetQueuePriority(internal::TaskQueueImpl* queue,
+	void TaskQueueSelector::SetQueuePriority(TaskQueueImpl* queue,
 		TaskQueue::QueuePriority priority) {
 		DCHECK_LT(priority, TaskQueue::kQueuePriorityCount);
 		DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
@@ -79,7 +79,7 @@ namespace base::sequence_manager::internal {
 		return static_cast<TaskQueue::QueuePriority>(static_cast<int>(priority) + 1);
 	}
 
-	void TaskQueueSelector::AddQueueImpl(internal::TaskQueueImpl* queue,
+	void TaskQueueSelector::AddQueueImpl(TaskQueueImpl* queue,
 		TaskQueue::QueuePriority priority) {
 #if DCHECK_IS_ON()
 		DCHECK(!CheckContainsQueueForTest(queue));
@@ -91,7 +91,7 @@ namespace base::sequence_manager::internal {
 #endif
 	}
 
-	void TaskQueueSelector::ChangeSetIndex(internal::TaskQueueImpl* queue,
+	void TaskQueueSelector::ChangeSetIndex(TaskQueueImpl* queue,
 		TaskQueue::QueuePriority priority) {
 #if DCHECK_IS_ON()
 		DCHECK(CheckContainsQueueForTest(queue));
@@ -105,7 +105,7 @@ namespace base::sequence_manager::internal {
 #endif
 	}
 
-	void TaskQueueSelector::RemoveQueueImpl(internal::TaskQueueImpl* queue) {
+	void TaskQueueSelector::RemoveQueueImpl(TaskQueueImpl* queue) {
 #if DCHECK_IS_ON()
 		DCHECK(CheckContainsQueueForTest(queue));
 #endif
@@ -167,7 +167,7 @@ namespace base::sequence_manager::internal {
 
 #if DCHECK_IS_ON() || !defined(NDEBUG)
 	bool TaskQueueSelector::CheckContainsQueueForTest(
-		const internal::TaskQueueImpl * queue) const {
+		const TaskQueueImpl * queue) const {
 		bool contains_delayed_work_queue =
 			delayed_work_queue_sets_.ContainsWorkQueueForTest(
 				queue->delayed_work_queue());
@@ -261,17 +261,17 @@ namespace base::sequence_manager::internal {
 		DCHECK_LT(id, TaskQueue::kQueuePriorityCount);
 		DCHECK(!IsInQueue(id));
 		// Insert while keeping |keys_| sorted.
-		size_t i = size_;
+		auto i = size_;
 		while (i > 0 && key < keys_[i - 1]) {
 			keys_[i] = keys_[i - 1];
-			TaskQueue::QueuePriority moved_id = index_to_id_[i - 1];
+			auto moved_id = index_to_id_[i - 1];
 			index_to_id_[i] = moved_id;
-			id_to_index_[moved_id] = i;
+			id_to_index_[moved_id] = static_cast<uint8_t>(i);
 			i--;
 		}
 		keys_[i] = key;
 		index_to_id_[i] = id;
-		id_to_index_[id] = i;
+		id_to_index_[id] = static_cast<uint8_t>(i);
 		size_++;
 	}
 
@@ -285,7 +285,7 @@ namespace base::sequence_manager::internal {
 			keys_[i] = keys_[i + 1];
 			const auto moved_id = index_to_id_[i + 1];
 			index_to_id_[i] = moved_id;
-			id_to_index_[moved_id] = i;
+			id_to_index_[moved_id] = static_cast<uint8_t>(i);
 		}
 		id_to_index_[id] = kInvalidIndex;
 	}
@@ -298,12 +298,12 @@ namespace base::sequence_manager::internal {
 			keys_[i] = keys_[i + 1];
 			const auto moved_id = index_to_id_[i + 1];
 			index_to_id_[i] = moved_id;
-			id_to_index_[moved_id] = i;
+			id_to_index_[moved_id] = static_cast<uint8_t>(i);
 			i++;
 		}
 		keys_[i] = new_key;
 		index_to_id_[i] = id;
-		id_to_index_[id] = i;
+		id_to_index_[id] = static_cast<uint8_t>(i);
 	}
 
 } // namespace base

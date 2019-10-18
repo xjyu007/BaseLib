@@ -13,7 +13,7 @@ namespace base {
 	// storage duration that:
 	// - is only constructed on first access
 	// - never invokes the destructor
-	// in order to satisfy the styleguide ban on global constructors and
+	// in order to satisfy the style guide ban on global constructors and
 	// destructors.
 	//
 	// Runtime constant example:
@@ -86,7 +86,7 @@ namespace base {
 		//
 		// Unfortunately, I haven't been able to demonstrate this issue in simpler
 		// reproductions: until that's resolved, hold an explicit pointer to the
-		// placement-new'd object in leak sanitizer mode to help LSan realize that
+		// placement-new's object in leak sanitizer mode to help LSan realize that
 		// objects allocated by the contained type are still reachable.
 		T* storage_ptr_ = reinterpret_cast<T*>(storage_);
 #endif  // defined(LEAK_SANITIZER)

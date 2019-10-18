@@ -1,5 +1,3 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -67,6 +65,8 @@
 // Thus, at least one WeakPtr object must exist and have been dereferenced on
 // the correct sequence to enforce that other WeakPtr objects will enforce they
 // are used on the desired sequence.
+
+#pragma once
 
 #include <cstddef>
 #include <type_traits>
@@ -184,7 +184,8 @@ namespace base {
 			// Precondition: t != nullptr
 			template<typename Derived>
 			static WeakPtr<Derived> StaticAsWeakPtr(Derived* t) {
-				static_assert(std::is_base_of<internal::SupportsWeakPtrBase, Derived>::value,
+				static_assert(
+					std::is_base_of<internal::SupportsWeakPtrBase, Derived>::value,
 					"AsWeakPtr argument must inherit from SupportsWeakPtr");
 				return AsWeakPtrImpl<Derived>(t);
 			}
@@ -196,7 +197,8 @@ namespace base {
 			template <typename Derived, typename Base>
 			static WeakPtr<Derived> AsWeakPtrImpl(SupportsWeakPtr<Base>* t) {
 				WeakPtr<Base> ptr = t->AsWeakPtr();
-				return WeakPtr<Derived>(ptr.ref_, static_cast<Derived*>(reinterpret_cast<Base*>(ptr.ptr_)));
+				return WeakPtr<Derived>(
+					ptr.ref_, static_cast<Derived*>(reinterpret_cast<Base*>(ptr.ptr_)));
 			}
 		};
 
@@ -322,7 +324,8 @@ namespace base {
 		~WeakPtrFactory() = default;
 
 		WeakPtr<T> GetWeakPtr() {
-			return WeakPtr<T>(weak_reference_owner_.GetRef(), reinterpret_cast<T*>(ptr_));
+			return WeakPtr<T>(weak_reference_owner_.GetRef(), 
+							  reinterpret_cast<T*>(ptr_));
 		}
 
 		// Call this method to invalidate all existing weak pointers.

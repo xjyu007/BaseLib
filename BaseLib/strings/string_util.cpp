@@ -398,7 +398,7 @@ namespace base {
 					--chars_written;
 				}
 			} else {
-				// Non-whitespace chracters are copied straight across.
+				// Non-whitespace characters are copied straight across.
 				in_whitespace = false;
 				already_trimmed = false;
 				result[chars_written++] = *i;
@@ -720,7 +720,7 @@ namespace base {
 		// replace() on each instance, and finish the entire operation in O(n) time.
 		if (find_length == replace_length) {
 			auto* buffer = &((*str)[0]);
-			for (size_t offset = first_match; offset != std::basic_string<Ch>::npos;
+			for (auto offset = first_match; offset != std::basic_string<Ch>::npos;
 				offset = matcher.Find(*str, offset + replace_length)) {
 				CharTraits::copy(buffer + offset, replace_with.data(), replace_length);
 			}

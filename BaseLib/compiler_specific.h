@@ -123,12 +123,12 @@
 #include <sanitizer/msan_interface.h>
 
 // Mark a memory region fully initialized.
-// Use this to annotate code that deliberately reads uninitialized data, for
+// Use this to annotate code that deliberately reads un-initialized data, for
 // example a GC scavenging root set pointers from the stack.
 #define MSAN_UNPOISON(p, size)  __msan_unpoison(p, size)
 
-// Check a memory region for initializedness, as if it was being used here.
-// If any bits are uninitialized, crash with an MSan report.
+// Check a memory region for initialized, as if it was being used here.
+// If any bits are un-initialized, crash with an MSan report.
 // Use this to sanitize data which MSan won't be able to track, e.g. before
 // passing data to another process via shared memory.
 #define MSAN_CHECK_MEM_IS_INITIALIZED(p, size) \

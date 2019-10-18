@@ -1,5 +1,3 @@
-#pragma once
-
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -7,6 +5,8 @@
 // WARNING: You should *NOT* be using this class directly.  PlatformThread is
 // the low-level platform-specific abstraction to the OS's threading interface.
 // You should instead be using a message-loop driven Thread, see thread.h.
+
+#pragma once
 
 #include "base_export.h"
 #include "macros.h"
@@ -170,10 +170,6 @@ namespace base {
 		// Detaches and releases the thread handle. The thread is no longer joinable
 		// and |thread_handle| is invalidated after this call.
 		static void Detach(PlatformThreadHandle thread_handle);
-
-		// Returns true if SetCurrentThreadPriority() should be able to increase the
-		// priority of a thread to |priority|.
-		static bool CanIncreaseThreadPriority(ThreadPriority priority);
 
 		// Toggles the current thread's priority at runtime.
 		//

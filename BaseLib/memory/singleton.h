@@ -1,5 +1,3 @@
-#pragma once
-
 // Copyright (c) 2011 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -25,6 +23,8 @@
 // If you absolutely need a singleton, please keep them as trivial as possible
 // and ideally a leaf dependency. Singletons get problematic when they attempt
 // to do too much in their destructor or have circular dependencies.
+
+#pragma once
 
 #include "at_exit.h"
 #include "atomicops.h"

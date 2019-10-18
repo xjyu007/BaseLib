@@ -65,7 +65,7 @@ namespace base::internal {
 			DictionaryValue dict;
 
 			dict.SetStringKey("task_priority",
-				base::TaskPriorityToString(task_traits_.priority()));
+				TaskPriorityToString(task_traits_.priority()));
 			dict.SetStringKey("execution_mode", execution_mode_);
 			if (sequence_token_.IsValid())
 				dict.SetIntKey("sequence_token", sequence_token_.ToInternalValue());
@@ -113,7 +113,7 @@ STATIC_HISTOGRAM_POINTER_GROUP(                                        \
 		}
 
 		// Needed for PostTaskHere and CurrentThread. This executor lives for the
-		// duration of a threadpool task invocation.
+		// duration of a thread pool task invocation.
 		class EphemeralTaskExecutor : public TaskExecutor {
 		public:
 			// |sequenced_task_runner| and |single_thread_task_runner| must outlive this
@@ -171,7 +171,7 @@ STATIC_HISTOGRAM_POINTER_GROUP(                                        \
 
 		private:
 			// Currently ignores |traits.priority()|.
-			void CheckTraitsCompatibleWithSequenceTraits(const TaskTraits& traits) {
+			void CheckTraitsCompatibleWithSequenceTraits(const TaskTraits& traits) const {
 				if (traits.shutdown_behavior_set_explicitly()) {
 					DCHECK_EQ(traits.shutdown_behavior(),
 					sequence_traits_->shutdown_behavior());
@@ -192,13 +192,13 @@ STATIC_HISTOGRAM_POINTER_GROUP(                                        \
 
 	}  // namespace
 
-		// Atomic internal state used by TaskTracker to track items that are blocking
-		// Shutdown. An "item" consist of either:
-		// - A running SKIP_ON_SHUTDOWN task
-		// - A queued/running BLOCK_SHUTDOWN TaskSource.
-		// Sequential consistency shouldn't be assumed from these calls (i.e. a thread
-		// reading |HasShutdownStarted() == true| isn't guaranteed to see all writes
-		// made before |StartShutdown()| on the thread that invoked it).
+	// Atomic internal state used by TaskTracker to track items that are blocking
+	// Shutdown. An "item" consist of either:
+	// - A running SKIP_ON_SHUTDOWN task
+	// - A queued/running BLOCK_SHUTDOWN TaskSource.
+	// Sequential consistency shouldn't be assumed from these calls (i.e. a thread
+	// reading |HasShutdownStarted() == true| isn't guaranteed to see all writes
+	// made before |StartShutdown()| on the thread that invoked it).
 	class TaskTracker::State {
 	public:
 		State() = default;
@@ -321,10 +321,10 @@ STATIC_HISTOGRAM_POINTER_GROUP(                                        \
 	void TaskTracker::CompleteShutdown() {
 		// It is safe to access |shutdown_event_| without holding |lock_| because the
 		// pointer never changes after being set by StartShutdown(), which must be
-		// happen-before before this.
+		// happen-before this.
 		DCHECK(TS_UNCHECKED_READ(shutdown_event_));
 		{
-			base::ScopedAllowBaseSyncPrimitives allow_wait;
+			ScopedAllowBaseSyncPrimitives allow_wait;
 			TS_UNCHECKED_READ(shutdown_event_)->Wait();
 		}
 
@@ -582,12 +582,12 @@ STATIC_HISTOGRAM_POINTER_GROUP(                                        \
 				break;
 			}
 
-			/*TRACE_TASK_EXECUTION("ThreadPool_RunTask", task);
+			//TRACE_TASK_EXECUTION("ThreadPool_RunTask", task);
 
 			// TODO(gab): In a better world this would be tacked on as an extra arg
 			// to the trace event generated above. This is not possible however until
 			// http://crbug.com/652692 is resolved.
-			TRACE_EVENT1("thread_pool", "ThreadPool_TaskInfo", "task_info",
+			/*TRACE_EVENT1("thread_pool", "ThreadPool_TaskInfo", "task_info",
 				std::make_unique<TaskTracingInfo>(
 					traits,
 					kExecutionModeString[static_cast<size_t>(
@@ -635,38 +635,38 @@ STATIC_HISTOGRAM_POINTER_GROUP(                                        \
 
 	bool TaskTracker::BeforeRunTask(TaskShutdownBehavior shutdown_behavior) const {
 		switch (shutdown_behavior) {
-		case TaskShutdownBehavior::BLOCK_SHUTDOWN: {
-			// The number of tasks blocking shutdown has been incremented when the
-			// task was posted.
-			DCHECK(state_->AreItemsBlockingShutdown());
+			case TaskShutdownBehavior::BLOCK_SHUTDOWN: {
+				// The number of tasks blocking shutdown has been incremented when the
+				// task was posted.
+				DCHECK(state_->AreItemsBlockingShutdown());
 
-			// Trying to run a BLOCK_SHUTDOWN task after shutdown has completed is
-			// unexpected as it either shouldn't have been posted if shutdown
-			// completed or should be blocking shutdown if it was posted before it
-			// did.
-			DCHECK(!state_->HasShutdownStarted() || !IsShutdownComplete());
+				// Trying to run a BLOCK_SHUTDOWN task after shutdown has completed is
+				// unexpected as it either shouldn't have been posted if shutdown
+				// completed or should be blocking shutdown if it was posted before it
+				// did.
+				DCHECK(!state_->HasShutdownStarted() || !IsShutdownComplete());
 
-			return true;
-		}
-
-		case TaskShutdownBehavior::SKIP_ON_SHUTDOWN: {
-			// SKIP_ON_SHUTDOWN tasks block shutdown while they are running.
-			const auto shutdown_started = state_->IncrementNumItemsBlockingShutdown();
-
-			if (shutdown_started) {
-				// The SKIP_ON_SHUTDOWN task isn't allowed to run during shutdown.
-				// Decrement the number of tasks blocking shutdown that was wrongly
-				// incremented.
-				DecrementNumItemsBlockingShutdown();
-				return false;
+				return true;
 			}
 
-			return true;
-		}
+			case TaskShutdownBehavior::SKIP_ON_SHUTDOWN: {
+				// SKIP_ON_SHUTDOWN tasks block shutdown while they are running.
+				const auto shutdown_started = state_->IncrementNumItemsBlockingShutdown();
 
-		case TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN: {
-			return !state_->HasShutdownStarted();
-		}
+				if (shutdown_started) {
+					// The SKIP_ON_SHUTDOWN task isn't allowed to run during shutdown.
+					// Decrement the number of tasks blocking shutdown that was wrongly
+					// incremented.
+					DecrementNumItemsBlockingShutdown();
+					return false;
+				}
+
+				return true;
+			}
+
+			case TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN: {
+				return !state_->HasShutdownStarted();
+			}
 		}
 
 		NOTREACHED();
